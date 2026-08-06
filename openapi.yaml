@@ -1,0 +1,2133 @@
+openapi: 3.1.0
+jsonSchemaDialect: https://json-schema.org/draft/2020-12/schema
+info:
+  title: MCM RE:BORN Hackathon API
+  version: 1.0.0
+  description: '2주 해커톤용 MCM RE:BORN API 계약입니다.
+
+    실제 MCM 내부 시스템, PG, 택배, 정품 인증 또는 공인 ESG 산식과 연동하지 않습니다.
+
+    OpenAI 이미지 분석은 실제 API를 사용하되 hybrid 모드에서 Fixture로 폴백할 수 있습니다.
+
+    '
+servers:
+- url: /api/v1
+  description: Same-origin Next.js Route Handlers
+- url: http://localhost:3000/api/v1
+  description: Local development
+security:
+- bearerAuth: []
+tags:
+- name: System
+- name: Auth
+- name: Uploads
+- name: Analyses
+- name: Products
+- name: Applications
+- name: Operator
+- name: Certificates
+- name: Analytics
+paths:
+  /health:
+    get:
+      tags:
+      - System
+      operationId: getHealth
+      summary: API 상태 확인
+      security: []
+      responses:
+        '200':
+          description: 정상
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+              example:
+                status: ok
+                version: 1.0.0
+                timestamp: '2026-08-04T06:30:00Z'
+                aiMode: hybrid
+  /auth/demo-login:
+    post:
+      tags:
+      - Auth
+      operationId: demoLogin
+      summary: 해커톤 데모 계정 로그인
+      description: ENABLE_DEMO_LOGIN=true 환경에서만 활성화합니다.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DemoLoginRequest'
+            examples:
+              customer:
+                value:
+                  demoAccount: CUSTOMER
+              operator:
+                value:
+                  demoAccount: OPERATOR
+      responses:
+        '200':
+          description: 로그인 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DemoLoginResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /me:
+    get:
+      tags:
+      - Auth
+      operationId: getCurrentUser
+      summary: 현재 로그인 사용자 조회
+      responses:
+        '200':
+          description: 현재 사용자
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /uploads/presign:
+    post:
+      tags:
+      - Uploads
+      operationId: createUploadUrls
+      summary: 원제품 이미지 업로드 URL 발급
+      description: 고객 전용. JPEG, PNG, WebP를 파일당 6MB까지 허용합니다.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PresignUploadRequest'
+      responses:
+        '201':
+          description: 업로드 URL 발급
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PresignUploadResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /analyses:
+    post:
+      tags:
+      - Analyses
+      operationId: createAnalysis
+      summary: 원제품 이미지 분석 실행
+      description: 'OpenAI Responses API와 Structured Output을 사용합니다.
+
+        AI_MODE=hybrid에서는 제공자 오류 시 Fixture 결과를 성공 응답으로 반환합니다.
+
+        '
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAnalysisRequest'
+      responses:
+        '201':
+          description: 분석 완료
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Analysis'
+              examples:
+                live:
+                  $ref: '#/components/examples/AnalysisLiveExample'
+                fallback:
+                  $ref: '#/components/examples/AnalysisFallbackExample'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          description: AI 구조화 출력 검증 실패
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '502':
+          description: AI 제공자 오류. AI_MODE=live일 때만 반환할 수 있습니다.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '504':
+          description: AI 제공자 시간 초과. AI_MODE=live일 때만 반환할 수 있습니다.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    get:
+      tags:
+      - Analyses
+      operationId: listMyAnalyses
+      summary: 내 분석 목록 조회
+      parameters:
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: 분석 목록
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PagedAnalyses'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /analyses/{analysisId}:
+    parameters:
+    - $ref: '#/components/parameters/AnalysisId'
+    get:
+      tags:
+      - Analyses
+      operationId: getAnalysis
+      summary: 분석 결과 조회
+      responses:
+        '200':
+          description: 분석 결과
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Analysis'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /products:
+    get:
+      tags:
+      - Products
+      operationId: listProducts
+      summary: 추천 제품 목록 조회
+      description: 제품 목록은 모든 제품의 완성형 정적 이미지를 반환하고 3D 렌더링은 상세에서 수행합니다.
+      parameters:
+      - name: analysisId
+        in: query
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: 추천 점수 순 제품 목록
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PagedProductCards'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /products/{productId}:
+    parameters:
+    - $ref: '#/components/parameters/ProductId'
+    get:
+      tags:
+      - Products
+      operationId: getProduct
+      summary: 제품 및 3D 상세 조회
+      description: 모든 활성 제품은 model3d 객체를 반드시 반환합니다.
+      parameters:
+      - name: analysisId
+        in: query
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: 제품 상세
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductDetail'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /applications:
+    post:
+      tags:
+      - Applications
+      operationId: createApplication
+      summary: 업사이클링 신청 생성
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateApplicationRequest'
+      responses:
+        '201':
+          description: 신청 생성
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApplicationSummary'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+    get:
+      tags:
+      - Applications
+      operationId: listMyApplications
+      summary: 내 신청 목록 조회
+      parameters:
+      - name: status
+        in: query
+        schema:
+          $ref: '#/components/schemas/ApplicationStatus'
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: 신청 목록
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PagedApplications'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /applications/{applicationId}:
+    parameters:
+    - $ref: '#/components/parameters/ApplicationId'
+    get:
+      tags:
+      - Applications
+      operationId: getApplication
+      summary: 신청 상세 조회
+      description: persistedStatus와 mock 계산을 결합한 effectiveStatus를 반환합니다.
+      responses:
+        '200':
+          description: 신청 상세
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApplicationDetail'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /applications/{applicationId}/mock-payment:
+    parameters:
+    - $ref: '#/components/parameters/ApplicationId'
+    post:
+      tags:
+      - Applications
+      operationId: completeMockPayment
+      summary: Mock 결제 완료
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MockPaymentRequest'
+      responses:
+        '200':
+          description: 결제 처리 결과
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MockPaymentResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /applications/{applicationId}/timeline:
+    parameters:
+    - $ref: '#/components/parameters/ApplicationId'
+    get:
+      tags:
+      - Applications
+      operationId: getApplicationTimeline
+      summary: 신청 공정 타임라인 조회
+      responses:
+        '200':
+          description: 계산된 공정 타임라인
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApplicationTimeline'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /applications/{applicationId}/shipment:
+    parameters:
+    - $ref: '#/components/parameters/ApplicationId'
+    get:
+      tags:
+      - Applications
+      operationId: getMockShipment
+      summary: Mock 물류 조회
+      responses:
+        '200':
+          description: Mock 운송장과 배송 상태
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MockShipment'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /applications/{applicationId}/certificate:
+    parameters:
+    - $ref: '#/components/parameters/ApplicationId'
+    get:
+      tags:
+      - Certificates
+      operationId: getCertificateByApplication
+      summary: 신청의 ESG 보증서 조회
+      responses:
+        '200':
+          description: 보증서
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EsgCertificate'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: 신청이 완료되지 않아 보증서가 준비되지 않음
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /certificates/{certificateId}/verify:
+    parameters:
+    - $ref: '#/components/parameters/CertificateId'
+    get:
+      tags:
+      - Certificates
+      operationId: verifyCertificate
+      summary: 공개 보증서 검증 데이터 조회
+      security: []
+      responses:
+        '200':
+          description: 검증 결과
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CertificateVerification'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /admin/applications:
+    get:
+      tags:
+      - Operator
+      operationId: listApplicationsForOperator
+      summary: 운영자 신청 목록 조회
+      parameters:
+      - name: status
+        in: query
+        schema:
+          $ref: '#/components/schemas/ApplicationStatus'
+      - name: query
+        in: query
+        description: 신청번호 또는 고객 표시명 검색
+        schema:
+          type: string
+          maxLength: 80
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: 운영자 신청 목록
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PagedOperatorApplications'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /admin/applications/{applicationId}:
+    parameters:
+    - $ref: '#/components/parameters/ApplicationId'
+    get:
+      tags:
+      - Operator
+      operationId: getApplicationForOperator
+      summary: 운영자 신청 상세 조회
+      responses:
+        '200':
+          description: 운영자 상세
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperatorApplicationDetail'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /admin/applications/{applicationId}/approve:
+    parameters:
+    - $ref: '#/components/parameters/ApplicationId'
+    post:
+      tags:
+      - Operator
+      operationId: approveApplication
+      summary: 신청 승인
+      description: PENDING_APPROVAL 상태에서만 가능하며 이후 공정은 자동 Mock 시뮬레이션합니다.
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApproveApplicationRequest'
+      responses:
+        '200':
+          description: 승인 완료
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApplicationApprovalResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /events:
+    post:
+      tags:
+      - Analytics
+      operationId: trackEvent
+      summary: KPI 이벤트 기록
+      security:
+      - bearerAuth: []
+      - {}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TrackEventRequest'
+      responses:
+        '202':
+          description: 이벤트 접수
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                - accepted
+                - eventId
+                properties:
+                  accepted:
+                    type: boolean
+                    const: true
+                  eventId:
+                    type: string
+                    format: uuid
+        '400':
+          $ref: '#/components/responses/BadRequest'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Supabase access token
+  parameters:
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema:
+        type: string
+        minLength: 8
+        maxLength: 128
+      description: 생성, 결제, 승인 중복 방지 키
+    Page:
+      name: page
+      in: query
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+    Size:
+      name: size
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+    AnalysisId:
+      name: analysisId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    ProductId:
+      name: productId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    ApplicationId:
+      name: applicationId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    CertificateId:
+      name: certificateId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+  responses:
+    BadRequest:
+      description: 잘못된 요청
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Unauthorized:
+      description: 인증 필요
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Forbidden:
+      description: 권한 없음
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFound:
+      description: 리소스 없음
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Conflict:
+      description: 상태 충돌 또는 중복 요청
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+  examples:
+    AnalysisLiveExample:
+      value:
+        id: 71d65a99-14bc-48b6-a58f-85043110aff1
+        status: COMPLETED
+        modeUsed: LIVE
+        sourceProduct:
+          category: TOTE_SHOPPER
+          materialType: COATED_CANVAS
+          confidence: 0.89
+        condition:
+          grade: B
+          overallDamageSeverity: 31
+          summary: 몸판은 대체로 양호하고 손잡이와 모서리에 마모가 있습니다.
+        damages:
+        - type: HANDLE_WEAR
+          location: TOP_HANDLE
+          severity: 54
+          confidence: 0.92
+        authenticitySignal: NOT_EVALUATED
+        reusableMaterialRate: 65
+        estimatedReusableAreaCm2: 2470
+        longStripAvailable: false
+        recommendations:
+        - productId: 10000000-0000-4000-8000-000000000001
+          productCode: REBORN_POUCH
+          eligible: true
+          score: 96
+          reasonCodes:
+          - SUFFICIENT_AREA
+          - PATTERN_VISIBILITY
+        esgPreview:
+          methodologyVersion: DEMO_LCA_V1
+          estimatedCarbonSavingKgCo2e: 2.96
+          disclaimer: 해커톤용 추정치이며 공인 ESG 수치가 아닙니다.
+        provider:
+          name: OPENAI
+          model: gpt-5.6
+          requestId: resp_demo_live
+        warnings: []
+        createdAt: '2026-08-04T06:30:00Z'
+        completedAt: '2026-08-04T06:30:08Z'
+    AnalysisFallbackExample:
+      value:
+        id: 71d65a99-14bc-48b6-a58f-85043110aff2
+        status: COMPLETED
+        modeUsed: FIXTURE_FALLBACK
+        sourceProduct:
+          category: TOTE_SHOPPER
+          materialType: COATED_CANVAS
+          confidence: 0.82
+        condition:
+          grade: B
+          overallDamageSeverity: 35
+          summary: 준비된 데모 분석 결과입니다.
+        damages: []
+        authenticitySignal: NOT_EVALUATED
+        reusableMaterialRate: 65
+        estimatedReusableAreaCm2: 2470
+        longStripAvailable: false
+        recommendations: []
+        esgPreview:
+          methodologyVersion: DEMO_LCA_V1
+          estimatedCarbonSavingKgCo2e: 2.96
+          disclaimer: 해커톤용 추정치이며 공인 ESG 수치가 아닙니다.
+        provider:
+          name: FIXTURE
+          model: TOTE_MODERATE_WEAR
+          requestId: null
+        warnings:
+        - code: AI_PROVIDER_TIMEOUT
+          message: 실제 AI 응답이 지연되어 준비된 데모 결과를 사용했습니다.
+        createdAt: '2026-08-04T06:30:00Z'
+        completedAt: '2026-08-04T06:30:05Z'
+  schemas:
+    HealthResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - status
+      - version
+      - timestamp
+      - aiMode
+      properties:
+        status:
+          type: string
+          enum:
+          - ok
+          - degraded
+        version:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        aiMode:
+          $ref: '#/components/schemas/AiMode'
+    AiMode:
+      type: string
+      enum:
+      - live
+      - fixture
+      - hybrid
+    DemoAccount:
+      type: string
+      enum:
+      - CUSTOMER
+      - OPERATOR
+    DemoLoginRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - demoAccount
+      properties:
+        demoAccount:
+          $ref: '#/components/schemas/DemoAccount'
+    UserRole:
+      type: string
+      enum:
+      - CUSTOMER
+      - OPERATOR
+    User:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - role
+      - displayName
+      - email
+      properties:
+        id:
+          type: string
+          format: uuid
+        role:
+          $ref: '#/components/schemas/UserRole'
+        displayName:
+          type: string
+        email:
+          type: string
+          format: email
+    AuthSession:
+      type: object
+      additionalProperties: false
+      required:
+      - accessToken
+      - expiresAt
+      properties:
+        accessToken:
+          type: string
+        refreshToken:
+          type:
+          - string
+          - 'null'
+        expiresAt:
+          type: string
+          format: date-time
+    DemoLoginResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - user
+      - session
+      properties:
+        user:
+          $ref: '#/components/schemas/User'
+        session:
+          $ref: '#/components/schemas/AuthSession'
+    UploadPurpose:
+      type: string
+      enum:
+      - SOURCE_PRODUCT
+      - DAMAGE_CLOSEUP
+      - INTERIOR
+      - SERIAL
+    UploadFileRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - fileName
+      - contentType
+      - sizeBytes
+      - purpose
+      properties:
+        fileName:
+          type: string
+          minLength: 1
+          maxLength: 255
+        contentType:
+          type: string
+          enum:
+          - image/jpeg
+          - image/png
+          - image/webp
+        sizeBytes:
+          type: integer
+          minimum: 1
+          maximum: 6291456
+        purpose:
+          $ref: '#/components/schemas/UploadPurpose'
+    PresignUploadRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - files
+      properties:
+        files:
+          type: array
+          minItems: 1
+          maxItems: 4
+          items:
+            $ref: '#/components/schemas/UploadFileRequest'
+    UploadAsset:
+      type: object
+      additionalProperties: false
+      required:
+      - assetId
+      - method
+      - uploadUrl
+      - headers
+      - storagePath
+      - expiresAt
+      properties:
+        assetId:
+          type: string
+          format: uuid
+        method:
+          type: string
+          const: PUT
+        uploadUrl:
+          type: string
+          format: uri
+        headers:
+          type: object
+          additionalProperties:
+            type: string
+        storagePath:
+          type: string
+        expiresAt:
+          type: string
+          format: date-time
+    PresignUploadResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - assets
+      properties:
+        assets:
+          type: array
+          minItems: 1
+          maxItems: 4
+          items:
+            $ref: '#/components/schemas/UploadAsset'
+    SourceCategory:
+      type: string
+      enum:
+      - BACKPACK
+      - TOTE_SHOPPER
+      - SHOULDER_CROSSBODY
+      - BUCKET_BAG
+      - TOP_HANDLE
+      - BOSTON_BAG
+      - CLUTCH_POUCH
+      - BELT_BAG
+      - WEEKENDER_DUFFLE
+      - TRAVEL_LUGGAGE
+      - UNKNOWN_BAG
+    MaterialType:
+      type: string
+      enum:
+      - COATED_CANVAS
+      - LEATHER
+      - NYLON
+      - FABRIC
+      - MIXED
+      - UNKNOWN
+    ConditionGrade:
+      type: string
+      enum:
+      - A
+      - B
+      - C
+      - D
+    DamageType:
+      type: string
+      enum:
+      - SURFACE_SCRATCH
+      - HANDLE_WEAR
+      - EDGE_ABRASION
+      - DISCOLORATION
+      - STAIN
+      - TEAR
+      - PEELING
+      - HARDWARE_DAMAGE
+      - OTHER
+    AnalysisStatus:
+      type: string
+      enum:
+      - COMPLETED
+      - FAILED
+    AnalysisModeUsed:
+      type: string
+      enum:
+      - LIVE
+      - FIXTURE
+      - FIXTURE_FALLBACK
+    AuthenticitySignal:
+      type: string
+      enum:
+      - NOT_EVALUATED
+      - REVIEW_REQUIRED
+    CreateAnalysisRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - imageAssetIds
+      - locale
+      properties:
+        imageAssetIds:
+          type: array
+          minItems: 1
+          maxItems: 4
+          uniqueItems: true
+          items:
+            type: string
+            format: uuid
+        sourceCategoryHint:
+          oneOf:
+          - $ref: '#/components/schemas/SourceCategory'
+          - type: 'null'
+        locale:
+          type: string
+          enum:
+          - ko-KR
+        demoScenarioKey:
+          type:
+          - string
+          - 'null'
+          enum:
+          - TOTE_MODERATE_WEAR
+          - BACKPACK_LIGHT_WEAR
+          - CROSSBODY_HEAVY_WEAR
+          - null
+    SourceProduct:
+      type: object
+      additionalProperties: false
+      required:
+      - category
+      - materialType
+      - confidence
+      properties:
+        category:
+          $ref: '#/components/schemas/SourceCategory'
+        materialType:
+          $ref: '#/components/schemas/MaterialType'
+        confidence:
+          type: number
+          minimum: 0
+          maximum: 1
+    Condition:
+      type: object
+      additionalProperties: false
+      required:
+      - grade
+      - overallDamageSeverity
+      - summary
+      properties:
+        grade:
+          $ref: '#/components/schemas/ConditionGrade'
+        overallDamageSeverity:
+          type: integer
+          minimum: 0
+          maximum: 100
+        summary:
+          type: string
+          maxLength: 300
+    Damage:
+      type: object
+      additionalProperties: false
+      required:
+      - type
+      - location
+      - severity
+      - confidence
+      properties:
+        type:
+          $ref: '#/components/schemas/DamageType'
+        location:
+          type: string
+          maxLength: 80
+        severity:
+          type: integer
+          minimum: 0
+          maximum: 100
+        confidence:
+          type: number
+          minimum: 0
+          maximum: 1
+    RecommendationReasonCode:
+      type: string
+      enum:
+      - SUFFICIENT_AREA
+      - PATTERN_VISIBILITY
+      - LOW_DAMAGE_REGION_AVAILABLE
+      - USES_SMALL_REMNANTS
+      - LONG_STRIP_AVAILABLE
+      - INSUFFICIENT_AREA
+    AnalysisRecommendation:
+      type: object
+      additionalProperties: false
+      required:
+      - productId
+      - productCode
+      - eligible
+      - score
+      - reasonCodes
+      properties:
+        productId:
+          type: string
+          format: uuid
+        productCode:
+          $ref: '#/components/schemas/ProductCode'
+        eligible:
+          type: boolean
+        score:
+          type: integer
+          minimum: 0
+          maximum: 100
+        reasonCodes:
+          type: array
+          items:
+            $ref: '#/components/schemas/RecommendationReasonCode'
+    EsgPreview:
+      type: object
+      additionalProperties: false
+      required:
+      - methodologyVersion
+      - estimatedCarbonSavingKgCo2e
+      - disclaimer
+      properties:
+        methodologyVersion:
+          type: string
+          const: DEMO_LCA_V1
+        estimatedCarbonSavingKgCo2e:
+          type: number
+          minimum: 0
+        disclaimer:
+          type: string
+    AnalysisProvider:
+      type: object
+      additionalProperties: false
+      required:
+      - name
+      - model
+      - requestId
+      properties:
+        name:
+          type: string
+          enum:
+          - OPENAI
+          - FIXTURE
+        model:
+          type: string
+        requestId:
+          type:
+          - string
+          - 'null'
+    Warning:
+      type: object
+      additionalProperties: false
+      required:
+      - code
+      - message
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+    Analysis:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - status
+      - modeUsed
+      - sourceProduct
+      - condition
+      - damages
+      - authenticitySignal
+      - reusableMaterialRate
+      - estimatedReusableAreaCm2
+      - longStripAvailable
+      - recommendations
+      - esgPreview
+      - provider
+      - warnings
+      - createdAt
+      - completedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          $ref: '#/components/schemas/AnalysisStatus'
+        modeUsed:
+          $ref: '#/components/schemas/AnalysisModeUsed'
+        sourceProduct:
+          $ref: '#/components/schemas/SourceProduct'
+        condition:
+          $ref: '#/components/schemas/Condition'
+        damages:
+          type: array
+          maxItems: 8
+          items:
+            $ref: '#/components/schemas/Damage'
+        authenticitySignal:
+          $ref: '#/components/schemas/AuthenticitySignal'
+        reusableMaterialRate:
+          type: integer
+          minimum: 0
+          maximum: 100
+        estimatedReusableAreaCm2:
+          type: integer
+          minimum: 0
+        longStripAvailable:
+          type: boolean
+        recommendations:
+          type: array
+          items:
+            $ref: '#/components/schemas/AnalysisRecommendation'
+        esgPreview:
+          $ref: '#/components/schemas/EsgPreview'
+        provider:
+          $ref: '#/components/schemas/AnalysisProvider'
+        warnings:
+          type: array
+          items:
+            $ref: '#/components/schemas/Warning'
+        createdAt:
+          type: string
+          format: date-time
+        completedAt:
+          type: string
+          format: date-time
+    AnalysisListItem:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - sourceCategory
+      - conditionGrade
+      - reusableMaterialRate
+      - modeUsed
+      - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        sourceCategory:
+          $ref: '#/components/schemas/SourceCategory'
+        conditionGrade:
+          $ref: '#/components/schemas/ConditionGrade'
+        reusableMaterialRate:
+          type: integer
+        modeUsed:
+          $ref: '#/components/schemas/AnalysisModeUsed'
+        createdAt:
+          type: string
+          format: date-time
+    ProductCode:
+      type: string
+      enum:
+      - REBORN_POUCH
+      - REBORN_CARD_WALLET
+      - REBORN_KEYRING
+      - REBORN_BAG_STRAP
+    ProductCategory:
+      type: string
+      enum:
+      - CLUTCH_POUCH
+      - CARD_WALLET
+      - KEYRING
+      - BAG_STRAP
+    Money:
+      type: object
+      additionalProperties: false
+      required:
+      - amount
+      - currency
+      properties:
+        amount:
+          type: integer
+          minimum: 0
+        currency:
+          type: string
+          const: KRW
+    ImageAsset:
+      type: object
+      additionalProperties: false
+      required:
+      - url
+      - alt
+      - width
+      - height
+      - aspectRatio
+      properties:
+        url:
+          type: string
+          format: uri-reference
+        alt:
+          type: string
+        width:
+          type: integer
+          minimum: 1
+        height:
+          type: integer
+          minimum: 1
+        aspectRatio:
+          type: string
+          const: '4:5'
+    RecommendationView:
+      type: object
+      additionalProperties: false
+      required:
+      - eligible
+      - score
+      - reasonCodes
+      properties:
+        eligible:
+          type: boolean
+        score:
+          type: integer
+          minimum: 0
+          maximum: 100
+        reasonCodes:
+          type: array
+          items:
+            $ref: '#/components/schemas/RecommendationReasonCode'
+    ProductCard:
+      type: object
+      required:
+      - id
+      - code
+      - name
+      - category
+      - mockPrice
+      - requiredAreaCm2
+      - listImage
+      - has3d
+      - recommendation
+      properties:
+        id:
+          type: string
+          format: uuid
+        code:
+          $ref: '#/components/schemas/ProductCode'
+        name:
+          type: string
+        category:
+          $ref: '#/components/schemas/ProductCategory'
+        mockPrice:
+          $ref: '#/components/schemas/Money'
+        requiredAreaCm2:
+          type: integer
+          minimum: 1
+        listImage:
+          $ref: '#/components/schemas/ImageAsset'
+        has3d:
+          type: boolean
+          const: true
+        recommendation:
+          $ref: '#/components/schemas/RecommendationView'
+    ModelFormat:
+      type: string
+      enum:
+      - GLB
+      - GLTF
+    ModelVariant:
+      type: object
+      additionalProperties: false
+      required:
+      - key
+      - label
+      properties:
+        key:
+          type: string
+        label:
+          type: string
+    Product3D:
+      type: object
+      additionalProperties: false
+      required:
+      - format
+      - url
+      - posterUrl
+      - cameraOrbit
+      - cameraTarget
+      - fieldOfView
+      - autoRotate
+      - availableVariants
+      properties:
+        format:
+          $ref: '#/components/schemas/ModelFormat'
+        url:
+          type: string
+          format: uri-reference
+        posterUrl:
+          type: string
+          format: uri-reference
+        environmentImageUrl:
+          type:
+          - string
+          - 'null'
+          format: uri-reference
+        cameraOrbit:
+          type: string
+        cameraTarget:
+          type: string
+        fieldOfView:
+          type: string
+        autoRotate:
+          type: boolean
+        availableVariants:
+          type: array
+          items:
+            $ref: '#/components/schemas/ModelVariant'
+    Dimensions:
+      type: object
+      additionalProperties: false
+      required:
+      - widthMm
+      - heightMm
+      - depthMm
+      properties:
+        widthMm:
+          type: integer
+          minimum: 1
+        heightMm:
+          type: integer
+          minimum: 1
+        depthMm:
+          type: integer
+          minimum: 0
+    SelectOption:
+      type: object
+      additionalProperties: false
+      required:
+      - value
+      - label
+      properties:
+        value:
+          type: string
+        label:
+          type: string
+        modelVariant:
+          type:
+          - string
+          - 'null'
+    OptionGroup:
+      type: object
+      additionalProperties: false
+      required:
+      - key
+      - label
+      - required
+      - type
+      properties:
+        key:
+          type: string
+        label:
+          type: string
+        required:
+          type: boolean
+        type:
+          type: string
+          enum:
+          - SELECT
+          - TEXT
+        options:
+          type: array
+          items:
+            $ref: '#/components/schemas/SelectOption'
+        maxLength:
+          type:
+          - integer
+          - 'null'
+          minimum: 1
+    ProductDetail:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - code
+      - name
+      - category
+      - mockPrice
+      - requiredAreaCm2
+      - listImage
+      - has3d
+      - recommendation
+      - description
+      - dimensions
+      - model3d
+      - optionGroups
+      properties:
+        id:
+          type: string
+          format: uuid
+        code:
+          $ref: '#/components/schemas/ProductCode'
+        name:
+          type: string
+        category:
+          $ref: '#/components/schemas/ProductCategory'
+        mockPrice:
+          $ref: '#/components/schemas/Money'
+        requiredAreaCm2:
+          type: integer
+          minimum: 1
+        listImage:
+          $ref: '#/components/schemas/ImageAsset'
+        has3d:
+          type: boolean
+          const: true
+        recommendation:
+          $ref: '#/components/schemas/RecommendationView'
+        description:
+          type: string
+        dimensions:
+          $ref: '#/components/schemas/Dimensions'
+        model3d:
+          $ref: '#/components/schemas/Product3D'
+        optionGroups:
+          type: array
+          items:
+            $ref: '#/components/schemas/OptionGroup'
+    Address:
+      type: object
+      additionalProperties: false
+      required:
+      - recipientName
+      - phone
+      - postalCode
+      - address1
+      properties:
+        recipientName:
+          type: string
+          minLength: 1
+          maxLength: 60
+        phone:
+          type: string
+          minLength: 8
+          maxLength: 30
+        postalCode:
+          type: string
+          maxLength: 12
+        address1:
+          type: string
+          maxLength: 200
+        address2:
+          type:
+          - string
+          - 'null'
+          maxLength: 200
+    Consents:
+      type: object
+      additionalProperties: false
+      required:
+      - demoTermsAccepted
+      - aiEstimateNoticeAccepted
+      - esgEstimateNoticeAccepted
+      properties:
+        demoTermsAccepted:
+          type: boolean
+          const: true
+        aiEstimateNoticeAccepted:
+          type: boolean
+          const: true
+        esgEstimateNoticeAccepted:
+          type: boolean
+          const: true
+    CreateApplicationRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - analysisId
+      - productId
+      - selectedOptions
+      - shippingAddress
+      - consents
+      properties:
+        analysisId:
+          type: string
+          format: uuid
+        productId:
+          type: string
+          format: uuid
+        selectedOptions:
+          type: object
+          additionalProperties:
+            type:
+            - string
+            - number
+            - boolean
+        shippingAddress:
+          $ref: '#/components/schemas/Address'
+        consents:
+          $ref: '#/components/schemas/Consents'
+    ApplicationStatus:
+      type: string
+      enum:
+      - PENDING_PAYMENT
+      - PENDING_APPROVAL
+      - APPROVED
+      - RECEIVING_PRODUCT
+      - PRODUCT_RECEIVED
+      - IN_PRODUCTION
+      - QUALITY_CHECK
+      - SHIPPED
+      - COMPLETED
+      - ADDITIONAL_REVIEW_REQUIRED
+      - AUTHENTICITY_REVIEW_REQUIRED
+      - PRODUCTION_UNAVAILABLE
+      - CANCELED
+    ApplicationSummary:
+      type: object
+      required:
+      - id
+      - applicationNumber
+      - status
+      - amount
+      - product
+      - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        applicationNumber:
+          type: string
+          pattern: ^RB-[0-9]{8}-[0-9]{4}$
+        status:
+          $ref: '#/components/schemas/ApplicationStatus'
+        amount:
+          $ref: '#/components/schemas/Money'
+        product:
+          $ref: '#/components/schemas/ProductCard'
+        createdAt:
+          type: string
+          format: date-time
+    ApplicationDetail:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - applicationNumber
+      - status
+      - amount
+      - product
+      - createdAt
+      - analysisId
+      - selectedOptions
+      - shippingAddress
+      - effectiveStatus
+      - persistedStatus
+      - mockProgressProfile
+      properties:
+        id:
+          type: string
+          format: uuid
+        applicationNumber:
+          type: string
+          pattern: ^RB-[0-9]{8}-[0-9]{4}$
+        status:
+          $ref: '#/components/schemas/ApplicationStatus'
+        amount:
+          $ref: '#/components/schemas/Money'
+        product:
+          $ref: '#/components/schemas/ProductCard'
+        createdAt:
+          type: string
+          format: date-time
+        analysisId:
+          type: string
+          format: uuid
+        selectedOptions:
+          type: object
+          additionalProperties: true
+        shippingAddress:
+          $ref: '#/components/schemas/Address'
+        effectiveStatus:
+          $ref: '#/components/schemas/ApplicationStatus'
+        persistedStatus:
+          $ref: '#/components/schemas/ApplicationStatus'
+        statusOverride:
+          oneOf:
+          - $ref: '#/components/schemas/ApplicationStatus'
+          - type: 'null'
+        approvedAt:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        mockProgressProfile:
+          type: string
+          enum:
+          - FAST_DEMO
+          - STATIC
+    MockPaymentMethod:
+      type: string
+      enum:
+      - DEMO_CARD
+    MockPaymentRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - method
+      - simulate
+      properties:
+        method:
+          $ref: '#/components/schemas/MockPaymentMethod'
+        simulate:
+          type: string
+          enum:
+          - SUCCESS
+          - FAILURE
+    MockPaymentResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - paymentId
+      - transactionId
+      - status
+      - paidAmount
+      - paidAt
+      - applicationStatus
+      properties:
+        paymentId:
+          type: string
+          format: uuid
+        transactionId:
+          type: string
+        status:
+          type: string
+          enum:
+          - PAID
+          - FAILED
+        paidAmount:
+          $ref: '#/components/schemas/Money'
+        paidAt:
+          type: string
+          format: date-time
+        applicationStatus:
+          $ref: '#/components/schemas/ApplicationStatus'
+    TimelineStep:
+      type: object
+      additionalProperties: false
+      required:
+      - status
+      - label
+      - state
+      properties:
+        status:
+          $ref: '#/components/schemas/ApplicationStatus'
+        label:
+          type: string
+        state:
+          type: string
+          enum:
+          - COMPLETED
+          - CURRENT
+          - UPCOMING
+          - EXCEPTION
+        occurredAt:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        description:
+          type:
+          - string
+          - 'null'
+    ApplicationTimeline:
+      type: object
+      additionalProperties: false
+      required:
+      - applicationId
+      - effectiveStatus
+      - steps
+      - refreshedAt
+      properties:
+        applicationId:
+          type: string
+          format: uuid
+        effectiveStatus:
+          $ref: '#/components/schemas/ApplicationStatus'
+        steps:
+          type: array
+          items:
+            $ref: '#/components/schemas/TimelineStep'
+        refreshedAt:
+          type: string
+          format: date-time
+    ShipmentStatus:
+      type: string
+      enum:
+      - PICKUP_RESERVED
+      - PICKUP_IN_PROGRESS
+      - AT_WORKSHOP
+      - OUT_FOR_DELIVERY
+      - DELIVERED
+    MockShipment:
+      type: object
+      additionalProperties: false
+      required:
+      - applicationId
+      - carrierCode
+      - carrierName
+      - trackingNumber
+      - status
+      properties:
+        applicationId:
+          type: string
+          format: uuid
+        carrierCode:
+          type: string
+          const: MCM_REBORN_DEMO
+        carrierName:
+          type: string
+        trackingNumber:
+          type: string
+        trackingUrl:
+          type:
+          - string
+          - 'null'
+          format: uri
+        status:
+          $ref: '#/components/schemas/ShipmentStatus'
+    EsgCertificate:
+      type: object
+      additionalProperties: false
+      required:
+      - certificateId
+      - certificateNumber
+      - applicationNumber
+      - sourceCategory
+      - rebornProduct
+      - reusedMaterialRate
+      - reusedAreaCm2
+      - estimatedCarbonSavingKgCo2e
+      - methodologyVersion
+      - issuedAt
+      - verificationCode
+      - disclaimer
+      properties:
+        certificateId:
+          type: string
+          format: uuid
+        certificateNumber:
+          type: string
+        applicationNumber:
+          type: string
+        sourceCategory:
+          $ref: '#/components/schemas/SourceCategory'
+        rebornProduct:
+          type: string
+        reusedMaterialRate:
+          type: integer
+          minimum: 0
+          maximum: 100
+        reusedAreaCm2:
+          type: integer
+          minimum: 0
+        estimatedCarbonSavingKgCo2e:
+          type: number
+          minimum: 0
+        methodologyVersion:
+          type: string
+          const: DEMO_LCA_V1
+        issuedAt:
+          type: string
+          format: date-time
+        verificationCode:
+          type: string
+        disclaimer:
+          type: string
+    CertificateVerification:
+      type: object
+      additionalProperties: false
+      required:
+      - valid
+      - certificate
+      properties:
+        valid:
+          type: boolean
+        certificate:
+          $ref: '#/components/schemas/EsgCertificate'
+    OperatorApplicationSummary:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - applicationNumber
+      - customer
+      - product
+      - effectiveStatus
+      - createdAt
+      - approvalAvailable
+      properties:
+        id:
+          type: string
+          format: uuid
+        applicationNumber:
+          type: string
+        customer:
+          $ref: '#/components/schemas/User'
+        product:
+          $ref: '#/components/schemas/ProductCard'
+        effectiveStatus:
+          $ref: '#/components/schemas/ApplicationStatus'
+        createdAt:
+          type: string
+          format: date-time
+        approvalAvailable:
+          type: boolean
+    OperatorApplicationDetail:
+      type: object
+      additionalProperties: false
+      required:
+      - application
+      - customer
+      - analysis
+      - sourceImages
+      - approvalAvailable
+      properties:
+        application:
+          $ref: '#/components/schemas/ApplicationDetail'
+        customer:
+          $ref: '#/components/schemas/User'
+        analysis:
+          $ref: '#/components/schemas/Analysis'
+        sourceImages:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required:
+            - assetId
+            - purpose
+            - signedUrl
+            properties:
+              assetId:
+                type: string
+                format: uuid
+              purpose:
+                $ref: '#/components/schemas/UploadPurpose'
+              signedUrl:
+                type: string
+                format: uri
+        approvalAvailable:
+          type: boolean
+    ApproveApplicationRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - note
+      properties:
+        note:
+          type: string
+          maxLength: 500
+    ApplicationApprovalResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - status
+      - approvedAt
+      - approvedBy
+      - mockProgressProfile
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          const: APPROVED
+        approvedAt:
+          type: string
+          format: date-time
+        approvedBy:
+          type: object
+          additionalProperties: false
+          required:
+          - id
+          - displayName
+          properties:
+            id:
+              type: string
+              format: uuid
+            displayName:
+              type: string
+        mockProgressProfile:
+          type: string
+          enum:
+          - FAST_DEMO
+          - STATIC
+    AnalyticsEventName:
+      type: string
+      enum:
+      - ANALYSIS_STARTED
+      - ANALYSIS_COMPLETED
+      - ANALYSIS_FALLBACK_USED
+      - PRODUCT_LIST_VIEWED
+      - PRODUCT_DETAIL_VIEWED
+      - APPLICATION_CREATED
+      - MOCK_PAYMENT_COMPLETED
+      - APPLICATION_APPROVED
+      - CERTIFICATE_VIEWED
+    TrackEventRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - eventName
+      - occurredAt
+      - sessionId
+      properties:
+        eventName:
+          $ref: '#/components/schemas/AnalyticsEventName'
+        occurredAt:
+          type: string
+          format: date-time
+        sessionId:
+          type: string
+          format: uuid
+        analysisId:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        productId:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        applicationId:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        metadata:
+          type: object
+          additionalProperties: true
+    ErrorDetail:
+      type: object
+      additionalProperties: true
+    ErrorObject:
+      type: object
+      additionalProperties: false
+      required:
+      - code
+      - message
+      - requestId
+      - details
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        requestId:
+          type: string
+        details:
+          $ref: '#/components/schemas/ErrorDetail'
+    ErrorResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - error
+      properties:
+        error:
+          $ref: '#/components/schemas/ErrorObject'
+    PagedAnalyses:
+      type: object
+      additionalProperties: false
+      required:
+      - items
+      - page
+      - size
+      - totalElements
+      - totalPages
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/AnalysisListItem'
+        page:
+          type: integer
+        size:
+          type: integer
+        totalElements:
+          type: integer
+        totalPages:
+          type: integer
+    PagedProductCards:
+      type: object
+      additionalProperties: false
+      required:
+      - items
+      - page
+      - size
+      - totalElements
+      - totalPages
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductCard'
+        page:
+          type: integer
+        size:
+          type: integer
+        totalElements:
+          type: integer
+        totalPages:
+          type: integer
+    PagedApplications:
+      type: object
+      additionalProperties: false
+      required:
+      - items
+      - page
+      - size
+      - totalElements
+      - totalPages
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ApplicationSummary'
+        page:
+          type: integer
+        size:
+          type: integer
+        totalElements:
+          type: integer
+        totalPages:
+          type: integer
+    PagedOperatorApplications:
+      type: object
+      additionalProperties: false
+      required:
+      - items
+      - page
+      - size
+      - totalElements
+      - totalPages
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OperatorApplicationSummary'
+        page:
+          type: integer
+        size:
+          type: integer
+        totalElements:
+          type: integer
+        totalPages:
+          type: integer

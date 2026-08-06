@@ -1,0 +1,423 @@
+{
+  "meta": {
+    "version": "1.0.0",
+    "generatedFor": "MCM RE:BORN 2-week hackathon",
+    "notice": "All prices, material areas, carbon values, authentication signals, logistics and certificates are demo-only mock data."
+  },
+  "demoUsers": [
+    {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "role": "CUSTOMER",
+      "displayName": "김민지",
+      "email": "customer@mcm-reborn.demo"
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000002",
+      "role": "OPERATOR",
+      "displayName": "MCM RE:BORN 운영자",
+      "email": "operator@mcm-reborn.demo"
+    }
+  ],
+  "products": [
+    {
+      "id": "10000000-0000-4000-8000-000000000001",
+      "code": "REBORN_POUCH",
+      "name": "RE:BORN 클러치 파우치",
+      "category": "CLUTCH_POUCH",
+      "description": "기존 가방의 패턴 원단을 넓게 살리는 클러치형 파우치입니다.",
+      "requiredAreaCm2": 1000,
+      "mockPrice": { "amount": 280000, "currency": "KRW" },
+      "dimensions": { "widthMm": 260, "heightMm": 180, "depthMm": 45 },
+      "listImage": {
+        "url": "/assets/products/reborn-pouch/list.webp",
+        "alt": "RE:BORN 클러치 파우치 전체 이미지",
+        "width": 1200,
+        "height": 1500,
+        "aspectRatio": "4:5"
+      },
+      "model3d": {
+        "format": "GLB",
+        "url": "/assets/models/reborn-pouch.glb",
+        "posterUrl": "/assets/products/reborn-pouch/poster.webp",
+        "environmentImageUrl": "/assets/3d/studio.hdr",
+        "cameraOrbit": "0deg 75deg 105%",
+        "cameraTarget": "0m 0m 0m",
+        "fieldOfView": "30deg",
+        "autoRotate": true,
+        "availableVariants": [
+          { "key": "BLACK_GOLD", "label": "블랙·골드" },
+          { "key": "BLACK_SILVER", "label": "블랙·실버" },
+          { "key": "COGNAC_GOLD", "label": "코냑·골드" }
+        ]
+      },
+      "optionGroups": [
+        {
+          "key": "hardwareColor",
+          "label": "금속 색상",
+          "required": true,
+          "type": "SELECT",
+          "options": [
+            { "value": "GOLD", "label": "골드", "modelVariant": "BLACK_GOLD" },
+            { "value": "SILVER", "label": "실버", "modelVariant": "BLACK_SILVER" }
+          ]
+        },
+        {
+          "key": "liningColor",
+          "label": "안감 색상",
+          "required": true,
+          "type": "SELECT",
+          "options": [
+            { "value": "BLACK", "label": "블랙", "modelVariant": null },
+            { "value": "COGNAC", "label": "코냑", "modelVariant": "COGNAC_GOLD" }
+          ]
+        },
+        {
+          "key": "initials",
+          "label": "이니셜",
+          "required": false,
+          "type": "TEXT",
+          "maxLength": 3
+        }
+      ],
+      "active": true
+    },
+    {
+      "id": "10000000-0000-4000-8000-000000000002",
+      "code": "REBORN_CARD_WALLET",
+      "name": "RE:BORN 카드지갑",
+      "category": "CARD_WALLET",
+      "description": "상태가 좋은 패턴 영역을 선별해 제작하는 소형 카드지갑입니다.",
+      "requiredAreaCm2": 300,
+      "mockPrice": { "amount": 180000, "currency": "KRW" },
+      "dimensions": { "widthMm": 105, "heightMm": 75, "depthMm": 8 },
+      "listImage": {
+        "url": "/assets/products/reborn-card-wallet/list.webp",
+        "alt": "RE:BORN 카드지갑 전체 이미지",
+        "width": 1200,
+        "height": 1500,
+        "aspectRatio": "4:5"
+      },
+      "model3d": {
+        "format": "GLB",
+        "url": "/assets/models/reborn-card-wallet.glb",
+        "posterUrl": "/assets/products/reborn-card-wallet/poster.webp",
+        "environmentImageUrl": "/assets/3d/studio.hdr",
+        "cameraOrbit": "20deg 75deg 110%",
+        "cameraTarget": "0m 0m 0m",
+        "fieldOfView": "28deg",
+        "autoRotate": true,
+        "availableVariants": [
+          { "key": "BLACK_GOLD", "label": "블랙·골드" },
+          { "key": "COGNAC_GOLD", "label": "코냑·골드" }
+        ]
+      },
+      "optionGroups": [
+        {
+          "key": "edgeColor",
+          "label": "엣지 색상",
+          "required": true,
+          "type": "SELECT",
+          "options": [
+            { "value": "BLACK", "label": "블랙", "modelVariant": "BLACK_GOLD" },
+            { "value": "COGNAC", "label": "코냑", "modelVariant": "COGNAC_GOLD" }
+          ]
+        },
+        {
+          "key": "initials",
+          "label": "이니셜",
+          "required": false,
+          "type": "TEXT",
+          "maxLength": 3
+        }
+      ],
+      "active": true
+    },
+    {
+      "id": "10000000-0000-4000-8000-000000000003",
+      "code": "REBORN_KEYRING",
+      "name": "RE:BORN 키링",
+      "category": "KEYRING",
+      "description": "작은 잔여 원단까지 활용하는 가죽 키링입니다.",
+      "requiredAreaCm2": 80,
+      "mockPrice": { "amount": 90000, "currency": "KRW" },
+      "dimensions": { "widthMm": 45, "heightMm": 90, "depthMm": 5 },
+      "listImage": {
+        "url": "/assets/products/reborn-keyring/list.webp",
+        "alt": "RE:BORN 키링 전체 이미지",
+        "width": 1200,
+        "height": 1500,
+        "aspectRatio": "4:5"
+      },
+      "model3d": {
+        "format": "GLB",
+        "url": "/assets/models/reborn-keyring.glb",
+        "posterUrl": "/assets/products/reborn-keyring/poster.webp",
+        "environmentImageUrl": "/assets/3d/studio.hdr",
+        "cameraOrbit": "0deg 75deg 115%",
+        "cameraTarget": "0m 0m 0m",
+        "fieldOfView": "25deg",
+        "autoRotate": true,
+        "availableVariants": [
+          { "key": "GOLD_RING", "label": "골드 링" },
+          { "key": "SILVER_RING", "label": "실버 링" }
+        ]
+      },
+      "optionGroups": [
+        {
+          "key": "ringColor",
+          "label": "링 색상",
+          "required": true,
+          "type": "SELECT",
+          "options": [
+            { "value": "GOLD", "label": "골드", "modelVariant": "GOLD_RING" },
+            { "value": "SILVER", "label": "실버", "modelVariant": "SILVER_RING" }
+          ]
+        }
+      ],
+      "active": true
+    }
+  ],
+  "analysisFixtures": [
+    {
+      "scenarioKey": "TOTE_MODERATE_WEAR",
+      "id": "20000000-0000-4000-8000-000000000001",
+      "status": "COMPLETED",
+      "modeUsed": "FIXTURE",
+      "sourceProduct": {
+        "category": "TOTE_SHOPPER",
+        "materialType": "COATED_CANVAS",
+        "confidence": 0.89
+      },
+      "condition": {
+        "grade": "B",
+        "overallDamageSeverity": 31,
+        "summary": "몸판은 대체로 양호하고 손잡이와 모서리에 마모가 있습니다."
+      },
+      "damages": [
+        { "type": "HANDLE_WEAR", "location": "TOP_HANDLE", "severity": 54, "confidence": 0.92 },
+        { "type": "EDGE_ABRASION", "location": "BOTTOM_CORNERS", "severity": 36, "confidence": 0.81 }
+      ],
+      "authenticitySignal": "NOT_EVALUATED",
+      "reusableMaterialRate": 65,
+      "estimatedReusableAreaCm2": 2470,
+      "longStripAvailable": false,
+      "recommendations": [
+        {
+          "productId": "10000000-0000-4000-8000-000000000001",
+          "productCode": "REBORN_POUCH",
+          "eligible": true,
+          "score": 96,
+          "reasonCodes": ["SUFFICIENT_AREA", "PATTERN_VISIBILITY"]
+        },
+        {
+          "productId": "10000000-0000-4000-8000-000000000002",
+          "productCode": "REBORN_CARD_WALLET",
+          "eligible": true,
+          "score": 91,
+          "reasonCodes": ["SUFFICIENT_AREA", "LOW_DAMAGE_REGION_AVAILABLE"]
+        },
+        {
+          "productId": "10000000-0000-4000-8000-000000000003",
+          "productCode": "REBORN_KEYRING",
+          "eligible": true,
+          "score": 82,
+          "reasonCodes": ["USES_SMALL_REMNANTS"]
+        }
+      ],
+      "esgPreview": {
+        "methodologyVersion": "DEMO_LCA_V1",
+        "estimatedCarbonSavingKgCo2e": 2.96,
+        "disclaimer": "해커톤용 추정치이며 공인 ESG 수치가 아닙니다."
+      }
+    },
+    {
+      "scenarioKey": "BACKPACK_LIGHT_WEAR",
+      "id": "20000000-0000-4000-8000-000000000002",
+      "status": "COMPLETED",
+      "modeUsed": "FIXTURE",
+      "sourceProduct": {
+        "category": "BACKPACK",
+        "materialType": "MIXED",
+        "confidence": 0.86
+      },
+      "condition": {
+        "grade": "A",
+        "overallDamageSeverity": 18,
+        "summary": "외부 패널의 상태가 양호하고 하단 모서리에 가벼운 사용감이 있습니다."
+      },
+      "damages": [
+        { "type": "EDGE_ABRASION", "location": "LOWER_EDGE", "severity": 22, "confidence": 0.78 }
+      ],
+      "authenticitySignal": "NOT_EVALUATED",
+      "reusableMaterialRate": 82,
+      "estimatedReusableAreaCm2": 3444,
+      "longStripAvailable": true,
+      "recommendations": [
+        {
+          "productId": "10000000-0000-4000-8000-000000000001",
+          "productCode": "REBORN_POUCH",
+          "eligible": true,
+          "score": 100,
+          "reasonCodes": ["SUFFICIENT_AREA", "PATTERN_VISIBILITY"]
+        },
+        {
+          "productId": "10000000-0000-4000-8000-000000000002",
+          "productCode": "REBORN_CARD_WALLET",
+          "eligible": true,
+          "score": 95,
+          "reasonCodes": ["SUFFICIENT_AREA", "LOW_DAMAGE_REGION_AVAILABLE"]
+        },
+        {
+          "productId": "10000000-0000-4000-8000-000000000003",
+          "productCode": "REBORN_KEYRING",
+          "eligible": true,
+          "score": 90,
+          "reasonCodes": ["USES_SMALL_REMNANTS"]
+        }
+      ],
+      "esgPreview": {
+        "methodologyVersion": "DEMO_LCA_V1",
+        "estimatedCarbonSavingKgCo2e": 4.13,
+        "disclaimer": "해커톤용 추정치이며 공인 ESG 수치가 아닙니다."
+      }
+    },
+    {
+      "scenarioKey": "CROSSBODY_HEAVY_WEAR",
+      "id": "20000000-0000-4000-8000-000000000003",
+      "status": "COMPLETED",
+      "modeUsed": "FIXTURE",
+      "sourceProduct": {
+        "category": "SHOULDER_CROSSBODY",
+        "materialType": "LEATHER",
+        "confidence": 0.81
+      },
+      "condition": {
+        "grade": "D",
+        "overallDamageSeverity": 74,
+        "summary": "표면 박리와 변색이 넓게 관찰되어 작은 부품 위주의 활용이 적합합니다."
+      },
+      "damages": [
+        { "type": "PEELING", "location": "FRONT_PANEL", "severity": 77, "confidence": 0.88 },
+        { "type": "DISCOLORATION", "location": "SIDE_PANEL", "severity": 68, "confidence": 0.80 }
+      ],
+      "authenticitySignal": "REVIEW_REQUIRED",
+      "reusableMaterialRate": 15,
+      "estimatedReusableAreaCm2": 375,
+      "longStripAvailable": false,
+      "recommendations": [
+        {
+          "productId": "10000000-0000-4000-8000-000000000001",
+          "productCode": "REBORN_POUCH",
+          "eligible": false,
+          "score": 18,
+          "reasonCodes": ["INSUFFICIENT_AREA"]
+        },
+        {
+          "productId": "10000000-0000-4000-8000-000000000002",
+          "productCode": "REBORN_CARD_WALLET",
+          "eligible": true,
+          "score": 52,
+          "reasonCodes": ["LOW_DAMAGE_REGION_AVAILABLE"]
+        },
+        {
+          "productId": "10000000-0000-4000-8000-000000000003",
+          "productCode": "REBORN_KEYRING",
+          "eligible": true,
+          "score": 61,
+          "reasonCodes": ["USES_SMALL_REMNANTS"]
+        }
+      ],
+      "esgPreview": {
+        "methodologyVersion": "DEMO_LCA_V1",
+        "estimatedCarbonSavingKgCo2e": 0.45,
+        "disclaimer": "해커톤용 추정치이며 공인 ESG 수치가 아닙니다."
+      }
+    }
+  ],
+  "applications": [
+    {
+      "id": "30000000-0000-4000-8000-000000000001",
+      "applicationNumber": "RB-20260804-0001",
+      "customerId": "00000000-0000-4000-8000-000000000001",
+      "analysisId": "20000000-0000-4000-8000-000000000001",
+      "productId": "10000000-0000-4000-8000-000000000001",
+      "persistedStatus": "PENDING_APPROVAL",
+      "statusOverride": null,
+      "selectedOptions": {
+        "hardwareColor": "GOLD",
+        "liningColor": "BLACK",
+        "initials": "MCM"
+      },
+      "mockPriceKrw": 280000,
+      "createdAt": "2026-08-04T06:30:00Z",
+      "approvedAt": null,
+      "progressProfile": "FAST_DEMO"
+    },
+    {
+      "id": "30000000-0000-4000-8000-000000000002",
+      "applicationNumber": "RB-20260804-0002",
+      "customerId": "00000000-0000-4000-8000-000000000001",
+      "analysisId": "20000000-0000-4000-8000-000000000003",
+      "productId": "10000000-0000-4000-8000-000000000002",
+      "persistedStatus": "PENDING_APPROVAL",
+      "statusOverride": "AUTHENTICITY_REVIEW_REQUIRED",
+      "selectedOptions": {
+        "edgeColor": "BLACK"
+      },
+      "mockPriceKrw": 180000,
+      "createdAt": "2026-08-04T05:50:00Z",
+      "approvedAt": null,
+      "progressProfile": "STATIC"
+    },
+    {
+      "id": "30000000-0000-4000-8000-000000000003",
+      "applicationNumber": "RB-20260804-0003",
+      "customerId": "00000000-0000-4000-8000-000000000001",
+      "analysisId": "20000000-0000-4000-8000-000000000001",
+      "productId": "10000000-0000-4000-8000-000000000001",
+      "persistedStatus": "PRODUCT_RECEIVED",
+      "statusOverride": "PRODUCTION_UNAVAILABLE",
+      "selectedOptions": {
+        "hardwareColor": "SILVER",
+        "liningColor": "COGNAC"
+      },
+      "mockPriceKrw": 280000,
+      "createdAt": "2026-08-03T06:30:00Z",
+      "approvedAt": "2026-08-03T07:00:00Z",
+      "progressProfile": "STATIC"
+    },
+    {
+      "id": "30000000-0000-4000-8000-000000000004",
+      "applicationNumber": "RB-20260804-0004",
+      "customerId": "00000000-0000-4000-8000-000000000001",
+      "analysisId": "20000000-0000-4000-8000-000000000002",
+      "productId": "10000000-0000-4000-8000-000000000003",
+      "persistedStatus": "COMPLETED",
+      "statusOverride": "COMPLETED",
+      "selectedOptions": {
+        "ringColor": "GOLD"
+      },
+      "mockPriceKrw": 90000,
+      "createdAt": "2026-08-01T04:00:00Z",
+      "approvedAt": "2026-08-01T04:10:00Z",
+      "progressProfile": "STATIC"
+    }
+  ],
+  "certificates": [
+    {
+      "certificateId": "40000000-0000-4000-8000-000000000001",
+      "certificateNumber": "ESG-RB-20260804-0004",
+      "applicationId": "30000000-0000-4000-8000-000000000004",
+      "applicationNumber": "RB-20260804-0004",
+      "sourceCategory": "BACKPACK",
+      "rebornProduct": "RE:BORN 키링",
+      "reusedMaterialRate": 82,
+      "reusedAreaCm2": 3444,
+      "estimatedCarbonSavingKgCo2e": 4.13,
+      "methodologyVersion": "DEMO_LCA_V1",
+      "issuedAt": "2026-08-01T05:20:00Z",
+      "verificationCode": "MRB-8F3Q-2M7K",
+      "disclaimer": "해커톤용 가상 보증서이며 법적·상업적 효력이 없습니다."
+    }
+  ]
+}
