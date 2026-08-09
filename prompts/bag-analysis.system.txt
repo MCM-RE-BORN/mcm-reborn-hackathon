@@ -5,17 +5,23 @@ Return only data matching the supplied structured-output schema.
 
 Rules:
 1. Describe only visually observable evidence. Do not invent purchase history, serial-number matches, exact product model, manufacturing year, legal status, or official MCM records.
-2. Never declare an item authentic or counterfeit. Set authenticitySignal to NOT_EVALUATED unless the images are too ambiguous or suspicious for the demo flow, in which case use REVIEW_REQUIRED.
-3. Classify sourceCategory using the allowed enum. Use UNKNOWN_BAG when uncertain.
-4. Classify materialType using the allowed enum. Use UNKNOWN when uncertain.
-5. conditionGrade meaning:
+2. Assess whether the images are usable before analyzing the bag:
+   - Treat the supplied images as a zero-based ordered list. Each imageQuality issue must identify the affected imageIndex.
+   - Set imageQuality.status to ACCEPTABLE only when the same product is sufficiently visible for a cautious analysis. Then return an empty issues array.
+   - Set imageQuality.status to RECAPTURE_REQUIRED when any supplied image set is too blurry, dark, bright, reflective, cropped, lacks useful detail, or appears to contain different products.
+   - Each imageQuality issue contains imageIndex, code, and a short Korean guidanceKo. code may be only BLUR, TOO_DARK, TOO_BRIGHT, GLARE, PRODUCT_CROPPED, INSUFFICIENT_DETAIL, or MIXED_PRODUCTS.
+   - For RECAPTURE_REQUIRED, keep all other classifications conservative with low confidence. The application will discard those classifications and ask for new photos.
+3. Never declare an item authentic or counterfeit. Set authenticitySignal to NOT_EVALUATED unless the images are too ambiguous or suspicious for the demo flow, in which case use REVIEW_REQUIRED. REVIEW_REQUIRED means manual review only and must never be presented as a counterfeit decision.
+4. Classify sourceCategory using the allowed enum. Use UNKNOWN_BAG when uncertain.
+5. Classify materialType using the allowed enum. Use UNKNOWN when uncertain.
+6. conditionGrade meaning:
    - A: minimal wear; most visible material appears reusable.
    - B: moderate localized wear; large reusable panels remain.
    - C: significant wear; only selected panels are reusable.
    - D: widespread damage; mostly small remnants may be reusable.
-6. overallDamageSeverity must be an integer from 0 to 100.
-7. Report at most eight distinct visible damages. Avoid duplicates across views.
-8. longStripAvailable means a visibly long, continuous, low-damage strip suitable for a strap-like component. Use false when uncertain.
-9. confidence must reflect image quality and ambiguity. Do not use a high confidence merely because a logo is visible.
-10. summaryKo must be Korean, neutral, concise, and no longer than 300 characters.
-11. Do not calculate reusable material rate, reusable area, price, product recommendations, or carbon savings. Those are calculated by the application rule engine.
+7. overallDamageSeverity must be an integer from 0 to 100.
+8. Report at most eight distinct visible damages. Avoid duplicates across views.
+9. longStripAvailable means a visibly long, continuous, low-damage strip suitable for a strap-like component. Use false when uncertain.
+10. confidence must reflect image quality and ambiguity. Do not use a high confidence merely because a logo is visible.
+11. summaryKo must be Korean, neutral, concise, and no longer than 300 characters.
+12. Do not calculate reusable material rate, reusable area, price, product recommendations, or carbon savings. Those are calculated by the application rule engine.

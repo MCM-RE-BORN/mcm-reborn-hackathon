@@ -1,13 +1,15 @@
 # MCM RE:BORN — 2주 해커톤 API 명세 및 개발 가이드
 
-- 문서 버전: `1.0.0`
-- 작성 기준일: `2026-08-04`
+- 문서 버전: `1.1.0`
+- 작성 기준일: `2026-08-10`
 - API 계약: OpenAPI `3.1.0`
 - 기준 구현: **Next.js Full-stack + Supabase + OpenAI API**
 - 대안 구현: **Next.js Frontend + Spring Boot Backend**
 - 서비스 성격: **Mock 데이터와 실제 멀티모달 AI를 결합한 해커톤 데모**
 
 > 이 문서는 실제 MCM 상용 시스템, 정품 인증 시스템, 결제·택배 시스템과 연동하지 않는 해커톤용 명세다. 브랜드 자산, 제품 이미지 및 3D 모델은 사용 권한을 확인해야 하며, 데모 화면에는 “비공식 콘셉트/예상 분석”임을 명시한다.
+
+> 2주 MVP의 단일 기준(source of truth)은 이 저장소의 `develop` 브랜치다. 별도 PRD와 유저 플로우의 장인 역할 분리, 실제 정품 검증, 실물 검수·고객 재승인, 생산 용량, 공식 A/S, 감사 및 iOS 기능은 Post-MVP / Phase 2 범위다.
 
 ---
 
@@ -24,7 +26,12 @@
 ```text
 고객 데모 로그인
 → 원제품 사진 업로드
-→ OpenAI 이미지 분석
+→ 사진 품질 확인
+  ├─ 품질 미달: 원인별 안내 후 재촬영
+  └─ 품질 통과: OpenAI 이미지 분석
+→ `REVIEW_REQUIRED` 여부 확인
+  ├─ 검토 필요: 신청 미생성·운영자 수동 검토 대기 안내
+  └─ 검토 불필요: 다음 단계 진행
 → 재활용률·추천 제품 표시
 → 제품 그리드에서 완성 이미지 확인
 → 각 제품 상세에서 3D 모델 회전·확대
@@ -42,20 +49,20 @@
 | 화면 | 경로 예시 | 핵심 기능 |
 |---|---|---|
 | 데모 로그인 | `/login` | 고객 데모 계정 진입 |
-| AI 스캔 | `/scan` | 사진 업로드, 촬영 가이드 |
-| 분석 결과 | `/analyses/{id}` | 상태, 손상, 재활용률, ESG 예상치 |
+| AI 스캔 | `/scan` | 사진 업로드, 촬영 가이드, 품질 미달 사유별 재촬영 안내 |
+| 분석 결과 | `/analyses/{id}` | 상태, 손상, 재활용률, ESG 예상치, 정품 수동 검토 안내 |
 | 추천 제품 목록 | `/products?analysisId=...` | **각 제품의 완성형 전체 이미지**를 카드/그리드로 표시 |
 | 제품 상세 | `/products/{id}?analysisId=...` | **모든 제품의 GLB·glTF 3D 뷰어**, 옵션 선택 |
 | 신청·Mock 결제 | `/checkout` | 주소, 동의, Mock 결제 |
 | 진행 조회 | `/applications/{id}` | 승인·제작·배송 타임라인 |
 | 보증서 | `/certificates/{id}` | ESG 예상 성과 및 QR 검증 정보 |
 
-#### 관리자·장인 통합 대시보드
+#### `OPERATOR` 통합 운영 대시보드
 
 | 화면 | 경로 예시 | 핵심 기능 |
 |---|---|---|
 | 신청 목록 | `/operator/applications` | 신청 목록, 상태 필터 |
-| 신청 상세 | `/operator/applications/{id}` | 고객 이미지, AI 분석, 선택 제품 확인 |
+| 신청 상세 | `/operator/applications/{id}` | 고객 이미지, AI 분석, 선택 제품, 수동 검토 신호 확인 |
 | 승인 | 같은 상세 화면 | `승인` 버튼 1개 |
 
 운영 화면은 신청 목록·상세·승인에만 집중한다. 작업 상태를 직접 단계별로 수정하는 기능은 만들지 않는다.
@@ -362,6 +369,9 @@ src/main/java/com/mcm/reborn/
 - OpenAI 호출용 이미지 URL은 짧은 만료시간의 signed URL을 사용한다.
 - API 응답에 Storage service-role key, OpenAI key, 내부 프롬프트를 포함하지 않는다.
 - 업로드 파일 이름을 그대로 경로로 사용하지 않고 UUID를 사용한다.
+- 분석·추천·신청·결제·승인처럼 신뢰가 필요한 값은 Route Handler 또는 신뢰된 서버에서만 기록한다. 브라우저가 PostgREST로 결과 필드를 직접 쓰게 하지 않는다.
+- `source-products` 객체 경로는 `<auth.uid()>/<asset-id>.<ext>` 형식으로 제한하고, 고객은 자기 경로만 읽고 쓴다.
+- 운영자 권한은 `profiles.role = OPERATOR`인 계정에만 부여하며, private 원본 조회와 카탈로그 자산 쓰기를 그 역할로 제한한다.
 
 ---
 
@@ -524,7 +534,7 @@ src/main/java/com/mcm/reborn/
 }
 ```
 
-`demoScenarioKey`는 `AI_MODE=fixture` 또는 live 호출 실패 시 폴백 결과를 결정하는 용도다. 실제 AI 성공 시 무시할 수 있다.
+`demoScenarioKey`는 `AI_MODE=fixture` 또는 live 호출 실패 시 폴백 결과를 결정하는 용도다. 실제 AI 성공 시 무시할 수 있다. 단, `LOW_QUALITY_RECAPTURE`는 재촬영 오류를 재현하는 전용 시나리오다.
 
 응답:
 
@@ -557,6 +567,10 @@ src/main/java/com/mcm/reborn/
       "confidence": 0.81
     }
   ],
+  "imageQuality": {
+    "status": "ACCEPTABLE",
+    "issues": []
+  },
   "authenticitySignal": "NOT_EVALUATED",
   "reusableMaterialRate": 65,
   "estimatedReusableAreaCm2": 2470,
@@ -607,6 +621,8 @@ src/main/java/com/mcm/reborn/
 | `AI_MODE=hybrid` | OpenAI 우선, 실패·타임아웃·파싱 오류 시 Fixture 반환 |
 
 해커톤 시연은 `hybrid`를 사용한다. 폴백 발생 시 HTTP는 성공으로 반환하되 `modeUsed = FIXTURE_FALLBACK`, `warnings`에 원인을 담는다.
+
+사진 품질 미달은 AI 제공자 장애가 아니므로 Fixture 성공으로 폴백하지 않는다. 성공 분석 레코드를 만들지 않고 `422 IMAGE_QUALITY_INSUFFICIENT`를 반환하며, `imageQuality.issues`에 문제 코드와 `guidanceKo`를 담아 같은 제품을 다시 촬영하게 한다.
 
 ## 8.3 추천 제품 목록
 
@@ -778,6 +794,7 @@ TypeScript JSX 타입 선언이 필요한 경우 `model-viewer.d.ts`를 추가�
 
 - 분석 소유자가 현재 고객인지 확인
 - 분석이 완료되었는지 확인
+- `authenticitySignal = REVIEW_REQUIRED`이면 신청을 생성하지 않고 `422 AUTHENTICITY_REVIEW_REQUIRED`와 수동 검토 대기 정보를 반환
 - 추천 결과에서 `eligible = true`인지 확인
 - 제품이 활성 상태이고 3D 자산을 보유하는지 확인
 - 옵션 값이 제품 옵션 스키마와 일치하는지 확인
@@ -860,12 +877,11 @@ PENDING_PAYMENT
 
 ```text
 ADDITIONAL_REVIEW_REQUIRED
-AUTHENTICITY_REVIEW_REQUIRED
 PRODUCTION_UNAVAILABLE
 CANCELED
 ```
 
-AI는 정품 여부를 확정하지 않는다. `AUTHENTICITY_REVIEW_REQUIRED`는 해커톤에서 “추가 확인이 필요한 사례”를 표현하는 Mock 상태다.
+AI는 정품 여부를 확정하지 않는다. 분석의 `authenticitySignal = REVIEW_REQUIRED`는 “추가 확인 필요” 신호일 뿐 정품 또는 가품 판정이 아니다. 이 경우 신청·결제·제작 상태로 진입하지 않고, `POST /applications`가 `422 AUTHENTICITY_REVIEW_REQUIRED`와 `manualReviewCaseId`, `PENDING`, `AWAIT_MANUAL_REVIEW`를 반환한다. 수동 검토 완료 API는 2주 MVP 범위에 포함하지 않는다.
 
 ### 9.3 상태 전이표
 
@@ -931,6 +947,7 @@ effectiveStatus = statusOverride ?? resolveMockStatus(approvedAt, now)
 
 OpenAI가 담당하는 영역:
 
+- 이미지별 분석 가능 품질과 재촬영 사유
 - 가방 카테고리 추정
 - 소재 유형 추정
 - 상태 등급
@@ -953,7 +970,25 @@ AI에게 최종 추천과 ESG 수치를 맡기지 않는 이유는 데모 반복
 ```ts
 import { z } from 'zod';
 
+const ImageQualityIssueCodeSchema = z.enum([
+  'BLUR',
+  'TOO_DARK',
+  'TOO_BRIGHT',
+  'GLARE',
+  'PRODUCT_CROPPED',
+  'INSUFFICIENT_DETAIL',
+  'MIXED_PRODUCTS',
+]);
+
 export const BagVisionSchema = z.object({
+  imageQuality: z.object({
+    status: z.enum(['ACCEPTABLE', 'RECAPTURE_REQUIRED']),
+    issues: z.array(z.object({
+      imageIndex: z.number().int().min(0).max(3),
+      code: ImageQualityIssueCodeSchema,
+      guidanceKo: z.string().min(1).max(120),
+    })).max(7),
+  }),
   sourceCategory: z.enum([
     'BACKPACK',
     'TOTE_SHOPPER',
@@ -1000,16 +1035,38 @@ export const BagVisionSchema = z.object({
   summaryKo: z.string().max(300),
   authenticitySignal: z.enum(['NOT_EVALUATED', 'REVIEW_REQUIRED']),
 });
+
+export function assertImageQualityContract(
+  result: z.infer<typeof BagVisionSchema>,
+  imageCount: number,
+) {
+  const { status, issues } = result.imageQuality;
+  if (status === 'ACCEPTABLE' && issues.length !== 0) {
+    throw new Error('AI_OUTPUT_INVALID_ACCEPTABLE_WITH_ISSUES');
+  }
+  if (status === 'RECAPTURE_REQUIRED' && issues.length === 0) {
+    throw new Error('AI_OUTPUT_INVALID_RECAPTURE_WITHOUT_ISSUES');
+  }
+  if (issues.some(({ imageIndex }) => imageIndex >= imageCount)) {
+    throw new Error('AI_OUTPUT_INVALID_IMAGE_INDEX');
+  }
+}
 ```
 
-정품에 대한 확정 Enum은 만들지 않는다.
+Structured Output 파싱 직후 `assertImageQualityContract`를 호출한다. API 계층은 `imageIndex`를 원래 요청의 `imageAssetIds[imageIndex]`와 결합해 `assetId`, `code`, `guidanceKo` 형태의 재촬영 오류를 만든다. `ACCEPTABLE`이면 `issues`는 비어 있어야 하고, `RECAPTURE_REQUIRED`이면 하나 이상이어야 한다.
+
+정품에 대한 확정 Enum은 만들지 않는다. `REVIEW_REQUIRED`는 신청을 차단하고 운영자 수동 검토 대기로 안내하는 신호다.
 
 ## 10.3 OpenAI Provider 예시
 
 ```ts
 import OpenAI from 'openai';
 import { zodTextFormat } from 'openai/helpers/zod';
-import { BagVisionSchema } from '@/contracts/analysis';
+import {
+  assertImageQualityContract,
+  BagVisionSchema,
+} from '@/contracts/analysis';
+import { ImageQualityInsufficientError } from '@/providers/openai-analysis';
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -1053,6 +1110,14 @@ export async function analyzeBagImages(imageUrls: string[]) {
     throw new Error('OPENAI_STRUCTURED_OUTPUT_EMPTY');
   }
 
+  assertImageQualityContract(response.output_parsed, imageUrls.length);
+
+  if (response.output_parsed.imageQuality.status === 'RECAPTURE_REQUIRED') {
+    throw new ImageQualityInsufficientError(
+      response.output_parsed.imageQuality.issues,
+    );
+  }
+
   return {
     result: response.output_parsed,
     model,
@@ -1069,8 +1134,9 @@ export async function analyzeBagImages(imageUrls: string[]) {
 
 - 사진에서 관찰할 수 있는 내용만 기술
 - 동일 제품의 여러 각도로 간주
+- 품질 미달 사진은 이미지 인덱스, 허용된 원인 코드, 짧은 한국어 재촬영 안내로 반환
 - 모호한 경우 신뢰도를 낮춤
-- 정품 확정 금지
+- 정품·가품 확정 금지, `REVIEW_REQUIRED`는 수동 검토 신호로만 사용
 - 브랜드 로고만으로 제품 모델을 단정하지 않음
 - 수치 범위 준수
 - 한국어 요약은 300자 이하
@@ -1078,6 +1144,8 @@ export async function analyzeBagImages(imageUrls: string[]) {
 ## 10.5 Hybrid 폴백
 
 ```ts
+import { isImageQualityInsufficient } from '@/providers/openai-analysis';
+
 export async function analyzeWithFallback(input: AnalyzeInput) {
   if (process.env.AI_MODE === 'fixture') {
     return fixtureProvider.analyze(input);
@@ -1086,6 +1154,7 @@ export async function analyzeWithFallback(input: AnalyzeInput) {
   try {
     return await openAiProvider.analyze(input);
   } catch (error) {
+    if (isImageQualityInsufficient(error)) throw error;
     if (process.env.AI_MODE !== 'hybrid') throw error;
 
     const fallback = await fixtureProvider.analyze(input);
@@ -1098,12 +1167,16 @@ export async function analyzeWithFallback(input: AnalyzeInput) {
 }
 ```
 
+`IMAGE_QUALITY_INSUFFICIENT`는 제공자 장애가 아니므로 Hybrid 폴백 대상에서 반드시 제외한다. Route Handler는 이 오류를 `422`와 자산별 재촬영 안내로 변환한다.
+
 시연 전에 반드시 다음을 검증한다.
 
 - API 키 사용 가능
 - 프로젝트 예산·사용량 알림 설정
 - 모델 접근 가능
 - 3개 데모 이미지 각각 live 분석 성공
+- 저품질 Fixture에서 422와 이미지별 재촬영 안내 반환
+- `REVIEW_REQUIRED` 분석의 신청 생성 차단
 - 네트워크 차단 상황에서 fixture 전환 성공
 - 폴백 UI가 오류처럼 보이지 않고 “분석 완료”로 이어짐
 
@@ -1194,6 +1267,7 @@ erDiagram
     AUTH_USERS ||--o{ ANALYSES : requests
     ANALYSES ||--o{ ANALYSIS_IMAGES : contains
     MEDIA_ASSETS ||--o{ ANALYSIS_IMAGES : referenced_by
+    ANALYSES ||--o| MANUAL_REVIEW_CASES : may_require
     ANALYSES ||--o{ ANALYSIS_RECOMMENDATIONS : produces
     PRODUCTS ||--o{ ANALYSIS_RECOMMENDATIONS : recommended
     AUTH_USERS ||--o{ APPLICATIONS : creates
@@ -1228,9 +1302,17 @@ erDiagram
       text material_type
       text condition_grade
       int damage_severity
+      text authenticity_signal
       int reusable_rate
       int reusable_area_cm2
       jsonb provider_result
+    }
+    MANUAL_REVIEW_CASES {
+      uuid id PK
+      uuid analysis_id FK,UK
+      text status
+      text reason_code
+      timestamptz created_at
     }
     PRODUCTS {
       uuid id PK
@@ -1337,12 +1419,14 @@ PDF 생성은 필수가 아니다. HTML 보증서 페이지에 인쇄 CSS를 적
 | 409 | `PAYMENT_ALREADY_COMPLETED` | 결제 중복 |
 | 409 | `APPROVAL_ALREADY_PROCESSED` | 승인 중복 |
 | 409 | `CERTIFICATE_NOT_READY` | 완료 전 보증서 요청 |
+| 422 | `IMAGE_QUALITY_INSUFFICIENT` | 분석 가능한 사진 품질 미달, 재촬영 필요 |
+| 422 | `AUTHENTICITY_REVIEW_REQUIRED` | 정품 판정 없이 수동 검토 대기, 신청 미생성 |
 | 422 | `AI_OUTPUT_INVALID` | 구조화 결과 검증 실패 |
 | 502 | `AI_PROVIDER_ERROR` | OpenAI 오류, live 모드 |
 | 504 | `AI_PROVIDER_TIMEOUT` | OpenAI 시간 초과, live 모드 |
 | 500 | `INTERNAL_ERROR` | 예기치 않은 오류 |
 
-Hybrid 모드에서 OpenAI 오류 후 Fixture로 성공한 경우 5xx를 반환하지 않는다.
+Hybrid 모드에서 OpenAI 오류 후 Fixture로 성공한 경우 5xx를 반환하지 않는다. 단, 사진 품질 미달은 제공자 오류가 아니므로 폴백하지 않고 422를 유지한다.
 
 ---
 
@@ -1412,8 +1496,11 @@ models/{productCode}/model.glb
 - 운영자는 `profiles.role = OPERATOR`일 때 모든 신청·분석 조회
 - `products`는 인증 사용자에게 읽기 허용
 - 원본 이미지는 고객 본인 및 운영자만 읽기 허용
+- 고객용 생성·상태 변경은 인증·소유권 검사를 마친 Route Handler가 `service_role`로 수행하며, 고객의 직접 PostgREST 결과 쓰기는 허용하지 않음
+- DB 트리거는 분석-이미지와 신청-분석의 소유자가 같은지 확인하고, `REVIEW_REQUIRED` 분석의 신청 생성을 거부
+- `source-products`는 첫 경로 세그먼트가 `auth.uid()`인 객체만 고객이 읽고 쓰며, `catalog-assets` 쓰기는 운영자만 허용
 
-동봉된 `supabase-schema.sql`에 최소 테이블·Seed·RLS 예시가 포함되어 있다.
+동봉된 `supabase-schema.sql`에 최소 테이블·Seed·RLS·Storage 버킷 및 객체 정책 예시가 포함되어 있다.
 
 ---
 
@@ -1453,13 +1540,14 @@ ENABLE_DEMO_LOGIN=true
 | Contract | `openapi.yaml` 파싱 및 주요 endpoint 존재 검사 |
 | Upload | 형식·용량·파일 수 검증 |
 | AI | Structured Output 정상 파싱 |
+| Image quality | 7개 품질 코드, 이미지별 안내, 품질 미달 시 422 및 분석 미생성 |
 | AI fallback | 타임아웃·오류 시 Fixture 전환 |
 | Rule Engine | 등급·손상도별 재활용률 계산 |
 | Recommendation | 면적 임계값별 제품 추천 |
 | Product Asset | 활성 제품마다 목록 이미지와 3D URL 존재 |
-| Application | 추천 제품만 신청 가능 |
+| Application | 추천 제품만 신청 가능, `REVIEW_REQUIRED` 분석은 신청 미생성 |
 | Idempotency | 중복 신청·결제·승인 방지 |
-| Authorization | 고객의 타인 신청 접근 차단 |
+| Authorization | 고객의 타인 데이터 접근·직접 결과 쓰기 차단, Storage 소유자 경로 검사 |
 | Timeline | 0/5/10/20/35/50/65초 상태 계산 |
 | Certificate | 완료 전 409, 완료 후 정상 발급 |
 
@@ -1480,9 +1568,12 @@ CUSTOMER 로그인
 → 완료 Seed 신청의 보증서 확인
 ```
 
+추가 E2E에서는 `LOW_QUALITY_RECAPTURE`가 422와 이미지별 안내를 반환하고 분석을 만들지 않는지, `CROSSBODY_HEAVY_WEAR`의 `REVIEW_REQUIRED` 분석이 422와 수동 검토 대기를 반환하며 신청·결제로 진입하지 않는지 확인한다.
+
 ### 18.3 시연 안전장치
 
 - 데모용 이미지 3세트 로컬·Storage에 모두 준비
+- 저품질 재촬영 Fixture와 수동 검토 Fixture를 별도 준비
 - AI 실패 버튼 또는 환경변수로 fallback 동작 사전 점검
 - 3D 모델을 CDN 실패에 대비해 Next.js `public`에도 복사 가능
 - 완료 보증서 시연은 실시간 65초 대기 대신 Seed 완료 신청을 별도 제공
@@ -1499,7 +1590,7 @@ CUSTOMER 로그인
 | 1 | 범위·계약 고정, 프로젝트 생성 | OpenAPI 초안, 라우팅, 디자인 토큰, Supabase 프로젝트 |
 | 2 | DB·Auth·Seed | 고객/운영자 데모 로그인, 제품 3개 조회 |
 | 3 | 이미지 업로드 | private bucket 업로드, 미리보기, 검증 |
-| 4 | OpenAI 분석 | 실제 이미지 분석, Zod 파싱, 로그 |
+| 4 | OpenAI 분석 | 실제 이미지 분석, Zod 파싱, 사진 품질·재촬영 분기, 로그 |
 | 5 | Fixture 폴백·추천 엔진 | hybrid 모드, 재활용률·제품 추천 결과 UI |
 | 6 | 제품 그리드·3D 상세 | 모든 카드 전체 이미지, 모든 상세 GLB·glTF 뷰어 |
 | 7 | 신청·Mock 결제 | 신청 생성, 옵션 검증, 결제 후 승인 대기 |
@@ -1514,6 +1605,8 @@ CUSTOMER 로그인
 - 데모 로그인
 - 이미지 업로드
 - 실제 OpenAI 분석 + Fixture 폴백
+- 사진 품질 미달 재촬영 안내
+- `REVIEW_REQUIRED` 신청 차단 및 수동 검토 대기 안내
 - 추천 제품 3개
 - 제품 목록 전체 이미지
 - 제품 3종 상세 3D
@@ -1554,13 +1647,12 @@ CUSTOMER 로그인
 
 ### 예외 흐름
 
-운영자 목록에 다음 Seed 행을 함께 둔다.
+신청 전 예외는 별도 Fixture로 보여준다.
 
-- `AUTHENTICITY_REVIEW_REQUIRED`: 정품 판정이 아니라 추가 확인 필요 사례
-- `PRODUCTION_UNAVAILABLE`: 실물 검수 후 제작 불가 사례
-- `CANCELED`: 고객 취소 사례
+- `LOW_QUALITY_RECAPTURE`: 품질 원인별 한국어 안내를 표시하고 재촬영 화면으로 복귀
+- `CROSSBODY_HEAVY_WEAR`: `REVIEW_REQUIRED`를 정품·가품 판정으로 표시하지 않고, 신청 미생성 및 수동 검토 대기를 안내
 
-버튼을 추가하지 않고 상태 badge와 설명만 보여준다.
+운영자 신청 목록에는 `ADDITIONAL_REVIEW_REQUIRED`와 `PRODUCTION_UNAVAILABLE` Seed를 상태 badge와 설명으로 보여준다. `REVIEW_REQUIRED` 분석은 신청 행으로 만들지 않는다.
 
 ---
 
@@ -1632,9 +1724,12 @@ Spring Boot를 선택할 경우 추가 작업:
 - [ ] 고객과 운영자 데모 계정이 분리된다.
 - [ ] OpenAI API 키가 클라이언트 번들에 포함되지 않는다.
 - [ ] AI live 호출과 fixture fallback이 모두 검증된다.
+- [ ] 사진 품질 미달은 폴백하지 않고 422와 이미지별 재촬영 안내를 반환하며 성공 분석을 만들지 않는다.
+- [ ] `REVIEW_REQUIRED`는 정품·가품 판정으로 표시되지 않고 신청·결제를 차단한다.
 - [ ] 제품 3종의 목록 전체 이미지가 존재한다.
 - [ ] 제품 3종의 상세 3D 자산이 정상 로드된다.
 - [ ] 추천되지 않은 제품 신청이 서버에서 차단된다.
+- [ ] 고객은 다른 고객의 DB 행·원본 객체에 접근할 수 없고 분석·신청 결과를 PostgREST로 직접 쓸 수 없다.
 - [ ] Mock 결제 후 운영자 목록에 신청이 표시된다.
 - [ ] 승인 버튼은 `PENDING_APPROVAL`에서만 활성화된다.
 - [ ] 승인 후 타임라인이 자동 진행된다.
@@ -1649,8 +1744,8 @@ Spring Boot를 선택할 경우 추가 작업:
 | 파일 | 설명 |
 |---|---|
 | `openapi.yaml` | OpenAPI 3.1 API 계약 |
-| `mock-data.json` | 제품·분석·신청·예외 상태 Fixture |
-| `supabase-schema.sql` | 최소 DB·Seed·RLS 예시 |
+| `mock-data.json` | 제품·분석·재촬영·수동 검토·신청 Fixture |
+| `supabase-schema.sql` | 최소 DB·Seed·RLS·Storage 정책 예시 |
 | `.env.example` | 환경변수 템플릿 |
 | `prompts/bag-analysis.system.txt` | OpenAI 시스템 프롬프트 |
 | `examples/openai-analysis.ts` | OpenAI Structured Output 예시 |

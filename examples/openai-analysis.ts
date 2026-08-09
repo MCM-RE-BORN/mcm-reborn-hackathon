@@ -1,8 +1,31 @@
+import { readFile } from 'node:fs/promises';
 import OpenAI from 'openai';
 import { zodTextFormat } from 'openai/helpers/zod';
 import { z } from 'zod';
 
+const ImageQualityIssueCodeSchema = z.enum([
+  'BLUR',
+  'TOO_DARK',
+  'TOO_BRIGHT',
+  'GLARE',
+  'PRODUCT_CROPPED',
+  'INSUFFICIENT_DETAIL',
+  'MIXED_PRODUCTS',
+]);
+
+const ImageQualityIssueSchema = z.object({
+  imageIndex: z.number().int().min(0).max(3),
+  code: ImageQualityIssueCodeSchema,
+  guidanceKo: z.string().min(1).max(120),
+});
+
+const ImageQualitySchema = z.object({
+  status: z.enum(['ACCEPTABLE', 'RECAPTURE_REQUIRED']),
+  issues: z.array(ImageQualityIssueSchema).max(7),
+});
+
 const BagVisionSchema = z.object({
+  imageQuality: ImageQualitySchema,
   sourceCategory: z.enum([
     'BACKPACK',
     'TOTE_SHOPPER',
@@ -51,16 +74,46 @@ const BagVisionSchema = z.object({
 });
 
 export type BagVisionResult = z.infer<typeof BagVisionSchema>;
+export type ImageQualityIssue = z.infer<typeof ImageQualityIssueSchema>;
+export type ImageQualityIssueCode = z.infer<typeof ImageQualityIssueCodeSchema>;
 
-const SYSTEM_PROMPT = `
-You are a visual inspection component for an upcycling hackathon prototype.
-Analyze all images as views of one bag. Describe only visible evidence.
-Never declare authenticity or counterfeit status. Do not calculate product
-recommendations, material area, price, or carbon savings. Return only the
-structured schema. summaryKo must be concise Korean.
-`.trim();
+export class ImageQualityInsufficientError extends Error {
+  readonly code = 'IMAGE_QUALITY_INSUFFICIENT';
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  constructor(
+    readonly issues: readonly ImageQualityIssue[],
+  ) {
+    super('Submitted images must be recaptured before analysis can continue.');
+    this.name = 'ImageQualityInsufficientError';
+  }
+}
+
+export function isImageQualityInsufficient(
+  error: unknown,
+): error is ImageQualityInsufficientError {
+  return error instanceof ImageQualityInsufficientError;
+}
+
+export function assertImageQualityContract(
+  result: BagVisionResult,
+  imageCount: number,
+): void {
+  const { status, issues } = result.imageQuality;
+  if (status === 'ACCEPTABLE' && issues.length !== 0) {
+    throw new Error('AI_OUTPUT_INVALID_ACCEPTABLE_WITH_ISSUES');
+  }
+  if (status === 'RECAPTURE_REQUIRED' && issues.length === 0) {
+    throw new Error('AI_OUTPUT_INVALID_RECAPTURE_WITHOUT_ISSUES');
+  }
+  if (issues.some(({ imageIndex }) => imageIndex >= imageCount)) {
+    throw new Error('AI_OUTPUT_INVALID_IMAGE_INDEX');
+  }
+}
+
+const systemPromptPromise = readFile(
+  new URL('../prompts/bag-analysis.system.txt', import.meta.url),
+  'utf8',
+);
 
 export async function analyzeBagImages(
   imageUrls: readonly string[],
@@ -76,6 +129,8 @@ export async function analyzeBagImages(
     throw new Error('IMAGE_COUNT_OUT_OF_RANGE');
   }
 
+  const systemPrompt = (await systemPromptPromise).trim();
+  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
   const model = process.env.OPENAI_VISION_MODEL ?? 'gpt-5.6';
 
   const response = await openai.responses.parse({
@@ -84,7 +139,7 @@ export async function analyzeBagImages(
     input: [
       {
         role: 'system',
-        content: [{ type: 'input_text', text: SYSTEM_PROMPT }],
+        content: [{ type: 'input_text', text: systemPrompt }],
       },
       {
         role: 'user',
@@ -108,6 +163,14 @@ export async function analyzeBagImages(
 
   if (!response.output_parsed) {
     throw new Error('OPENAI_STRUCTURED_OUTPUT_EMPTY');
+  }
+
+  assertImageQualityContract(response.output_parsed, imageUrls.length);
+
+  if (response.output_parsed.imageQuality.status === 'RECAPTURE_REQUIRED') {
+    throw new ImageQualityInsufficientError(
+      response.output_parsed.imageQuality.issues,
+    );
   }
 
   return {
