@@ -255,8 +255,10 @@ flowchart LR
 
 ### 4.1 Next.js 권장 구조
 
+현재 저장소의 Next.js 애플리케이션 루트는 `mcm-reborn/`이다. 생성된 `app/` 구조를 유지해 불필요한 이동 충돌을 피하며, 공개 자산은 `mcm-reborn/public/` 아래에 배치한다. 아래 트리는 저장소 루트 기준이다.
+
 ```text
-src/
+mcm-reborn/
 ├── app/
 │   ├── (customer)/
 │   │   ├── login/
@@ -1506,6 +1508,8 @@ models/{productCode}/model.glb
 
 ## 17. 환경변수
 
+환경변수 템플릿은 저장소 루트의 `.env.example`에서 관리한다. 로컬 애플리케이션 실행 시 이 파일을 `mcm-reborn/.env.local`로 복사한 뒤 값을 설정하며, 비밀값이 들어간 `.env.local`은 커밋하지 않는다.
+
 ```bash
 # Public
 NEXT_PUBLIC_SUPABASE_URL=
@@ -1746,7 +1750,7 @@ Spring Boot를 선택할 경우 추가 작업:
 | `openapi.yaml` | OpenAPI 3.1 API 계약 |
 | `mock-data.json` | 제품·분석·재촬영·수동 검토·신청 Fixture |
 | `supabase-schema.sql` | 최소 DB·Seed·RLS·Storage 정책 예시 |
-| `.env.example` | 환경변수 템플릿 |
+| `.env.example` | 저장소 루트의 환경변수 템플릿. 로컬 실행 시 `mcm-reborn/.env.local`로 복사 |
 | `prompts/bag-analysis.system.txt` | OpenAI 시스템 프롬프트 |
 | `examples/openai-analysis.ts` | OpenAI Structured Output 예시 |
 | `examples/mock-status.ts` | 자동 상태 계산 예시 |
