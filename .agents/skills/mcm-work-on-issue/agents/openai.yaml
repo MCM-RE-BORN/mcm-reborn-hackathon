@@ -1,0 +1,4 @@
+interface:
+  display_name: "MCM 이슈 작업"
+  short_description: "MCM 협업 규칙에 따라 이슈를 계획하고 구현"
+  default_prompt: "Use $mcm-work-on-issue to plan and implement this repository issue under the team collaboration rules."
