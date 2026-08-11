@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 협업 규칙 확인
+    url: https://github.com/MCM-RE-BORN/mcm-reborn-hackathon/blob/develop/docs/COLLABORATION.md
+    about: 이슈를 만들기 전에 작업 준비 기준과 범위 규칙을 확인해 주세요.

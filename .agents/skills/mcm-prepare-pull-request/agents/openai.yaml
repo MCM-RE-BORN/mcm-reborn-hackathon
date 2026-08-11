@@ -1,0 +1,4 @@
+interface:
+  display_name: "MCM PR 준비"
+  short_description: "완료 기준과 AI 공개 항목으로 PR 준비 상태를 검증"
+  default_prompt: "Use $mcm-prepare-pull-request to verify this change and draft a review-ready pull request."

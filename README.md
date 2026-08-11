@@ -1,8 +1,21 @@
-# MCM RE:BORN Hackathon API Package
+# MCM RE:BORN Hackathon
 
-2주 해커톤에서 바로 사용할 수 있도록 API 계약, 구현 가이드, Mock 데이터, Supabase 스키마와 OpenAI 분석 예시를 묶은 패키지입니다.
+이 저장소는 2주 해커톤에서 사용할 API 계약 패키지와 `mcm-reborn/`의 Next.js 애플리케이션 스캐폴드를 함께 관리합니다. 저장소 루트에는 API 계약, 구현 가이드, Mock 데이터, Supabase 스키마와 OpenAI 분석 예시가 있고, 실제 웹 구현은 `mcm-reborn/`에서 진행합니다.
 
 이 저장소의 `develop` 브랜치를 2주 MVP의 단일 기준(source of truth)으로 사용합니다. 별도 PRD와 유저 플로우의 장인 분리, 실제 정품 검증, 실물 검수·재승인, 생산 용량, 공식 A/S, 감사 및 iOS 범위는 Post-MVP / Phase 2 로드맵입니다.
+
+## 협업 시작
+
+사람과 코딩 에이전트 모두 작업 전에 아래 순서로 기준을 확인합니다.
+
+1. [`AGENTS.md`](AGENTS.md) — 저장소 전체 작업 규칙과 필수 문서
+2. [`AI_RULES.md`](AI_RULES.md) — AI 작업 범위, 금지 사항, 검증과 공개 규칙
+3. [`docs/PROJECT_CONTEXT.md`](docs/PROJECT_CONTEXT.md) — 2주 MVP 기준과 이후 로드맵 경계
+4. [`docs/COLLABORATION.md`](docs/COLLABORATION.md) — 이슈, 브랜치, PR, 리뷰, QA 운영 규칙
+5. [`docs/REPOSITORY_STRUCTURE.md`](docs/REPOSITORY_STRUCTURE.md) — 루트 계약과 Next.js 앱의 경로·소유권
+6. [`mcm-reborn/AGENTS.md`](mcm-reborn/AGENTS.md) — Next.js 애플리케이션 작업 시 추가로 적용되는 규칙
+
+기여 절차는 [`CONTRIBUTING.md`](CONTRIBUTING.md)를 따릅니다. 제품 범위·사용자 흐름·계약·시연·의사결정은 각각 [`docs/PRD.md`](docs/PRD.md), [`docs/USER_FLOW.md`](docs/USER_FLOW.md), [`docs/API_CONTRACT.md`](docs/API_CONTRACT.md), [`docs/DEMO.md`](docs/DEMO.md), [`docs/DECISIONS.md`](docs/DECISIONS.md)에서 관리합니다. 저장소 전용 에이전트 스킬은 [`.agents/skills/`](.agents/skills/)에 있습니다.
 
 ## 포함 파일
 
@@ -20,6 +33,7 @@
 | `examples/Product3DViewer.tsx` | 모든 제품 상세에서 사용할 3D 뷰어 예시 |
 | `examples/model-viewer.d.ts` | React JSX custom element 타입 예시 |
 | `validate_package.py` | OpenAPI·Mock·AI 예시·핵심 SQL 보안 불변조건 검증 |
+| `mcm-reborn/` | Next.js 16 기반 웹 애플리케이션 스캐폴드와 npm 스크립트 |
 
 ## 확정된 UX 계약
 
@@ -37,12 +51,12 @@
 
 ## 빠른 시작 순서
 
-1. Next.js 프로젝트를 생성하고 Supabase를 연결합니다.
+1. 저장소 루트에서 `npm --prefix mcm-reborn ci`를 실행해 기존 Next.js 애플리케이션 의존성을 설치합니다.
 2. `supabase-schema.sql`을 실행합니다.
 3. Supabase Auth에 고객·운영자 데모 사용자를 생성하고 `profiles`에 역할을 저장합니다.
 4. SQL이 생성한 `source-products` private bucket과 `catalog-assets` public bucket 및 Storage 정책을 확인합니다.
 5. 보유한 목록 이미지와 GLB·glTF 자산을 `mock-data.json`의 경로에 맞게 배치하거나 URL을 수정합니다.
-6. `.env.example`을 `.env.local`로 복사하고 OpenAI·Supabase 값을 설정합니다.
+6. 루트의 `.env.example`을 `mcm-reborn/.env.local`로 복사하고 OpenAI·Supabase 값을 설정합니다.
 7. `openapi.yaml`을 기준으로 Route Handler를 구현합니다.
 8. `examples/openai-analysis.ts`와 프롬프트를 AI Provider에 적용합니다.
 9. `mock-data.json`의 `PENDING_APPROVAL` 신청과 예외 상태를 Seed합니다.
@@ -51,14 +65,14 @@
 ## 권장 패키지
 
 ```bash
-npm install openai zod @supabase/ssr @supabase/supabase-js @google/model-viewer
+npm --prefix mcm-reborn install openai zod @supabase/ssr @supabase/supabase-js @google/model-viewer
 ```
 
 OpenAPI TypeScript client를 생성할 경우 팀 표준에 맞는 생성기를 하나만 선택합니다. 생성기 없이 `contracts/` 타입을 직접 관리해도 2주 범위에서는 충분합니다.
 
 ## 3D 자산 체크
 
-활성 제품 3종 모두 아래 파일이 필요합니다.
+활성 제품 3종 모두 `mcm-reborn/`을 기준으로 아래 파일이 필요합니다.
 
 ```text
 public/assets/products/reborn-pouch/list.webp
@@ -93,13 +107,20 @@ public/assets/models/reborn-keyring.glb
 - model-viewer materials and variants: https://modelviewer.dev/examples/scenegraph/
 - Spring Boot Servlet Web Applications: https://docs.spring.io/spring-boot/reference/web/servlet.html
 
-## 패키지 검증
+## 설치와 검증
+
+저장소 루트에서 다음 명령을 실행합니다.
 
 ```bash
-python validate_package.py
+npm --prefix mcm-reborn ci
+python -X utf8 scripts/validate_collaboration.py
+python -X utf8 validate_package.py
+npm --prefix mcm-reborn run lint
+npm --prefix mcm-reborn run typecheck
+npm --prefix mcm-reborn run build
 ```
 
-PyYAML이 필요합니다. 성공 시 API 참조·operationId·제품 자산과 재촬영·수동 검토 차단·핵심 SQL 접근 정책의 정합성 검증 결과를 출력합니다.
+Python 검증에는 PyYAML이 필요합니다. `validate_package.py`는 API 참조·operationId·제품 자산과 재촬영·수동 검토 차단·핵심 SQL 접근 정책의 정합성을 확인합니다. 현재 `mcm-reborn/package.json`에는 자동 테스트 스크립트가 없으므로 테스트를 실행했다고 표시하지 말고, 추가 전까지 이 점을 남은 검증 공백으로 기록합니다.
 
 ## 중요 고지
 

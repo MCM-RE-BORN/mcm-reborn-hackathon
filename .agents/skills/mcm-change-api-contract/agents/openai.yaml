@@ -1,0 +1,4 @@
+interface:
+  display_name: "MCM API 계약 변경"
+  short_description: "OpenAPI·Mock·DB 계약을 승인 절차에 맞게 변경"
+  default_prompt: "Use $mcm-change-api-contract to update an API contract and all dependent artifacts safely."
