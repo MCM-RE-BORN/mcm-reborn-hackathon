@@ -17,7 +17,6 @@ create type public.application_status as enum (
   'SHIPPED',
   'COMPLETED',
   'ADDITIONAL_REVIEW_REQUIRED',
-  'AUTHENTICITY_REVIEW_REQUIRED',
   'PRODUCTION_UNAVAILABLE',
   'CANCELED'
 );
@@ -33,13 +32,17 @@ create table public.profiles (
 create table public.media_assets (
   id uuid primary key default gen_random_uuid(),
   owner_id uuid not null references auth.users(id) on delete cascade,
-  bucket text not null,
+  bucket text not null check (bucket = 'source-products'),
   path text not null,
   mime_type text not null check (mime_type in ('image/jpeg', 'image/png', 'image/webp')),
   size_bytes bigint not null check (size_bytes > 0 and size_bytes <= 6291456),
   purpose text not null check (purpose in ('SOURCE_PRODUCT', 'DAMAGE_CLOSEUP', 'INTERIOR', 'SERIAL')),
   upload_status text not null default 'PENDING' check (upload_status in ('PENDING', 'UPLOADED', 'FAILED')),
   created_at timestamptz not null default now(),
+  constraint media_assets_owner_path check (
+    path like owner_id::text || '/%'
+    and path !~ '(^|/)\.{1,2}(/|$)'
+  ),
   unique (bucket, path)
 );
 
@@ -74,6 +77,16 @@ create table public.analysis_images (
   media_asset_id uuid not null references public.media_assets(id) on delete cascade,
   display_order integer not null default 0,
   primary key (analysis_id, media_asset_id)
+);
+
+create table public.manual_review_cases (
+  id uuid primary key default gen_random_uuid(),
+  analysis_id uuid not null unique references public.analyses(id) on delete cascade,
+  status text not null default 'PENDING' check (status = 'PENDING'),
+  reason_code text not null default 'AUTHENTICITY_REVIEW_REQUIRED'
+    check (reason_code = 'AUTHENTICITY_REVIEW_REQUIRED'),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
 );
 
 create table public.products (
@@ -220,6 +233,11 @@ create trigger applications_set_updated_at
 before update on public.applications
 for each row execute function public.set_updated_at();
 
+drop trigger if exists manual_review_cases_set_updated_at on public.manual_review_cases;
+create trigger manual_review_cases_set_updated_at
+before update on public.manual_review_cases
+for each row execute function public.set_updated_at();
+
 create or replace function public.is_operator()
 returns boolean
 language sql
@@ -233,10 +251,230 @@ as $$
   );
 $$;
 
+-- Results and order records are created by Route Handlers with service_role.
+-- These triggers keep ownership links valid even if a server-side bug supplies
+-- IDs belonging to different customers. Identity fields stay immutable after
+-- creation; workflow/status fields may still be changed by trusted code.
+create or replace function public.enforce_analysis_identity()
+returns trigger
+language plpgsql
+set search_path = public
+as $$
+begin
+  if (new.id, new.customer_id, new.authenticity_signal, new.created_at)
+      is distinct from (old.id, old.customer_id, old.authenticity_signal, old.created_at) then
+    raise exception 'analysis identity and authenticity signal are immutable'
+      using errcode = '23514';
+  end if;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists analyses_enforce_identity on public.analyses;
+create trigger analyses_enforce_identity
+before update on public.analyses
+for each row execute function public.enforce_analysis_identity();
+
+create or replace function public.enforce_media_asset_identity()
+returns trigger
+language plpgsql
+set search_path = public
+as $$
+begin
+  if (
+    new.id,
+    new.owner_id,
+    new.bucket,
+    new.path,
+    new.mime_type,
+    new.size_bytes,
+    new.purpose,
+    new.created_at
+  ) is distinct from (
+    old.id,
+    old.owner_id,
+    old.bucket,
+    old.path,
+    old.mime_type,
+    old.size_bytes,
+    old.purpose,
+    old.created_at
+  ) then
+    raise exception 'media asset identity and upload metadata are immutable'
+      using errcode = '23514';
+  end if;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists media_assets_enforce_identity on public.media_assets;
+create trigger media_assets_enforce_identity
+before update on public.media_assets
+for each row execute function public.enforce_media_asset_identity();
+
+create or replace function public.enforce_analysis_image_owner_match()
+returns trigger
+language plpgsql
+set search_path = public
+as $$
+begin
+  if not exists (
+    select 1
+    from public.analyses a
+    join public.media_assets m on m.owner_id = a.customer_id
+    where a.id = new.analysis_id
+      and m.id = new.media_asset_id
+  ) then
+    raise exception 'analysis and media asset must belong to the same customer'
+      using errcode = '23514';
+  end if;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists analysis_images_enforce_owner on public.analysis_images;
+create trigger analysis_images_enforce_owner
+before insert or update on public.analysis_images
+for each row execute function public.enforce_analysis_image_owner_match();
+
+create or replace function public.enforce_manual_review_case()
+returns trigger
+language plpgsql
+set search_path = public
+as $$
+begin
+  if not exists (
+    select 1
+    from public.analyses a
+    where a.id = new.analysis_id
+      and a.authenticity_signal = 'REVIEW_REQUIRED'
+  ) then
+    raise exception 'manual review cases require a REVIEW_REQUIRED analysis'
+      using errcode = '23514';
+  end if;
+
+  if tg_op = 'UPDATE' then
+    if (
+      new.id,
+      new.analysis_id,
+      new.reason_code,
+      new.created_at
+    ) is distinct from (
+      old.id,
+      old.analysis_id,
+      old.reason_code,
+      old.created_at
+    ) then
+      raise exception 'manual review case identity and reason are immutable'
+        using errcode = '23514';
+    end if;
+  end if;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists manual_review_cases_enforce_invariants on public.manual_review_cases;
+create trigger manual_review_cases_enforce_invariants
+before insert or update on public.manual_review_cases
+for each row execute function public.enforce_manual_review_case();
+
+create or replace function public.ensure_manual_review_case()
+returns trigger
+language plpgsql
+set search_path = public
+as $$
+begin
+  if new.authenticity_signal = 'REVIEW_REQUIRED' then
+    insert into public.manual_review_cases (analysis_id)
+    values (new.id)
+    on conflict (analysis_id) do nothing;
+  end if;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists analyses_ensure_manual_review_case on public.analyses;
+create trigger analyses_ensure_manual_review_case
+after insert or update of authenticity_signal on public.analyses
+for each row execute function public.ensure_manual_review_case();
+
+-- Safe backfill for REVIEW_REQUIRED analyses that predate this table/trigger.
+insert into public.manual_review_cases (analysis_id)
+select a.id
+from public.analyses a
+where a.authenticity_signal = 'REVIEW_REQUIRED'
+on conflict (analysis_id) do nothing;
+
+create or replace function public.enforce_application_owner_match()
+returns trigger
+language plpgsql
+set search_path = public
+as $$
+declare
+  analysis_customer_id uuid;
+  analysis_authenticity_signal text;
+begin
+  select
+    a.customer_id,
+    a.authenticity_signal
+  into
+    analysis_customer_id,
+    analysis_authenticity_signal
+  from public.analyses a
+  where a.id = new.analysis_id;
+
+  if not found or analysis_customer_id is distinct from new.customer_id then
+    raise exception 'application and analysis must belong to the same customer'
+      using errcode = '23514';
+  end if;
+
+  if analysis_authenticity_signal = 'REVIEW_REQUIRED' then
+    raise exception 'AUTHENTICITY_REVIEW_REQUIRED: application creation is blocked pending manual review'
+      using errcode = '23514';
+  end if;
+
+  if tg_op = 'UPDATE' then
+    if (
+      new.id,
+      new.application_number,
+      new.customer_id,
+      new.analysis_id,
+      new.product_id,
+      new.mock_price_krw,
+      new.created_at
+    ) is distinct from (
+      old.id,
+      old.application_number,
+      old.customer_id,
+      old.analysis_id,
+      old.product_id,
+      old.mock_price_krw,
+      old.created_at
+    ) then
+      raise exception 'application identity, product, and price are immutable'
+        using errcode = '23514';
+    end if;
+  end if;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists applications_enforce_owner on public.applications;
+create trigger applications_enforce_owner
+before insert or update on public.applications
+for each row execute function public.enforce_application_owner_match();
+
 alter table public.profiles enable row level security;
 alter table public.media_assets enable row level security;
 alter table public.analyses enable row level security;
 alter table public.analysis_images enable row level security;
+alter table public.manual_review_cases enable row level security;
 alter table public.products enable row level security;
 alter table public.analysis_recommendations enable row level security;
 alter table public.applications enable row level security;
@@ -250,15 +488,24 @@ alter table public.idempotency_keys enable row level security;
 create policy profiles_self_read on public.profiles
 for select using (id = auth.uid() or public.is_operator());
 
-create policy media_assets_owner_all on public.media_assets
-for all using (owner_id = auth.uid() or public.is_operator())
-with check (owner_id = auth.uid() or public.is_operator());
+drop policy if exists media_assets_owner_all on public.media_assets;
+drop policy if exists media_assets_owner_read on public.media_assets;
+drop policy if exists media_assets_operator_insert on public.media_assets;
+drop policy if exists media_assets_operator_update on public.media_assets;
+drop policy if exists media_assets_operator_delete on public.media_assets;
 
+create policy media_assets_owner_read on public.media_assets
+for select to authenticated
+using (owner_id = auth.uid() or public.is_operator());
+
+drop policy if exists analyses_owner_read on public.analyses;
 create policy analyses_owner_read on public.analyses
-for select using (customer_id = auth.uid() or public.is_operator());
+for select to authenticated
+using (customer_id = auth.uid() or public.is_operator());
 
-create policy analyses_owner_insert on public.analyses
-for insert with check (customer_id = auth.uid());
+drop policy if exists analyses_owner_insert on public.analyses;
+drop policy if exists analyses_operator_insert on public.analyses;
+drop policy if exists analyses_operator_update on public.analyses;
 
 create policy analysis_images_read on public.analysis_images
 for select using (
@@ -266,6 +513,22 @@ for select using (
     select 1 from public.analyses a
     where a.id = analysis_id
       and (a.customer_id = auth.uid() or public.is_operator())
+  )
+);
+
+drop policy if exists manual_review_cases_owner_read on public.manual_review_cases;
+drop policy if exists manual_review_cases_operator_insert on public.manual_review_cases;
+drop policy if exists manual_review_cases_operator_update on public.manual_review_cases;
+drop policy if exists manual_review_cases_operator_delete on public.manual_review_cases;
+
+create policy manual_review_cases_owner_read on public.manual_review_cases
+for select to authenticated
+using (
+  exists (
+    select 1
+    from public.analyses a
+    where a.id = manual_review_cases.analysis_id
+    and (a.customer_id = auth.uid() or public.is_operator())
   )
 );
 
@@ -281,11 +544,14 @@ for select using (
   )
 );
 
+drop policy if exists applications_owner_read on public.applications;
 create policy applications_owner_read on public.applications
-for select using (customer_id = auth.uid() or public.is_operator());
+for select to authenticated
+using (customer_id = auth.uid() or public.is_operator());
 
-create policy applications_owner_insert on public.applications
-for insert with check (customer_id = auth.uid());
+drop policy if exists applications_owner_insert on public.applications;
+drop policy if exists applications_operator_insert on public.applications;
+drop policy if exists applications_operator_update on public.applications;
 
 create policy application_history_read on public.application_status_history
 for select using (
@@ -326,8 +592,40 @@ for select using (
 create policy analytics_insert on public.analytics_events
 for insert with check (user_id is null or user_id = auth.uid());
 
-create policy idempotency_owner on public.idempotency_keys
-for all using (user_id = auth.uid()) with check (user_id = auth.uid());
+drop policy if exists idempotency_owner on public.idempotency_keys;
+drop policy if exists idempotency_owner_read on public.idempotency_keys;
+
+create policy idempotency_owner_read on public.idempotency_keys
+for select to authenticated
+using (user_id = auth.uid() or public.is_operator());
+
+-- Supabase projects commonly grant broad table privileges to PostgREST roles.
+-- Make the intended boundary explicit: authenticated customers/operators can
+-- only read rows allowed by RLS. Route Handlers use service_role for every
+-- metadata, analysis, application, and manual-review write/state change.
+revoke all privileges on table
+  public.media_assets,
+  public.analyses,
+  public.applications,
+  public.manual_review_cases,
+  public.idempotency_keys
+from anon, authenticated;
+
+grant select on table
+  public.media_assets,
+  public.analyses,
+  public.applications,
+  public.manual_review_cases,
+  public.idempotency_keys
+to authenticated;
+
+grant all privileges on table
+  public.media_assets,
+  public.analyses,
+  public.applications,
+  public.manual_review_cases,
+  public.idempotency_keys
+to service_role;
 
 -- Product seed: replace asset paths with the supplied GLB/glTF files.
 insert into public.products (
@@ -391,6 +689,126 @@ on conflict (code) do update set
   active = excluded.active,
   sort_order = excluded.sort_order;
 
--- Storage buckets are normally created in the Supabase dashboard or Storage API.
--- source-products: private, max file size 6MB, MIME image/jpeg,image/png,image/webp
--- catalog-assets: public, contains list images, posters, GLB/glTF and HDR assets
+-- Idempotent Storage setup. Object names in source-products must begin with the
+-- owner's auth UID, for example: <uid>/<asset-uuid>.webp.
+insert into storage.buckets (
+  id,
+  name,
+  public,
+  file_size_limit,
+  allowed_mime_types
+) values
+(
+  'source-products',
+  'source-products',
+  false,
+  6291456,
+  array['image/jpeg', 'image/png', 'image/webp']::text[]
+),
+(
+  'catalog-assets',
+  'catalog-assets',
+  true,
+  52428800,
+  array[
+    'image/jpeg',
+    'image/png',
+    'image/webp',
+    'model/gltf-binary',
+    'model/gltf+json',
+    'image/vnd.radiance',
+    'application/octet-stream'
+  ]::text[]
+)
+on conflict (id) do update set
+  name = excluded.name,
+  public = excluded.public,
+  file_size_limit = excluded.file_size_limit,
+  allowed_mime_types = excluded.allowed_mime_types;
+
+drop policy if exists source_products_owner_read on storage.objects;
+drop policy if exists source_products_owner_insert on storage.objects;
+drop policy if exists source_products_owner_update on storage.objects;
+drop policy if exists source_products_owner_delete on storage.objects;
+drop policy if exists catalog_assets_public_read on storage.objects;
+drop policy if exists catalog_assets_operator_insert on storage.objects;
+drop policy if exists catalog_assets_operator_update on storage.objects;
+drop policy if exists catalog_assets_operator_delete on storage.objects;
+
+create policy source_products_owner_read on storage.objects
+for select to authenticated
+using (
+  bucket_id = 'source-products'
+  and (
+    (storage.foldername(name))[1] = auth.uid()::text
+    or public.is_operator()
+  )
+);
+
+create policy source_products_owner_insert on storage.objects
+for insert to authenticated
+with check (
+  bucket_id = 'source-products'
+  and (
+    (storage.foldername(name))[1] = auth.uid()::text
+    or public.is_operator()
+  )
+);
+
+create policy source_products_owner_update on storage.objects
+for update to authenticated
+using (
+  bucket_id = 'source-products'
+  and (
+    (storage.foldername(name))[1] = auth.uid()::text
+    or public.is_operator()
+  )
+)
+with check (
+  bucket_id = 'source-products'
+  and (
+    (storage.foldername(name))[1] = auth.uid()::text
+    or public.is_operator()
+  )
+);
+
+create policy source_products_owner_delete on storage.objects
+for delete to authenticated
+using (
+  bucket_id = 'source-products'
+  and (
+    (storage.foldername(name))[1] = auth.uid()::text
+    or public.is_operator()
+  )
+);
+
+-- Public buckets bypass access control for public download URLs. This SELECT
+-- policy additionally permits Storage API reads/listing for anonymous clients.
+create policy catalog_assets_public_read on storage.objects
+for select to public
+using (bucket_id = 'catalog-assets');
+
+create policy catalog_assets_operator_insert on storage.objects
+for insert to authenticated
+with check (
+  bucket_id = 'catalog-assets'
+  and public.is_operator()
+);
+
+create policy catalog_assets_operator_update on storage.objects
+for update to authenticated
+using (
+  bucket_id = 'catalog-assets'
+  and public.is_operator()
+)
+with check (
+  bucket_id = 'catalog-assets'
+  and public.is_operator()
+);
+
+create policy catalog_assets_operator_delete on storage.objects
+for delete to authenticated
+using (
+  bucket_id = 'catalog-assets'
+  and public.is_operator()
+);
