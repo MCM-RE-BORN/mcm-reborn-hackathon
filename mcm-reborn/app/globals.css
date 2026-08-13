@@ -73,6 +73,7 @@
   /* Layout and controls */
   --layout-shell-max: 25.125rem;
   --layout-content-max: 21.875rem;
+  --layout-nav-max: 22.25rem;
   --layout-gutter: var(--space-14);
   --layout-gutter-wide: var(--space-16);
   --layout-header-height: 7rem;
@@ -99,6 +100,7 @@
   --shadow-section: inset 0 0 var(--space-1) rgb(0 0 0 / 3%);
   --opacity-placeholder: 40%;
   --opacity-disabled: 48%;
+  --opacity-muted-icon: 55%;
   --duration-fast: 160ms;
   --duration-standard: 240ms;
   --duration-recommendation-loop: 3312.942ms;
