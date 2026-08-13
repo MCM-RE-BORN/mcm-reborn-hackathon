@@ -3,6 +3,8 @@ export type DemoState =
   | "loading"
   | "empty"
   | "error"
+  | "permission"
+  | "locked"
   | "change-request"
   | "canceled";
 

@@ -20,6 +20,7 @@ export default async function OrderCompletePage({
     "loading",
     "empty",
     "error",
+    "permission",
   ]);
 
   return <OrderCompleteScreen state={state} />;

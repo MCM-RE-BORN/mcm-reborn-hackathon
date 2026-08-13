@@ -29,6 +29,7 @@ export function PageHeader({
               alt=""
               aria-hidden="true"
               height={13}
+              loading="eager"
               src="/assets/mvp-beta/icon-back.svg"
               width={15}
             />

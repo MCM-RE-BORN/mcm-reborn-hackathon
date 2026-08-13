@@ -22,6 +22,7 @@ export default async function OrderDetailsPage({
     "loading",
     "empty",
     "error",
+    "permission",
     "change-request",
     "canceled",
   ]);

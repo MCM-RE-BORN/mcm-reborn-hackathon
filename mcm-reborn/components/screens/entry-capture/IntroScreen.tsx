@@ -12,18 +12,33 @@ type IntroScreenProps = {
 const STEPS = [
   {
     index: "01",
-    title: "AI 사전 분석",
-    description: "보유한 MCM 제품의 상태와 예상 재활용률을 먼저 확인해요.",
+    title: "제품 사진 등록",
+    description: "보유한 MCM 가방·지갑·액세서리의 모습을 선명하게 등록해요.",
   },
   {
     index: "02",
-    title: "맞춤 디자인 선택",
-    description: "제품 소재에 맞춘 디자인과 3D 목업을 비교해요.",
+    title: "AI 사전 분석",
+    description: "사진으로 소재 상태와 예상 재활용 가능 범위를 확인해요.",
   },
   {
     index: "03",
-    title: "공식 장인 제작",
-    description: "실물 검수 이후 MCM 장인이 새로운 쓰임을 완성해요.",
+    title: "추천 디자인 선택",
+    description: "기존 계약의 파우치·카드지갑·키링 후보를 비교해요.",
+  },
+  {
+    index: "04",
+    title: "3D 목업 확인",
+    description: "선택한 디자인의 정적 3D 미리보기와 제작 제약을 확인해요.",
+  },
+  {
+    index: "05",
+    title: "신청·실물 검수·제작",
+    description: "신청 후 실물 검수 조건을 확인하고 장인 제작을 기다려요.",
+  },
+  {
+    index: "06",
+    title: "완료·ESG Passport",
+    description: "완료 건의 제작 여정과 데모 ESG 기록을 확인해요.",
   },
 ];
 
@@ -53,11 +68,26 @@ function IntroUnavailable({ state }: { state: PageState }) {
     );
   }
 
+  if (state === "permission" || state === "limited") {
+    return (
+      <StatusPanel
+        action={
+          <ButtonLink fullWidth href="/" variant="outline">
+            홈에서 둘러보기
+          </ButtonLink>
+        }
+        description="이 기기에서는 일부 소개 콘텐츠만 이용할 수 있어요. 홈에서 베타 흐름을 계속 확인할 수 있습니다."
+        title="소개 화면 이용이 제한되어 있어요"
+        tone="permission"
+      />
+    );
+  }
+
   return null;
 }
 
 export function IntroScreen({ state }: IntroScreenProps) {
-  const unavailable = <IntroUnavailable state={state} />;
+  const showContent = state === "normal";
 
   return (
     <AppShell contentClassName={styles.introContent}>
@@ -73,7 +103,7 @@ export function IntroScreen({ state }: IntroScreenProps) {
         <p>MCM RE:BORN BETA</p>
       </header>
 
-      {unavailable || (
+      {showContent ? (
         <>
           <section className={styles.introHero}>
             <p className={styles.eyebrow}>OFFICIAL UPCYCLING SERVICE</p>
@@ -100,10 +130,17 @@ export function IntroScreen({ state }: IntroScreenProps) {
           </ol>
 
           <aside className={styles.notice}>
-            AI 분석과 3D 목업은 제작 전 예상 결과입니다. 실물 검수와 수작업
-            제작 결과에 따라 조건 또는 완성품이 달라질 수 있어요. 정품 확인이
-            어렵거나 가품으로 판정된 제품은 제작 신청이 제한됩니다.
+            대상은 업사이클링을 검토할 MCM 가방·지갑·액세서리입니다. AI 분석과
+            3D 목업은 제작 전 예상 결과이며, 실물 검수와 수작업 제작에 따라 조건
+            또는 완성품이 달라질 수 있어요. AI는 정품을 판정하지 않으며, 추가
+            확인 신호가 있으면 수동 검토 전까지 신청이 보류됩니다. NFC·QR
+            Passport 열기는 현재 UI 미리보기로만 제공합니다.
           </aside>
+        </>
+      ) : (
+        <>
+          <h1 className={styles.visuallyHidden}>MCM RE:BORN 서비스 소개</h1>
+          <IntroUnavailable state={state} />
         </>
       )}
 

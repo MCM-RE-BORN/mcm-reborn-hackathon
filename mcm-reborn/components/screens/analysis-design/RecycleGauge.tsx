@@ -51,4 +51,3 @@ export function RecycleGauge({ grade, value }: RecycleGaugeProps) {
     </figure>
   );
 }
-

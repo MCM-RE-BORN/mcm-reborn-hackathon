@@ -20,6 +20,7 @@ export default async function OrderNewPage({
     "loading",
     "empty",
     "error",
+    "permission",
   ]);
 
   return <OrderNewScreen state={state} />;

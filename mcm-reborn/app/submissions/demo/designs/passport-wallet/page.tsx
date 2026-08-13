@@ -15,4 +15,3 @@ export default async function MockupPage({ searchParams }: MockupPageProps) {
 
   return <MockupDetailScreen state={readDemoState(state)} />;
 }
-

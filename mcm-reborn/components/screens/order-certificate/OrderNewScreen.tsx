@@ -12,7 +12,10 @@ import { DemoStatePanel } from "./DemoStatePanel";
 import styles from "./order-certificate.module.css";
 
 type OrderNewScreenProps = {
-  state: Extract<DemoState, "normal" | "loading" | "empty" | "error">;
+  state: Extract<
+    DemoState,
+    "normal" | "loading" | "empty" | "error" | "permission"
+  >;
 };
 
 export function OrderNewScreen({ state }: OrderNewScreenProps) {
@@ -33,7 +36,12 @@ export function OrderNewScreen({ state }: OrderNewScreenProps) {
           </StickyActionBar>
         ) : undefined
       }
-      header={<PageHeader backHref="/" title="업사이클링 신청" />}
+      header={
+        <PageHeader
+          backHref="/submissions/demo/designs/passport-wallet"
+          title="업사이클링 신청"
+        />
+      }
     >
       {!isNormal ? (
         <div className={styles.stateInset}>
@@ -68,6 +76,7 @@ export function OrderNewScreen({ state }: OrderNewScreenProps) {
             />
           </section>
           <SectionBand />
+          {/* TODO(post-beta): persist the approved application and create the pickup request through the contract API. */}
           <form action="/checkout" id="order-application-form" method="get">
             <Section title="주문자 정보">
               <div className={styles.fieldStack}>
@@ -76,7 +85,6 @@ export function OrderNewScreen({ state }: OrderNewScreenProps) {
                   defaultValue={DEMO_ORDER.customer.name}
                   id="customer-name"
                   label="이름"
-                  name="name"
                   required
                 />
                 <TextField
@@ -85,17 +93,16 @@ export function OrderNewScreen({ state }: OrderNewScreenProps) {
                   id="customer-phone"
                   inputMode="tel"
                   label="휴대폰 번호"
-                  name="phone"
                   required
                   type="tel"
                 />
                 <div className={styles.addressRow}>
                   <TextField
-                    autoComplete="street-address"
-                    defaultValue={DEMO_ORDER.customer.address}
-                    id="customer-address"
-                    label="주소"
-                    name="address"
+                    autoComplete="postal-code"
+                    defaultValue={DEMO_ORDER.customer.postalCode}
+                    id="customer-postal-code"
+                    inputMode="numeric"
+                    label="우편번호"
                     required
                   />
                   {/* TODO(post-beta): 주소 검색 서비스 연동 */}
@@ -109,50 +116,58 @@ export function OrderNewScreen({ state }: OrderNewScreenProps) {
                   </Button>
                 </div>
                 <TextField
+                  autoComplete="street-address"
+                  defaultValue={DEMO_ORDER.customer.address}
+                  id="customer-address"
+                  label="주소"
+                  required
+                />
+                <TextField
                   autoComplete="address-line2"
                   defaultValue={DEMO_ORDER.customer.addressDetail}
                   id="customer-address-detail"
                   label="상세 주소"
-                  name="addressDetail"
                   required
                 />
                 <p className={styles.postBetaNote} id="address-post-beta">
-                  TODO(post-beta): 주소 검색 연동 전까지 데모 주소를 직접 입력합니다.
+                  베타에서는 주소 검색 없이 데모 주소를 직접 확인합니다.
                 </p>
               </div>
             </Section>
             <SectionBand />
             <Section
-              description="현재 베타는 계약에 정의된 택배 수거만 사용합니다."
+              description="현재 베타 데모에서는 택배 수거만 표시합니다."
               title="수거 정보"
             >
               <div className={styles.scheduleGrid}>
                 <TextField
                   disabled
-                  hint="TODO(post-beta): 수거 일정 선택"
+                  hint="수거 일정 선택은 정식 연동 후 제공됩니다."
                   id="pickup-date"
                   label="수거 희망일 (베타 미지원)"
-                  name="pickupDate"
                   placeholder="추후 제공"
                 />
                 <TextField
                   disabled
-                  hint="TODO(post-beta): 시간대 선택"
+                  hint="시간대 선택은 정식 연동 후 제공됩니다."
                   id="pickup-time"
                   label="수거 시간대 (베타 미지원)"
-                  name="pickupTime"
                   placeholder="추후 제공"
                 />
               </div>
               <fieldset className={styles.consentGroup}>
                 <legend>필수 확인</legend>
                 <label className={styles.checkRow}>
-                  <input name="pickupAgreement" required type="checkbox" />
-                  <span>택배 수거와 데모 제작 안내를 확인했습니다.</span>
+                  <input required type="checkbox" />
+                  <span>데모 이용 약관을 확인했습니다. (demoTermsAccepted)</span>
                 </label>
                 <label className={styles.checkRow}>
-                  <input name="privacyAgreement" required type="checkbox" />
-                  <span>데모 신청을 위한 정보 이용에 동의합니다.</span>
+                  <input required type="checkbox" />
+                  <span>AI 분석이 예상치임을 확인했습니다. (aiEstimateNoticeAccepted)</span>
+                </label>
+                <label className={styles.checkRow}>
+                  <input required type="checkbox" />
+                  <span>ESG 수치가 데모 추정치임을 확인했습니다. (esgEstimateNoticeAccepted)</span>
                 </label>
               </fieldset>
             </Section>

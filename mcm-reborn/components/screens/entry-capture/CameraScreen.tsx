@@ -69,7 +69,7 @@ function CameraState({ state }: CameraScreenProps) {
 }
 
 export function CameraScreen({ state }: CameraScreenProps) {
-  const statePanel = <CameraState state={state} />;
+  const showCamera = state === "normal";
 
   return (
     <AppShell
@@ -77,6 +77,7 @@ export function CameraScreen({ state }: CameraScreenProps) {
       contentWidth="full"
       immersive
     >
+      <h1 className={styles.visuallyHidden}>제품 사진 촬영</h1>
       <Image
         alt="밝은 공간에 놓인 MCM 가방 촬영 예시"
         className={styles.cameraBackground}
@@ -96,12 +97,13 @@ export function CameraScreen({ state }: CameraScreenProps) {
           alt=""
           aria-hidden="true"
           height={13}
+          loading="eager"
           src="/assets/mvp-beta/icon-back.svg"
           width={15}
         />
       </Link>
 
-      {statePanel || (
+      {showCamera ? (
         <>
           <div className={styles.cameraGuideCopy}>
             <p>제품 정면을 가이드 안에 맞춰주세요</p>
@@ -112,6 +114,7 @@ export function CameraScreen({ state }: CameraScreenProps) {
             <Image
               alt=""
               fill
+              priority
               sizes="287px"
               src="/assets/mvp-beta/camera-detection-outline.svg"
             />
@@ -143,6 +146,8 @@ export function CameraScreen({ state }: CameraScreenProps) {
             <span>1 / 4</span>
           </div>
         </>
+      ) : (
+        <CameraState state={state} />
       )}
     </AppShell>
   );

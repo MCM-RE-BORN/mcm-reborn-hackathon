@@ -20,6 +20,7 @@ export default async function CheckoutPage({
     "loading",
     "empty",
     "error",
+    "permission",
     "canceled",
   ]);
 

@@ -6,6 +6,7 @@ import { ButtonLink } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { KeyValueList } from "@/components/ui/KeyValueList";
 import { ProgressStepper } from "@/components/ui/ProgressStepper";
+import { StatusPanel } from "@/components/ui/StatusPanel";
 import { DemoStatePanel } from "./DemoStatePanel";
 import styles from "./analysis-design.module.css";
 import type { DemoState } from "./types";
@@ -19,11 +20,21 @@ export function SubmissionStatusScreen({
 }: SubmissionStatusScreenProps) {
   if (state !== "normal") {
     const action =
-      state === "limited"
+      state === "loading"
+        ? {
+            href: "/submissions/demo",
+            label: "완료된 분석 데모 보기",
+          }
+        : state === "limited"
         ? {
             href: "/products/new",
             label: "사진 보완하기",
           }
+        : state === "permission"
+          ? {
+              href: "/login",
+              label: "로그인으로 이동",
+            }
         : {
             href: "/products/new",
             label: "제품 등록으로 돌아가기",
@@ -36,12 +47,25 @@ export function SubmissionStatusScreen({
         }
       >
         <div className={styles.statePage}>
-          <DemoStatePanel
-            actionHref={action.href}
-            actionLabel={action.label}
-            context="submission"
-            state={state}
-          />
+          {state === "limited" ? (
+            <StatusPanel
+              action={
+                <ButtonLink fullWidth href="/products/new">
+                  보완 사진 다시 등록하기
+                </ButtonLink>
+              }
+              description="정면과 손상 부위가 더 선명한 사진이 필요합니다. 사진을 보완해 다시 제출하면 접수·분석 흐름으로 복귀합니다. 이 요청은 소재 C등급이나 수동 검토 상태와 다릅니다."
+              title="사진 보완 요청이 도착했어요"
+              tone="permission"
+            />
+          ) : (
+            <DemoStatePanel
+              actionHref={action.href}
+              actionLabel={action.label}
+              context="submission"
+              state={state}
+            />
+          )}
         </div>
       </AppShell>
     );
@@ -64,7 +88,7 @@ export function SubmissionStatusScreen({
       <div className={styles.submissionContent}>
         <section className={styles.submissionLead}>
           <span className={styles.eyebrow}>ANALYSIS COMPLETE</span>
-          <h1>AI 사전 분석이 완료되었어요</h1>
+          <h2>AI 사전 분석이 완료되었어요</h2>
           <p>
             접수한 사진과 제품 정보로 원단 상태를 확인했습니다. 결과를
             확인한 뒤 추천 디자인으로 이어갈 수 있어요.
@@ -121,4 +145,3 @@ export function SubmissionStatusScreen({
     </AppShell>
   );
 }
-

@@ -20,6 +20,8 @@ export default async function CertificatePage({
     "loading",
     "empty",
     "error",
+    "permission",
+    "locked",
   ]);
 
   return <CertificateScreen state={state} />;

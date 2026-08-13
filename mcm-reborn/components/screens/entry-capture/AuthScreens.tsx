@@ -54,30 +54,46 @@ function AuthState({ kind, state }: { kind: "login" | "signup"; state: PageState
     );
   }
 
+  if (state === "empty" || state === "limited") {
+    return (
+      <StatusPanel
+        action={
+          <ButtonLink fullWidth href="/intro" variant="outline">
+            서비스 소개로 돌아가기
+          </ButtonLink>
+        }
+        description="현재 베타 세션에서는 이 인증 화면을 사용할 수 없습니다. 잠시 후 다시 시도해 주세요."
+        title="인증 화면 이용이 제한되어 있어요"
+        tone="permission"
+      />
+    );
+  }
+
   return null;
 }
 
 export function LoginScreen({ state }: AuthScreenProps) {
-  const statePanel = <AuthState kind="login" state={state} />;
   const hasError = state === "error";
+  const showForm = state === "normal" || hasError;
 
   return (
     <AppShell header={<PageHeader backHref="/intro" />}>
       <div className={styles.authContent}>
         <AuthBrand />
-        {statePanel || (
+        {showForm ? (
           <>
             <div className={styles.authHeading}>
               <h1>로그인</h1>
               <p>보유한 MCM 제품의 새로운 여정을 시작하세요.</p>
             </div>
-            <form className={styles.authForm}>
+            <form action="/" className={styles.authForm} method="get">
               <TextField
                 autoComplete="email"
                 error={hasError ? "이메일 또는 비밀번호를 다시 확인해주세요." : undefined}
                 id="login-email"
                 label="이메일"
                 placeholder="example@email.com"
+                required
                 type="email"
               />
               <TextField
@@ -85,18 +101,24 @@ export function LoginScreen({ state }: AuthScreenProps) {
                 id="login-password"
                 label="비밀번호"
                 placeholder="비밀번호를 입력해주세요"
+                required
                 type="password"
               />
               {/* TODO(post-beta): connect login to the approved authentication contract. */}
-              <ButtonLink fullWidth href="/">
+              <button className={styles.authSubmit} type="submit">
                 로그인
-              </ButtonLink>
+              </button>
             </form>
             <nav aria-label="계정 도움말" className={styles.authLinks}>
               <Link href="/signup">회원가입</Link>
               <span aria-hidden="true" />
-              <Link href="/login?state=permission">비밀번호 찾기</Link>
+              <Link href="/login?state=limited">비밀번호 찾기</Link>
             </nav>
+          </>
+        ) : (
+          <>
+            <h1 className={styles.visuallyHidden}>로그인</h1>
+            <AuthState kind="login" state={state} />
           </>
         )}
         <p className={styles.betaCaption}>
@@ -108,20 +130,20 @@ export function LoginScreen({ state }: AuthScreenProps) {
 }
 
 export function SignupScreen({ state }: AuthScreenProps) {
-  const statePanel = <AuthState kind="signup" state={state} />;
   const hasError = state === "error";
+  const showForm = state === "normal" || hasError;
 
   return (
     <AppShell header={<PageHeader backHref="/login" />}>
       <div className={styles.authContent}>
         <AuthBrand />
-        {statePanel || (
+        {showForm ? (
           <>
             <div className={styles.authHeading}>
               <h1>회원가입</h1>
               <p>필수 정보와 약관 동의를 확인해주세요.</p>
             </div>
-            <form className={styles.authForm}>
+            <form action="/" className={styles.authForm} method="get">
               <TextField
                 autoComplete="name"
                 id="signup-name"
@@ -175,10 +197,15 @@ export function SignupScreen({ state }: AuthScreenProps) {
                 </label>
               </fieldset>
               {/* TODO(post-beta): connect signup, consent records, and duplicate-email validation. */}
-              <ButtonLink fullWidth href="/">
+              <button className={styles.authSubmit} type="submit">
                 가입하기
-              </ButtonLink>
+              </button>
             </form>
+          </>
+        ) : (
+          <>
+            <h1 className={styles.visuallyHidden}>회원가입</h1>
+            <AuthState kind="signup" state={state} />
           </>
         )}
         <p className={styles.betaCaption}>

@@ -3,7 +3,7 @@ import { AppShell } from "@/components/layout/AppShell";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Section } from "@/components/layout/Section";
-import { Button } from "@/components/ui/Button";
+import { Button, ButtonLink } from "@/components/ui/Button";
 import { KeyValueList } from "@/components/ui/KeyValueList";
 import { ProgressStepper } from "@/components/ui/ProgressStepper";
 import { SectionBand } from "@/components/ui/SectionBand";
@@ -58,8 +58,22 @@ export function OrderDetailsScreen({ state }: OrderDetailsScreenProps) {
                 title="제작 조건 확인이 필요합니다"
                 tone="permission"
               />
+              <KeyValueList
+                dividers
+                items={[
+                  {
+                    label: "변경 사유",
+                    value: "실물 검수에서 가장자리 손상 추가 확인",
+                  },
+                  {
+                    label: "새 제작 조건",
+                    value: "제작 기간 4~5주 · 데모 견적 158,000원",
+                  },
+                  { label: "고객 응답", value: "베타 미지원" },
+                ]}
+              />
               <p className={styles.postBetaNote}>
-                TODO(post-beta): 변경 사유·새 견적·고객 승인 흐름
+                조건 승인·거절은 정식 계약과 상태 API가 확정된 뒤 제공됩니다.
               </p>
             </div>
           ) : null}
@@ -77,6 +91,7 @@ export function OrderDetailsScreen({ state }: OrderDetailsScreenProps) {
               <div className={styles.orderProductCopy}>
                 <h2 id="order-product-name">{DEMO_ORDER.product.name}</h2>
                 <p>신청일 {DEMO_ORDER.applicationDate}</p>
+                <span>신청번호: {DEMO_ORDER.applicationNumber}</span>
                 <span>수량: {DEMO_ORDER.product.quantity}</span>
               </div>
               <strong>{DEMO_ORDER.product.price}</strong>
@@ -92,7 +107,7 @@ export function OrderDetailsScreen({ state }: OrderDetailsScreenProps) {
               </Button>
             </div>
             <p className={styles.postBetaNote}>
-              TODO(post-beta): 문의·배송조회는 현재 UI 미리보기만 제공합니다.
+              문의·배송 조회는 현재 UI 미리보기만 제공합니다.
             </p>
           </article>
 
@@ -109,7 +124,7 @@ export function OrderDetailsScreen({ state }: OrderDetailsScreenProps) {
           <SectionBand />
 
           <Section title="배송 정보">
-            <ProgressStepper currentIndex={2} items={PROGRESS_STEPS} />
+            <ProgressStepper currentIndex={5} items={PROGRESS_STEPS} />
             <div className={styles.divider} />
             <KeyValueList
               items={[
@@ -119,11 +134,22 @@ export function OrderDetailsScreen({ state }: OrderDetailsScreenProps) {
                   label: "주소지",
                   value: `${DEMO_ORDER.customer.address} ${DEMO_ORDER.customer.addressDetail}`,
                 },
+                { label: "현재 상태", value: "COMPLETED" },
               ]}
             />
             <p className={styles.demoNotice}>
-              Mock 물류 타임라인입니다. 실제 수거·배송 상태가 아닙니다.
+              Passport 흐름 검증을 위한 별도의 완료 상태 Mock 타임라인입니다.
+              실제 수거·배송 상태가 아닙니다.
             </p>
+            {state === "normal" ? (
+              <ButtonLink
+                fullWidth
+                href="/orders/demo?panel=change-request"
+                variant="outline"
+              >
+                실물 검수 조건 변경 예시
+              </ButtonLink>
+            ) : null}
           </Section>
           <SectionBand />
 
@@ -140,6 +166,9 @@ export function OrderDetailsScreen({ state }: OrderDetailsScreenProps) {
                 },
               ]}
             />
+            <ButtonLink fullWidth href="/certificates/demo" variant="outline">
+              디지털 ESG Passport 보기
+            </ButtonLink>
           </Section>
         </>
       )}

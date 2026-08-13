@@ -17,4 +17,3 @@ export default async function AnalysisPage({
 
   return <AnalysisResultScreen state={readDemoState(state)} />;
 }
-

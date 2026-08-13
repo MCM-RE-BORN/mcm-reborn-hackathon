@@ -17,4 +17,3 @@ export default async function SubmissionPage({
 
   return <SubmissionStatusScreen state={readDemoState(state)} />;
 }
-

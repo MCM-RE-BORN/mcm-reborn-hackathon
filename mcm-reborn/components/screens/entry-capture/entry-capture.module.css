@@ -6,6 +6,18 @@
   letter-spacing: var(--letter-spacing-tight);
 }
 
+.visuallyHidden {
+  position: absolute;
+  width: var(--border-thin);
+  height: var(--border-thin);
+  padding: var(--space-0);
+  border: var(--space-0);
+  margin: calc(var(--border-thin) * -1);
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
 .introContent {
   gap: var(--space-19);
   padding-block: var(--space-17) var(--space-14);
@@ -29,7 +41,7 @@
 .introLogo,
 .authLogo {
   width: var(--space-21);
-  height: var(--space-20);
+  height: auto;
   object-fit: contain;
 }
 
@@ -124,7 +136,12 @@
 
 .authLogo {
   width: var(--space-22);
-  height: var(--space-22);
+  height: auto;
+}
+
+.journeyChevron {
+  width: var(--space-10);
+  height: var(--space-3);
 }
 
 .authHeading {
@@ -150,6 +167,23 @@
 .authForm {
   display: grid;
   gap: var(--space-17);
+}
+
+.authSubmit {
+  display: inline-flex;
+  width: 100%;
+  min-height: var(--control-height-xl);
+  align-items: center;
+  justify-content: center;
+  padding-inline: var(--space-10);
+  border: var(--border-thin) solid var(--color-ink);
+  border-radius: var(--radius-control);
+  background: var(--color-ink);
+  color: var(--color-canvas);
+  font-size: var(--font-size-control);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
+  cursor: pointer;
 }
 
 .authLinks {
@@ -463,6 +497,11 @@
   padding: var(--space-7) var(--space-9);
   background: var(--color-surface);
   text-align: center;
+}
+
+.captureBarcode {
+  width: auto;
+  height: var(--space-17);
 }
 
 .captureSecondaryAction {

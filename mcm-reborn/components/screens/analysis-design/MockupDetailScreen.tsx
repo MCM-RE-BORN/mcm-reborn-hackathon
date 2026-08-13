@@ -40,6 +40,7 @@ function MockupHeader() {
           alt=""
           aria-hidden="true"
           height={13}
+          loading="eager"
           src="/assets/mvp-beta/icon-back.svg"
           width={15}
         />
@@ -95,7 +96,7 @@ export function MockupDetailScreen({ state }: MockupDetailScreenProps) {
             alt="Ottomar 비세토스 여권 지갑 정면 목업"
             fill
             priority
-            sizes="(max-width: 402px) calc(100vw - 52px), 350px"
+            sizes="(max-width: 360px) calc(100vw - 40px), (max-width: 402px) calc(100vw - 52px), 350px"
             src="/assets/mvp-beta/product-passport-wallet.png"
           />
           {/* TODO(post-beta): replace the static PNG entry with the contract-backed interactive GLB/glTF rotate and zoom viewer. */}
@@ -134,7 +135,7 @@ export function MockupDetailScreen({ state }: MockupDetailScreenProps) {
                 <Image
                   alt={item.alt}
                   fill
-                  sizes="(max-width: 402px) calc(100vw - 52px), 350px"
+                  sizes="(max-width: 360px) calc(100vw - 40px), (max-width: 402px) calc(100vw - 52px), 350px"
                   src={item.image}
                 />
               </li>

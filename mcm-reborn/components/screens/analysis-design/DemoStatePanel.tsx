@@ -38,6 +38,11 @@ const STATE_COPY: Record<Exclude<DemoState, "normal">, StateCopy> = {
     description: "연결 상태를 확인한 뒤 다시 시도해 주세요.",
     tone: "error",
   },
+  permission: {
+    title: "이 화면을 볼 권한이 필요해요",
+    description: "로그인 상태를 확인한 뒤 다시 시도해 주세요.",
+    tone: "permission",
+  },
   limited: {
     title: "다음 단계로 진행하기 어려워요",
     description: "현재 분석 조건에서는 제작 가능한 추천안을 제공할 수 없습니다.",
@@ -72,4 +77,3 @@ export function DemoStatePanel({
     />
   );
 }
-

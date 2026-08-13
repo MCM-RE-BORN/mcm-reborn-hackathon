@@ -2,7 +2,7 @@ import { AppShell } from "@/components/layout/AppShell";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Section } from "@/components/layout/Section";
 import { StickyActionBar } from "@/components/layout/StickyActionBar";
-import { ButtonLink } from "@/components/ui/Button";
+import { Button } from "@/components/ui/Button";
 import { KeyValueList } from "@/components/ui/KeyValueList";
 import { SectionBand } from "@/components/ui/SectionBand";
 import { DEMO_ORDER } from "./demo-data";
@@ -13,17 +13,17 @@ import styles from "./order-certificate.module.css";
 type CheckoutScreenProps = {
   state: Extract<
     DemoState,
-    "normal" | "loading" | "empty" | "error" | "canceled"
+    | "normal"
+    | "loading"
+    | "empty"
+    | "error"
+    | "permission"
+    | "canceled"
   >;
 };
 
 const PAYMENT_METHODS = [
-  "데모 카드",
-  "네이버페이",
-  "카카오페이",
-  "토스페이",
-  "휴대폰결제",
-  "무통장입금",
+  "DEMO_CARD",
 ] as const;
 
 export function CheckoutScreen({ state }: CheckoutScreenProps) {
@@ -35,13 +35,14 @@ export function CheckoutScreen({ state }: CheckoutScreenProps) {
         isNormal ? (
           <StickyActionBar>
             {/* TODO(post-beta): 결제사 승인 및 멱등 결제 연동 */}
-            <ButtonLink
+            <Button
               aria-describedby="mock-payment-notice"
+              form="demo-checkout-form"
               fullWidth
-              href="/orders/demo/complete"
+              type="submit"
             >
               데모 결제 확인
-            </ButtonLink>
+            </Button>
           </StickyActionBar>
         ) : undefined
       }
@@ -80,47 +81,69 @@ export function CheckoutScreen({ state }: CheckoutScreenProps) {
             />
           </section>
           <SectionBand />
-          <Section title="결제 수단">
-            <fieldset className={styles.paymentFieldset}>
-              <legend className={styles.visuallyHidden}>결제 수단 선택</legend>
-              <div className={styles.paymentGrid}>
-                {PAYMENT_METHODS.map((method, index) => (
-                  <label className={styles.paymentOption} key={method}>
-                    <input
-                      defaultChecked={index === 0}
-                      name="paymentMethod"
-                      type="radio"
-                      value={method}
-                    />
-                    <span>{method}</span>
-                  </label>
-                ))}
-              </div>
-            </fieldset>
-            <p className={styles.demoNotice} id="mock-payment-notice">
-              데모용 Mock 결제입니다. 실제 금액 청구나 결제사 요청은 발생하지 않습니다.
-              <span>TODO(post-beta): 실제 결제 연동</span>
-            </p>
-          </Section>
-          <SectionBand />
-          <Section title="결제 정보">
-            <KeyValueList
-              items={[
-                { label: "상품 금액", value: DEMO_ORDER.product.price },
-                { label: "총 배송비", value: DEMO_ORDER.deliveryFee },
-                { label: "결제 수단", value: DEMO_ORDER.paymentMethod },
-                {
-                  emphasis: true,
-                  label: "최종 결제 금액",
-                  value: DEMO_ORDER.finalAmount,
-                },
-              ]}
-            />
-            <label className={styles.checkRow}>
-              <input required type="checkbox" />
-              <span>Mock 결제와 데모 주문임을 확인했습니다.</span>
-            </label>
-          </Section>
+          <form
+            action="/orders/demo/complete"
+            id="demo-checkout-form"
+            method="get"
+          >
+            <Section title="결제 수단">
+              <fieldset className={styles.paymentFieldset}>
+                <legend className={styles.visuallyHidden}>결제 수단 선택</legend>
+                <div className={styles.paymentGrid}>
+                  {PAYMENT_METHODS.map((method, index) => (
+                    <label className={styles.paymentOption} key={method}>
+                      <input
+                        defaultChecked={index === 0}
+                        name="paymentMethod"
+                        required
+                        type="radio"
+                        value={method}
+                      />
+                      <span>{method}</span>
+                    </label>
+                  ))}
+                  {[
+                    "네이버페이",
+                    "카카오페이",
+                    "토스페이",
+                    "휴대폰결제",
+                    "무통장입금",
+                  ].map((method) => (
+                    <span
+                      aria-disabled="true"
+                      className={styles.paymentOptionDisabled}
+                      key={method}
+                    >
+                      {method} · 추후 제공
+                    </span>
+                  ))}
+                </div>
+              </fieldset>
+              <p className={styles.demoNotice} id="mock-payment-notice">
+                데모용 Mock 결제입니다. 실제 금액 청구나 결제사 요청은 발생하지 않습니다.
+                <span>실제 결제 연동은 정식 서비스에서 제공됩니다.</span>
+              </p>
+            </Section>
+            <SectionBand />
+            <Section title="결제 정보">
+              <KeyValueList
+                items={[
+                  { label: "상품 금액", value: DEMO_ORDER.product.price },
+                  { label: "총 배송비", value: DEMO_ORDER.deliveryFee },
+                  { label: "결제 수단", value: DEMO_ORDER.paymentMethod },
+                  {
+                    emphasis: true,
+                    label: "최종 결제 금액",
+                    value: DEMO_ORDER.finalAmount,
+                  },
+                ]}
+              />
+              <label className={styles.checkRow}>
+                <input required type="checkbox" />
+                <span>Mock 결제와 데모 주문임을 확인했습니다.</span>
+              </label>
+            </Section>
+          </form>
         </>
       )}
     </AppShell>

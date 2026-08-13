@@ -85,7 +85,6 @@ function CaptureStatePanel({ state }: { state: PageState }) {
 }
 
 export function ProductCaptureScreen({ captured, state }: ProductCaptureScreenProps) {
-  const statePanel = <CaptureStatePanel state={state} />;
   const showForm = state === "normal";
 
   return (
@@ -94,9 +93,15 @@ export function ProductCaptureScreen({ captured, state }: ProductCaptureScreenPr
         showForm ? (
           <StickyActionBar>
             {/* TODO(post-beta): upload validated files and request the AI analysis endpoint. */}
-            <ButtonLink fullWidth href="/submissions/demo?state=loading">
-              AI 분석 요청하기
-            </ButtonLink>
+            {captured ? (
+              <ButtonLink fullWidth href="/submissions/demo?state=loading">
+                AI 분석 요청하기
+              </ButtonLink>
+            ) : (
+              <Button disabled fullWidth>
+                사진 1장 이상 등록해 주세요
+              </Button>
+            )}
           </StickyActionBar>
         ) : undefined
       }
@@ -109,7 +114,7 @@ export function ProductCaptureScreen({ captured, state }: ProductCaptureScreenPr
       }
     >
       <div className={styles.captureContent}>
-        {statePanel || (
+        {showForm ? (
           <>
             <section aria-labelledby="capture-guide-title" className={styles.captureGuide}>
               <div className={styles.captureSectionHeading}>
@@ -141,13 +146,14 @@ export function ProductCaptureScreen({ captured, state }: ProductCaptureScreenPr
                         <Image
                           alt="예시 MCM 제품 정면 촬영본"
                           fill
-                          sizes="(max-width: 402px) calc(100vw - 52px), 350px"
+                          sizes="(max-width: 360px) calc(100vw - 40px), (max-width: 402px) calc(100vw - 52px), 350px"
                           src="/assets/mvp-beta/camera-scene.png"
                         />
                       ) : slot.id === "serial" ? (
                         <Image
                           alt=""
                           aria-hidden="true"
+                          className={styles.captureBarcode}
                           height={31}
                           src="/assets/mvp-beta/icon-barcode.svg"
                           width={50}
@@ -215,6 +221,8 @@ export function ProductCaptureScreen({ captured, state }: ProductCaptureScreenPr
               />
             </section>
           </>
+        ) : (
+          <CaptureStatePanel state={state} />
         )}
       </div>
     </AppShell>

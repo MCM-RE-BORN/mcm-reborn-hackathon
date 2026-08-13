@@ -3,6 +3,7 @@ export type DemoState =
   | "loading"
   | "empty"
   | "error"
+  | "permission"
   | "limited"
   | "canceled";
 
@@ -13,6 +14,7 @@ const DEMO_STATES: DemoState[] = [
   "loading",
   "empty",
   "error",
+  "permission",
   "limited",
   "canceled",
 ];
@@ -48,4 +50,3 @@ export function readRecommendationCategory(
     ? (candidate as RecommendationCategory)
     : "wallet";
 }
-

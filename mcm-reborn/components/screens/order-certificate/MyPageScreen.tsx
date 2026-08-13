@@ -10,7 +10,10 @@ import { DemoStatePanel } from "./DemoStatePanel";
 import styles from "./order-certificate.module.css";
 
 type MyPageScreenProps = {
-  state: Extract<DemoState, "normal" | "loading" | "empty" | "error">;
+  state: Extract<
+    DemoState,
+    "normal" | "loading" | "empty" | "error" | "permission"
+  >;
 };
 
 export function MyPageScreen({ state }: MyPageScreenProps) {
@@ -32,6 +35,7 @@ export function MyPageScreen({ state }: MyPageScreenProps) {
         <div className={styles.profileLayout}>
           <Section
             action={
+              // TODO(post-beta): connect profile editing to the approved customer profile contract.
               <button className={styles.textLink} disabled type="button">
                 수정하기
               </button>
@@ -53,6 +57,7 @@ export function MyPageScreen({ state }: MyPageScreenProps) {
 
           <Section
             action={
+              // TODO(post-beta): persist the preferred MCM store selection.
               <button className={styles.textLink} disabled type="button">
                 매장 설정
               </button>
@@ -67,9 +72,11 @@ export function MyPageScreen({ state }: MyPageScreenProps) {
           </Section>
 
           <div className={styles.accountActions}>
+            {/* TODO(post-beta): revoke the authenticated session through the approved auth contract. */}
             <ButtonLink fullWidth href="/login">
               로그아웃
             </ButtonLink>
+            {/* TODO(post-beta): add re-authentication and account deletion after contract approval. */}
             <Button disabled fullWidth variant="danger">
               계정 탈퇴
             </Button>

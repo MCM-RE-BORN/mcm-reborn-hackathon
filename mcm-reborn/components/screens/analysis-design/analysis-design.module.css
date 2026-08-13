@@ -16,7 +16,7 @@
   gap: var(--space-5);
 }
 
-.submissionLead h1 {
+.submissionLead h2 {
   max-width: calc(var(--layout-content-max) - var(--space-23));
   font-size: var(--font-size-display);
   font-weight: var(--font-weight-bold);
@@ -172,7 +172,7 @@
   border-top: var(--border-thin) solid var(--color-divider);
 }
 
-.limitedCopy h1 {
+.limitedCopy h2 {
   font-size: var(--font-size-title);
   font-weight: var(--font-weight-semibold);
   line-height: var(--line-height-reading);

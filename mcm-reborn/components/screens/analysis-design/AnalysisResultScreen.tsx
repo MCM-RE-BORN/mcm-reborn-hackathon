@@ -9,9 +9,77 @@ import styles from "./analysis-design.module.css";
 import type { DemoState } from "./types";
 
 type AnalysisResultScreenProps = {
-  ineligible?: boolean;
+  ineligibleReason?: "quality" | "review";
   state: DemoState;
 };
+
+function IneligibleAnalysis({
+  reason,
+}: {
+  reason: NonNullable<AnalysisResultScreenProps["ineligibleReason"]>;
+}) {
+  const isQualityIssue = reason === "quality";
+
+  return (
+    <div className={styles.analysisContent}>
+      <section className={styles.limitedCopy}>
+        <h2>
+          {isQualityIssue
+            ? "사진 품질을 확인할 수 없어요"
+            : "수동 검토가 필요해 신청이 보류됐어요"}
+        </h2>
+        <p>
+          {isQualityIssue
+            ? "제품 전체와 손상 부위가 선명하게 보이지 않아 IMAGE_QUALITY_INSUFFICIENT 오류가 반환됐습니다. 이 결과는 정품·가품 판정이나 소재 등급이 아닙니다. 밝은 곳에서 흔들림 없이 다시 촬영해 주세요."
+            : "REVIEW_REQUIRED는 정품·가품 판정이 아니라 추가 확인이 필요하다는 신호입니다. PENDING 수동 검토 건만 생성되며, 검토 전에는 신청·결제 레코드를 만들지 않습니다."}
+        </p>
+      </section>
+
+      <KeyValueList
+        dividers
+        items={
+          isQualityIssue
+            ? [
+                { label: "오류 코드", value: "IMAGE_QUALITY_INSUFFICIENT" },
+                { label: "품질 상태", value: "RECAPTURE_REQUIRED" },
+                { label: "다음 행동", value: "사진 재촬영" },
+                { label: "신청 생성", value: "분석 전 단계" },
+              ]
+            : [
+                { label: "정품 신호", value: "REVIEW_REQUIRED" },
+                { label: "수동 검토", value: "PENDING" },
+                { label: "다음 행동", value: "AWAIT_MANUAL_REVIEW" },
+                { label: "신청 생성", value: "차단됨" },
+              ]
+        }
+      />
+
+      <aside className={styles.contractNotice}>
+        <strong>예외 상태 안내</strong>
+        <p>
+          사진 품질 미달은 재촬영으로, 수동 검토 신호는 검토 대기로 각각
+          처리합니다. 두 상태 모두 C등급 소재 손상 결과와 구분됩니다.
+        </p>
+      </aside>
+
+      <ButtonLink fullWidth href="/products/new">
+        {isQualityIssue ? "사진 다시 등록하기" : "다른 제품 등록하기"}
+      </ButtonLink>
+      <ButtonLink
+        className={styles.centeredLink}
+        href={
+          isQualityIssue
+            ? "/submissions/demo/ineligible"
+            : "/submissions/demo/ineligible?reason=quality"
+        }
+        size="small"
+        variant="ghost"
+      >
+        {isQualityIssue ? "수동 검토 예시 보기" : "사진 품질 미달 예시 보기"}
+      </ButtonLink>
+    </div>
+  );
+}
 
 function LimitedAnalysis() {
   return (
@@ -19,7 +87,7 @@ function LimitedAnalysis() {
       <RecycleGauge grade="C" value={18} />
 
       <section className={styles.limitedCopy}>
-        <h1>원단 손상이 커서 리폼 제작이 어려워요</h1>
+        <h2>원단 손상이 커서 리폼 제작이 어려워요</h2>
         <p>
           리폼 기준에 미치지 못한 가죽이라 해도 그 안에 담긴 시간까지
           사라지는 것은 아닙니다. RE:BORN은 성주재단과의 파트너십을 통해
@@ -51,11 +119,9 @@ function LimitedAnalysis() {
 }
 
 export function AnalysisResultScreen({
-  ineligible = false,
+  ineligibleReason,
   state,
 }: AnalysisResultScreenProps) {
-  const isLimited = ineligible || state === "limited";
-
   if (
     state !== "normal" &&
     state !== "limited"
@@ -81,7 +147,22 @@ export function AnalysisResultScreen({
     );
   }
 
-  if (isLimited) {
+  if (ineligibleReason) {
+    return (
+      <AppShell
+        header={
+          <PageHeader
+            backHref="/submissions/demo"
+            title="신청 전 확인"
+          />
+        }
+      >
+        <IneligibleAnalysis reason={ineligibleReason} />
+      </AppShell>
+    );
+  }
+
+  if (state === "limited") {
     return (
       <AppShell
         header={
@@ -158,4 +239,3 @@ export function AnalysisResultScreen({
     </AppShell>
   );
 }
-

@@ -16,6 +16,7 @@ type RecommendationScreenProps = {
 
 type Recommendation = {
   category: Exclude<RecommendationCategory, "keyring">;
+  detailHref?: string;
   image: string;
   name: string;
 };
@@ -52,6 +53,7 @@ const RECOMMENDATIONS: Recommendation[] = [
   },
   {
     category: "wallet",
+    detailHref: "/submissions/demo/designs/passport-wallet",
     image: "/assets/mvp-beta/recommendation-passport-wallet.png",
     name: "Ottomar 비세토스 여권 지갑",
   },
@@ -79,7 +81,7 @@ function RecommendationHeader({
     <div className={styles.recommendationHeader}>
       <PageHeader
         backHref="/submissions/demo/analysis"
-        description="현재 등급(A)의 Figma 시각 데모 후보입니다"
+        description="계약 카탈로그는 파우치·카드지갑·키링이며, 아래 이미지는 Figma 시각 후보입니다"
         title="추천 디자인"
       />
       <nav aria-label="추천 품목" className={styles.productTabs}>
@@ -134,12 +136,9 @@ export function RecommendationScreen({
     );
   }
 
-  const items =
-    category === "wallet"
-      ? RECOMMENDATIONS
-      : RECOMMENDATIONS.filter(
-          (recommendation) => recommendation.category === category,
-        );
+  const items = RECOMMENDATIONS.filter(
+    (recommendation) => recommendation.category === category,
+  );
 
   if (items.length === 0) {
     return (
@@ -197,25 +196,39 @@ export function RecommendationScreen({
             .join(" ")}
         >
           {/* TODO(post-beta): persist the selected recommendation and resolve a contract-backed 3D asset for each product. */}
-          {items.map((item, index) => (
-            <li key={item.name}>
-              <Link
-                className={styles.productCard}
-                href="/submissions/demo/designs/passport-wallet"
-              >
+          {items.map((item, index) => {
+            const cardContent = (
+              <>
                 <span className={styles.productImage}>
                   <Image
                     alt={`${item.name} 추천 디자인`}
                     fill
                     loading={index < 4 ? "eager" : "lazy"}
-                    sizes="(max-width: 402px) 50vw, 168px"
+                    sizes="(max-width: 360px) calc(100vw - 40px), (max-width: 402px) 50vw, 168px"
                     src={item.image}
                   />
                 </span>
                 <span className={styles.productName}>{item.name}</span>
-              </Link>
-            </li>
-          ))}
+              </>
+            );
+
+            return (
+              <li key={item.name}>
+                {item.detailHref ? (
+                  <Link className={styles.productCard} href={item.detailHref}>
+                    {cardContent}
+                  </Link>
+                ) : (
+                  <article
+                    aria-label={`${item.name} 시각 후보 · 상세 미제공`}
+                    className={styles.productCard}
+                  >
+                    {cardContent}
+                  </article>
+                )}
+              </li>
+            );
+          })}
         </ul>
       </div>
     </AppShell>

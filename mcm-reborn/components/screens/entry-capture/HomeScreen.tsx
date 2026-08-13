@@ -54,16 +54,30 @@ function HomeStatus({ state }: HomeScreenProps) {
     );
   }
 
-  if (state === "permission") {
+  if (state === "permission" || state === "limited") {
+    const isPermission = state === "permission";
+
     return (
       <StatusPanel
         action={
-          <ButtonLink fullWidth href="/login" variant="outline">
-            로그인하기
+          <ButtonLink
+            fullWidth
+            href={isPermission ? "/login" : "/intro"}
+            variant="outline"
+          >
+            {isPermission ? "로그인하기" : "서비스 안내 보기"}
           </ButtonLink>
         }
-        description="내 접수 내역은 로그인 후 확인할 수 있어요."
-        title="로그인이 필요한 정보예요"
+        description={
+          isPermission
+            ? "내 접수 내역은 로그인 후 확인할 수 있어요."
+            : "현재 기기에서는 진행 중인 여정 대신 서비스 소개와 정적 데모 화면을 이용할 수 있어요."
+        }
+        title={
+          isPermission
+            ? "로그인이 필요한 정보예요"
+            : "이 기기에서는 일부 기능이 제한되어 있어요"
+        }
         tone="permission"
       />
     );
@@ -80,9 +94,10 @@ function HomeStatus({ state }: HomeScreenProps) {
         <Image
           alt=""
           aria-hidden="true"
-          height={12}
+          className={styles.journeyChevron}
+          height={9}
           src="/assets/mvp-beta/icon-chevron-right.svg"
-          width={7}
+          width={17}
         />
       </Link>
     </Card>

@@ -13,10 +13,13 @@ type IneligiblePageProps = {
 export default async function IneligiblePage({
   searchParams,
 }: IneligiblePageProps) {
-  const { state } = await searchParams;
+  const { reason, state } = await searchParams;
+  const requestedReason = Array.isArray(reason) ? reason[0] : reason;
 
   return (
-    <AnalysisResultScreen ineligible state={readDemoState(state)} />
+    <AnalysisResultScreen
+      ineligibleReason={requestedReason === "quality" ? "quality" : "review"}
+      state={readDemoState(state)}
+    />
   );
 }
-

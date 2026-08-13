@@ -20,6 +20,7 @@ export default async function MyPage({
     "loading",
     "empty",
     "error",
+    "permission",
   ]);
 
   return <MyPageScreen state={state} />;
