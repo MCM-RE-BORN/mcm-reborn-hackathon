@@ -104,6 +104,7 @@
   --duration-fast: 160ms;
   --duration-standard: 240ms;
   --duration-recommendation-loop: 3312.942ms;
+  --motion-recommendation-shift: -24.53125rem;
   --ease-standard: cubic-bezier(0.2, 0, 0, 1);
   --ease-recommendation: cubic-bezier(0.5, 0, 0.5, 1);
   --z-behind: -1;
