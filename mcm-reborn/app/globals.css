@@ -104,6 +104,7 @@
   --duration-recommendation-loop: 3312.942ms;
   --ease-standard: cubic-bezier(0.2, 0, 0, 1);
   --ease-recommendation: cubic-bezier(0.5, 0, 0.5, 1);
+  --z-behind: -1;
   --z-sticky: 10;
   --z-overlay: 20;
   --safe-area-top: env(safe-area-inset-top, 0px);
