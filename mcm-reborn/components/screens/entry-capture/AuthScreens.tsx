@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { AppShell } from "@/components/layout/AppShell";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { ButtonLink } from "@/components/ui/Button";
@@ -12,18 +13,33 @@ type AuthScreenProps = {
   state: PageState;
 };
 
-function AuthBrand() {
+type AuthBrandProps = {
+  expanded?: boolean;
+  subtitle?: ReactNode;
+};
+
+function AuthBrand({ expanded = false, subtitle }: AuthBrandProps) {
+  const brandClassName = [styles.authBrand, expanded ? styles.authBrandExpanded : ""]
+    .filter(Boolean)
+    .join(" ");
+  const logoClassName = [styles.authLogo, expanded ? styles.authLogoExpanded : ""]
+    .filter(Boolean)
+    .join(" ");
+
   return (
-    <div className={styles.authBrand}>
+    <div className={brandClassName}>
       <Image
         alt="MCM"
-        className={styles.authLogo}
-        height={70}
+        className={logoClassName}
+        height={expanded ? 116 : 70}
         priority
         src="/assets/mvp-beta/brand-mcm-wing-logo.png"
-        width={80}
+        width={expanded ? 132 : 80}
       />
-      <p>MCM RE:BORN</p>
+      <div className={styles.authBrandCopy}>
+        <p className={expanded ? styles.authBrandTitle : undefined}>MCM RE:BORN</p>
+        {subtitle ? <p className={styles.authBrandSubtitle}>{subtitle}</p> : null}
+      </div>
     </div>
   );
 }
@@ -79,28 +95,31 @@ export function LoginScreen({ state }: AuthScreenProps) {
   return (
     <AppShell header={<PageHeader backHref="/intro" />}>
       <div className={styles.authContent}>
-        <AuthBrand />
+        <h1 className={styles.visuallyHidden}>로그인</h1>
+        <AuthBrand expanded subtitle="MODERN CREATION, REBORN" />
         {showForm ? (
           <>
-            <div className={styles.authHeading}>
-              <h1>로그인</h1>
-              <p>보유한 MCM 제품의 새로운 여정을 시작하세요.</p>
-            </div>
-            <form action="/" className={styles.authForm} method="get">
+            <form
+              action="/"
+              className={`${styles.authForm} ${styles.authFormTight}`}
+              method="get"
+            >
               <TextField
-                autoComplete="email"
-                error={hasError ? "이메일 또는 비밀번호를 다시 확인해주세요." : undefined}
-                id="login-email"
-                label="이메일"
-                placeholder="example@email.com"
+                autoComplete="username"
+                error={hasError ? "아이디 또는 비밀번호를 다시 확인해주세요." : undefined}
+                hideLabel
+                id="login-id"
+                label="아이디"
+                placeholder="아이디 입력"
                 required
-                type="email"
+                type="text"
               />
               <TextField
                 autoComplete="current-password"
+                hideLabel
                 id="login-password"
                 label="비밀번호"
-                placeholder="비밀번호를 입력해주세요"
+                placeholder="비밀번호 입력"
                 required
                 type="password"
               />
@@ -110,16 +129,15 @@ export function LoginScreen({ state }: AuthScreenProps) {
               </button>
             </form>
             <nav aria-label="계정 도움말" className={styles.authLinks}>
-              <Link href="/signup">회원가입</Link>
+              <Link href="/login?state=limited">아이디 찾기</Link>
               <span aria-hidden="true" />
               <Link href="/login?state=limited">비밀번호 찾기</Link>
+              <span aria-hidden="true" />
+              <Link href="/signup">회원가입</Link>
             </nav>
           </>
         ) : (
-          <>
-            <h1 className={styles.visuallyHidden}>로그인</h1>
-            <AuthState kind="login" state={state} />
-          </>
+          <AuthState kind="login" state={state} />
         )}
         <p className={styles.betaCaption}>
           베타 화면에서는 입력한 인증 정보를 저장하거나 전송하지 않습니다.

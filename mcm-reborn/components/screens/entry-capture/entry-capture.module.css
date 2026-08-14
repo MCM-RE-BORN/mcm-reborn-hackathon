@@ -146,6 +146,40 @@
   height: auto;
 }
 
+/*
+ * Login screen (Figma "로그인 화면") shows a bigger logo plus an
+ * "MCM RE:BORN" / "MODERN CREATION, REBORN" wordmark instead of the
+ * compact brand mark used elsewhere (e.g. signup). `--asset-size-brand`
+ * already exists in the token scale and matches the Figma logo width
+ * exactly, so reuse it here instead of a one-off value.
+ */
+.authLogoExpanded {
+  width: var(--asset-size-brand);
+}
+
+.authBrandExpanded {
+  gap: var(--space-11);
+}
+
+.authBrandCopy {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-1);
+}
+
+.authBrandCopy .authBrandTitle {
+  font-size: var(--font-size-display);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-tight);
+  letter-spacing: var(--letter-spacing-tight);
+}
+
+.authBrandCopy .authBrandSubtitle {
+  font-size: var(--font-size-control);
+  font-weight: var(--font-weight-light);
+  line-height: var(--line-height-tight);
+}
+
 .journeyChevron {
   width: var(--space-10);
   height: var(--space-3);
@@ -174,6 +208,15 @@
 .authForm {
   display: grid;
   gap: var(--space-17);
+}
+
+/*
+ * Login screen's Figma design spaces its two fields much tighter
+ * (~12px) than the default form gap (32px, still used by signup, which
+ * has no confirmed design to match against yet).
+ */
+.authFormTight {
+  gap: var(--space-7);
 }
 
 .authSubmit {

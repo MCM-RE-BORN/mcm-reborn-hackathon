@@ -107,6 +107,24 @@
   width: 100%;
 }
 
+/*
+ * Used by TextField's `hideLabel` prop (e.g. the login screen's Figma
+ * design, which shows the field label as placeholder text only). The
+ * label stays in the DOM and accessible to screen readers, but is
+ * removed from layout/visual flow entirely.
+ */
+.visuallyHidden {
+  position: absolute;
+  width: var(--border-thin);
+  height: var(--border-thin);
+  padding: var(--space-0);
+  border: var(--space-0);
+  margin: calc(var(--border-thin) * -1);
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
 .fieldLabelRow {
   display: flex;
   min-height: var(--space-11);
