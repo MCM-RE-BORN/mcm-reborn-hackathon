@@ -53,9 +53,16 @@
 }
 
 .introHero h1 {
+  /*
+   * `--line-height-tight` (1.25rem) is sized for body/control-sized text.
+   * This heading uses `--font-size-metric` (2.5rem) and wraps to two lines
+   * via <br />, so that line-height was shorter than the glyphs themselves
+   * and the two lines rendered on top of each other. Use a line-height
+   * scaled to the metric font size instead.
+   */
   font-size: var(--font-size-metric);
   font-weight: var(--font-weight-bold);
-  line-height: var(--line-height-tight);
+  line-height: var(--line-height-metric);
   letter-spacing: var(--letter-spacing-tight);
 }
 
@@ -295,9 +302,18 @@
 }
 
 .homeHeroCopy h1 {
+  /*
+   * Same overlap bug as `.introHero h1` above: `--line-height-tight`
+   * (1.25rem) is shorter than this `--font-size-display` (1.5rem) text,
+   * and HomeScreen's copy hardcodes a <br /> so it always renders two
+   * lines. `--line-height-relaxed` is already the established pairing
+   * for `--font-size-display` headings elsewhere (e.g. `.completeCopy
+   * h1`, `.submissionLead h2`), so reuse it here instead of the tight
+   * body-text line-height.
+   */
   font-size: var(--font-size-display);
   font-weight: var(--font-weight-bold);
-  line-height: var(--line-height-tight);
+  line-height: var(--line-height-relaxed);
   letter-spacing: var(--letter-spacing-tight);
 }
 
