@@ -8,6 +8,7 @@ import { StatusPanel } from "@/components/ui/StatusPanel";
 import { TextField } from "@/components/ui/TextField";
 import type { PageState } from "./page-state";
 import styles from "./entry-capture.module.css";
+import { SignupPasswordField } from "./SignupPasswordField";
 
 type AuthScreenProps = {
   state: PageState;
@@ -152,59 +153,66 @@ export function SignupScreen({ state }: AuthScreenProps) {
   const showForm = state === "normal" || hasError;
 
   return (
-    <AppShell header={<PageHeader backHref="/login" />}>
+    <AppShell header={<PageHeader backHref="/login" title="회원가입" />}>
       <div className={styles.authContent}>
-        <AuthBrand />
         {showForm ? (
-          <>
-            <div className={styles.authHeading}>
-              <h1>회원가입</h1>
-              <p>필수 정보와 약관 동의를 확인해주세요.</p>
-            </div>
-            <form action="/" className={styles.authForm} method="get">
-              <TextField
-                autoComplete="name"
-                id="signup-name"
-                label="이름"
-                placeholder="이름을 입력해주세요"
-                required
-              />
-              <TextField
-                autoComplete="email"
-                error={hasError ? "이미 가입된 이메일입니다." : undefined}
-                id="signup-email"
-                label="이메일"
-                placeholder="example@email.com"
-                required
-                type="email"
-              />
-              <TextField
-                autoComplete="tel"
-                id="signup-phone"
-                label="휴대전화"
-                placeholder="010-0000-0000"
-                required
-                type="tel"
-              />
-              <TextField
-                autoComplete="new-password"
-                hint="영문, 숫자를 포함해 8자 이상 입력해주세요."
-                id="signup-password"
-                label="비밀번호"
-                placeholder="비밀번호를 입력해주세요"
-                required
-                type="password"
-              />
-              <TextField
-                autoComplete="new-password"
-                id="signup-password-confirm"
-                label="비밀번호 확인"
-                placeholder="비밀번호를 한 번 더 입력해주세요"
-                required
-                type="password"
-              />
-              <fieldset className={styles.consentGroup}>
-                <legend>약관 동의</legend>
+          <form action="/" className={styles.authForm} method="get">
+            <TextField
+              autoComplete="name"
+              density="compact"
+              id="signup-name"
+              label="이름"
+              placeholder="이름을 입력해주세요"
+              required
+            />
+            <TextField
+              autoComplete="email"
+              density="compact"
+              error={hasError ? "이미 가입된 이메일입니다." : undefined}
+              id="signup-email"
+              label="이메일 주소"
+              placeholder="example@email.com"
+              required
+              type="email"
+            />
+            <TextField
+              autoComplete="tel"
+              density="compact"
+              id="signup-phone"
+              label="전화번호"
+              placeholder="010-0000-0000"
+              required
+              type="tel"
+            />
+            <SignupPasswordField />
+            <TextField
+              autoComplete="new-password"
+              density="compact"
+              id="signup-password-confirm"
+              label="비밀번호 확인"
+              placeholder="비밀번호를 한 번 더 입력해주세요"
+              required
+              type="password"
+            />
+            <details className={styles.consentDisclosure}>
+              <summary>
+                <span className={styles.consentSummaryLabel}>
+                  약관 동의
+                  <Image
+                    alt=""
+                    aria-hidden="true"
+                    className={styles.consentChevron}
+                    height={9}
+                    src="/assets/mvp-beta/icon-chevron-right.svg"
+                    width={17}
+                  />
+                </span>
+                <span className={styles.consentSummaryAction}>펼쳐보기</span>
+              </summary>
+              <fieldset
+                className={`${styles.consentGroup} ${styles.consentGroupSpacing}`}
+              >
+                <legend className={styles.visuallyHidden}>약관 동의 항목</legend>
                 <label>
                   <input required type="checkbox" />
                   <span>[필수] 서비스 이용약관 및 개인정보 처리 동의</span>
@@ -214,17 +222,14 @@ export function SignupScreen({ state }: AuthScreenProps) {
                   <span>[선택] 마케팅 정보 수신 동의</span>
                 </label>
               </fieldset>
-              {/* TODO(post-beta): connect signup, consent records, and duplicate-email validation. */}
-              <button className={styles.authSubmit} type="submit">
-                가입하기
-              </button>
-            </form>
-          </>
+            </details>
+            {/* TODO(post-beta): connect signup, consent records, and duplicate-email validation. */}
+            <button className={styles.authSubmit} type="submit">
+              가입하기
+            </button>
+          </form>
         ) : (
-          <>
-            <h1 className={styles.visuallyHidden}>회원가입</h1>
-            <AuthState kind="signup" state={state} />
-          </>
+          <AuthState kind="signup" state={state} />
         )}
         <p className={styles.betaCaption}>
           베타 화면에서는 입력한 회원 정보를 저장하거나 전송하지 않습니다.
