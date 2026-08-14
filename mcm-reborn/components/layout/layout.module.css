@@ -66,6 +66,21 @@
   background: var(--color-canvas);
 }
 
+/*
+ * Used when the header has no title/description (e.g. login, signup).
+ * `.pageHeader` reserves a fixed min-height and bottom-aligns its content so
+ * multi-line titles stay flush with the row below it. With no title/
+ * description there is only one grid row, so that reserved height collapsed
+ * into dead space above the back button instead of below it. Dropping the
+ * fixed height and top-aligning here makes the header hug the back-button
+ * row, so the top padding (above the row) and bottom padding (below it)
+ * match.
+ */
+.pageHeaderCompact {
+  min-height: auto;
+  align-content: start;
+}
+
 .pageHeaderTopRow {
   display: flex;
   min-height: var(--touch-target-min);
