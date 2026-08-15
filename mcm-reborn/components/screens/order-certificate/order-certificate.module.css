@@ -285,6 +285,89 @@
   flex-direction: column;
 }
 
+/*
+ * Figma's "마이페이지" design (node 177:714) sizes its section headings
+ * ("프로필 정보", "기본 설정") the same as the page title — 18px semibold
+ * (`--font-size-title`) — not the 15px `--font-size-control` that
+ * `Section`'s `h2` uses by default for every other screen. Scope the bump
+ * to My Page's own sections instead of changing the shared `Section`
+ * component's default. The doubled class selector is a deliberate
+ * specificity bump (not a typo): it guarantees this wins over the
+ * shared `.sectionCopy h2` rule regardless of CSS module bundling order,
+ * since the two rules live in different modules and can't be ordered
+ * against each other by source position alone.
+ */
+.myPageSection.myPageSection h2 {
+  font-size: var(--font-size-title);
+}
+
+/*
+ * `Section`'s header uses `justify-content: space-between`, spreading
+ * the title and its action to opposite edges of the row. Figma's My
+ * Page design sits "수정하기" immediately next to "프로필 정보" instead —
+ * targeting the plain `header` element (rather than the shared
+ * `.sectionHeader` class name, which is scoped to layout.module.css and
+ * can't be referenced from this file) keeps the override local to My
+ * Page's sections.
+ */
+.myPageSection header {
+  align-items: baseline;
+  justify-content: flex-start;
+  gap: var(--space-7);
+}
+
+/*
+ * `Section`'s action slot (the last `<div>` in its header — the shared
+ * `.sectionAction` class name isn't referenceable here, same as
+ * `.sectionHeader` above) reserves a 44px touch-target height. That
+ * reserved box was throwing off alignment against the 18px heading, so
+ * shrink it to the button's own text size here. `align-items: baseline`
+ * above (rather than `center`) is the actual fix for the mismatch:
+ * "프로필 정보" (18px) and "수정하기" (13px) share the same line-height, so
+ * centering their boxes doesn't align their text baselines — only
+ * `baseline` does, matching where the two sit on the same line in
+ * Figma. Since this action is disabled (no real tap target yet),
+ * dropping the reserved height is safe for now.
+ */
+.myPageSection header > div:last-child {
+  min-height: auto;
+}
+
+.profileEditLink {
+  min-height: auto;
+}
+
+/*
+ * Figma's profile rows use muted, medium-weight labels and values, not
+ * the shared `KeyValueList` default (light-weight ink labels, semibold
+ * ink values). Scoped the same way as `.myPageSection` above.
+ */
+.profileList.profileList dt {
+  color: var(--color-muted);
+  font-weight: var(--font-weight-medium);
+}
+
+.profileList.profileList dd {
+  font-weight: var(--font-weight-medium);
+}
+
+.profileContact {
+  display: grid;
+  gap: var(--space-2);
+  text-align: right;
+}
+
+.profilePasswordValue {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-5);
+}
+
+.profilePasswordLink {
+  min-height: auto;
+}
+
 .certificateHero {
   display: grid;
   justify-items: center;
@@ -393,16 +476,18 @@
   line-height: var(--line-height-tight);
 }
 
-.preferenceRow strong {
-  font-weight: var(--font-weight-medium);
-  text-align: right;
-}
-
+/*
+ * Traced directly from Figma's exported vector (node 177:774) instead of
+ * being redrawn with CSS — the earlier border-box + pseudo-element
+ * approximations never matched Figma's exact ribbon outline. `currentColor`
+ * lets the SVG's fill follow this rule's `color`, same as the rest of the
+ * screen's ink-colored icons/text.
+ */
 .bookmarkMark {
-  width: var(--space-8);
-  height: var(--space-10);
-  border: var(--border-thin) solid var(--color-ink);
-  border-bottom-color: var(--color-transparent);
+  flex: none;
+  width: 0.75rem;
+  height: 0.9375rem;
+  color: var(--color-ink);
 }
 
 .accountActions {
@@ -412,6 +497,15 @@
   margin-top: auto;
   margin-inline: auto;
   padding-block: var(--space-21) var(--space-9);
+}
+
+/*
+ * Figma shows "계정 탈퇴" as a small centered text link under the
+ * full-width "로그아웃" button, not a full-width danger button — center
+ * it instead of letting the grid stretch it edge-to-edge.
+ */
+.accountDangerAction {
+  justify-self: center;
 }
 
 @media (min-width: 24rem) {
@@ -442,8 +536,8 @@
     grid-template-columns: auto minmax(var(--space-0), 1fr);
   }
 
-  .preferenceRow strong {
+  .preferenceRow .textLink {
     grid-column: 2;
-    text-align: left;
+    justify-self: start;
   }
 }
