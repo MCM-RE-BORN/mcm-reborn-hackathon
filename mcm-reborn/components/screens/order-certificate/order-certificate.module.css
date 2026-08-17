@@ -336,24 +336,22 @@
  * action. Both sections render fully expanded with no wired-up collapse
  * behavior yet, so this is a static indicator for now — same scope as
  * the other disabled `TODO(post-beta)` controls on this screen.
+ *
+ * The chevron's shape comes from `ui.module.css`'s shared `.chevronMark`
+ * (composed onto this element in JSX); this block only positions it.
  */
 .accordionMark {
   position: relative;
   width: var(--space-9);
   height: var(--space-9);
   flex: none;
+  color: var(--color-muted);
 }
 
 .accordionMark::after {
-  position: absolute;
   top: 40%;
   left: 50%;
-  width: var(--space-4);
-  height: var(--space-4);
-  border-right: var(--border-focus) solid var(--color-muted);
-  border-bottom: var(--border-focus) solid var(--color-muted);
   transform: translate(-50%, -50%) rotate(45deg);
-  content: "";
 }
 
 /*

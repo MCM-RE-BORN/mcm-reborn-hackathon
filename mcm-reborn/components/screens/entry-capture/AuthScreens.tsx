@@ -6,10 +6,11 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { ButtonLink } from "@/components/ui/Button";
 import { StatusPanel } from "@/components/ui/StatusPanel";
 import { TextField } from "@/components/ui/TextField";
-import fieldStyles from "@/components/ui/ui.module.css";
 import type { PageState } from "./page-state";
 import styles from "./entry-capture.module.css";
+import { SignupEmailField } from "./SignupEmailField";
 import { SignupPasswordField } from "./SignupPasswordField";
+import { SignupPhoneField } from "./SignupPhoneField";
 
 type AuthScreenProps = {
   state: PageState;
@@ -166,85 +167,8 @@ export function SignupScreen({ state }: AuthScreenProps) {
               placeholder="이름을 입력해주세요"
               required
             />
-            {/*
-             * Figma's "회원가입 화면" (node 228:1510) splits the email
-             * field into a local-part / "@" / domain-part row instead of
-             * one full-address input. `TextField` only supports a single
-             * input per label, so this reuses its underlying `ui.module.css`
-             * classes directly to build the same label + row structure by
-             * hand.
-             */}
-            <div className={fieldStyles.field}>
-              <div className={fieldStyles.fieldLabelRow}>
-                <label className={fieldStyles.fieldLabel} htmlFor="signup-email-local">
-                  이메일 주소<span aria-hidden="true"> *</span>
-                </label>
-              </div>
-              <div className={styles.splitFieldRow}>
-                <input
-                  aria-describedby={hasError ? "signup-email-error" : undefined}
-                  aria-invalid={hasError ? true : undefined}
-                  className={`${fieldStyles.input} ${fieldStyles["input-compact"]}`}
-                  id="signup-email-local"
-                  name="signup-email-local"
-                  placeholder="example"
-                  required
-                  type="text"
-                />
-                <span aria-hidden="true" className={styles.fieldDivider}>
-                  @
-                </span>
-                <input
-                  aria-describedby={hasError ? "signup-email-error" : undefined}
-                  aria-invalid={hasError ? true : undefined}
-                  className={`${fieldStyles.input} ${fieldStyles["input-compact"]}`}
-                  id="signup-email-domain"
-                  name="signup-email-domain"
-                  placeholder="email.com"
-                  required
-                  type="text"
-                />
-              </div>
-              {hasError ? (
-                <p className={fieldStyles.fieldError} id="signup-email-error" role="alert">
-                  이미 가입된 이메일입니다.
-                </p>
-              ) : null}
-            </div>
-            {/*
-             * Figma splits the phone field into a fixed-width country-code
-             * selector ("82+") plus a flexible number input, instead of one
-             * full-width field.
-             */}
-            <div className={fieldStyles.field}>
-              <div className={fieldStyles.fieldLabelRow}>
-                <label className={fieldStyles.fieldLabel} htmlFor="signup-phone-number">
-                  전화번호<span aria-hidden="true"> *</span>
-                </label>
-              </div>
-              <div className={styles.splitFieldRow}>
-                <span className={styles.phoneCountryCodeWrap}>
-                  <select
-                    aria-label="국가 번호"
-                    className={`${fieldStyles.input} ${fieldStyles["input-compact"]} ${styles.phoneCountryCode}`}
-                    defaultValue="82"
-                    id="signup-phone-country"
-                    name="signup-phone-country"
-                  >
-                    <option value="82">82+</option>
-                  </select>
-                </span>
-                <input
-                  autoComplete="tel-national"
-                  className={`${fieldStyles.input} ${fieldStyles["input-compact"]}`}
-                  id="signup-phone-number"
-                  name="signup-phone-number"
-                  placeholder="010-0000-0000"
-                  required
-                  type="tel"
-                />
-              </div>
-            </div>
+            <SignupEmailField hasError={hasError} />
+            <SignupPhoneField />
             <SignupPasswordField />
             <TextField
               autoComplete="new-password"

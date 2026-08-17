@@ -198,6 +198,27 @@
   color: var(--color-danger);
 }
 
+/*
+ * Shared "corner chevron" pseudo-element shape: a small square with only
+ * its right + bottom borders visible, rotated 45deg, forming a downward
+ * ("⌄") mark. Used for select-dropdown indicators and accordion
+ * disclosure marks across screens. This only supplies the shape — a
+ * caller composes it with a screen-local class (e.g. `${uiStyles.chevronMark}
+ * ${styles.phoneCountryCodeWrap}`) that sets `position: relative`, this
+ * element's `::after` position (top/left/right + any centering
+ * transform), and a text `color` for the border tint (borders use
+ * `currentColor`).
+ */
+.chevronMark::after {
+  position: absolute;
+  width: var(--space-4);
+  height: var(--space-4);
+  border-right: var(--border-focus) solid currentColor;
+  border-bottom: var(--border-focus) solid currentColor;
+  content: "";
+  pointer-events: none;
+}
+
 .card {
   width: 100%;
   border-radius: var(--radius-control);

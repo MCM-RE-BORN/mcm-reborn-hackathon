@@ -6,6 +6,7 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { Section } from "@/components/layout/Section";
 import { KeyValueList } from "@/components/ui/KeyValueList";
 import { SectionBand } from "@/components/ui/SectionBand";
+import fieldStyles from "@/components/ui/ui.module.css";
 import { DEMO_ORDER } from "./demo-data";
 import type { DemoState } from "./demo-state";
 import { DemoStatePanel } from "./DemoStatePanel";
@@ -17,6 +18,22 @@ type MyPageScreenProps = {
     "normal" | "loading" | "empty" | "error" | "permission"
   >;
 };
+
+/*
+ * Static disclosure indicator for a section that renders fully expanded
+ * with no wired-up collapse behavior yet (see `.accordionMark`'s comment
+ * in `order-certificate.module.css`). Both "프로필 정보" and "기본 설정"
+ * use it, so it's factored out once instead of repeating the composed
+ * className at each call site.
+ */
+function AccordionChevron() {
+  return (
+    <span
+      aria-hidden="true"
+      className={`${fieldStyles.chevronMark} ${styles.accordionMark}`}
+    />
+  );
+}
 
 export function MyPageScreen({ state }: MyPageScreenProps) {
   return (
@@ -36,7 +53,7 @@ export function MyPageScreen({ state }: MyPageScreenProps) {
       ) : (
         <div className={styles.profileLayout}>
           <Section
-            action={<span aria-hidden="true" className={styles.accordionMark} />}
+            action={<AccordionChevron />}
             className={styles.myPageSection}
             title="프로필 정보"
           >
@@ -70,7 +87,7 @@ export function MyPageScreen({ state }: MyPageScreenProps) {
           <SectionBand />
 
           <Section
-            action={<span aria-hidden="true" className={styles.accordionMark} />}
+            action={<AccordionChevron />}
             className={styles.myPageSection}
             title="기본 설정"
           >

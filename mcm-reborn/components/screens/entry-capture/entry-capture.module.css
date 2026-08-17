@@ -238,28 +238,21 @@
  * wrapper (rather than the `<select>` itself) carries that fixed width
  * and the dropdown chevron, because a `<select>` doesn't reliably render
  * `::after` pseudo-elements across browsers.
+ *
+ * The chevron's shape comes from `ui.module.css`'s shared `.chevronMark`
+ * (composed onto this element in JSX); this block only positions it.
  */
 .phoneCountryCodeWrap {
   position: relative;
   flex: none;
   width: 4.25rem;
+  color: var(--color-ink);
 }
 
-/*
- * Same border-corner-rotated-45deg technique as the checked-checkbox
- * glyph below, just pointing down instead of used as a tick mark.
- */
 .phoneCountryCodeWrap::after {
-  position: absolute;
   top: 50%;
   right: var(--space-6);
-  width: var(--space-4);
-  height: var(--space-4);
-  border-right: var(--border-focus) solid var(--color-ink);
-  border-bottom: var(--border-focus) solid var(--color-ink);
   transform: translateY(-75%) rotate(45deg);
-  content: "";
-  pointer-events: none;
 }
 
 /*
