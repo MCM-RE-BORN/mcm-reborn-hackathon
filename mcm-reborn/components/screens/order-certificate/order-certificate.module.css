@@ -285,6 +285,114 @@
   flex-direction: column;
 }
 
+/*
+ * Figma's "마이페이지" design (node 177:714) sizes its section headings
+ * ("프로필 정보", "기본 설정") the same as the page title — 18px semibold
+ * (`--font-size-title`) — not the 15px `--font-size-control` that
+ * `Section`'s `h2` uses by default for every other screen. Scope the bump
+ * to My Page's own sections instead of changing the shared `Section`
+ * component's default. The doubled class selector is a deliberate
+ * specificity bump (not a typo): it guarantees this wins over the
+ * shared `.sectionCopy h2` rule regardless of CSS module bundling order,
+ * since the two rules live in different modules and can't be ordered
+ * against each other by source position alone.
+ */
+.myPageSection.myPageSection h2 {
+  font-size: var(--font-size-title);
+}
+
+/*
+ * `Section`'s header uses `justify-content: space-between`, spreading
+ * the title and its action to opposite edges of the row. Figma's My
+ * Page design sits the accordion chevron immediately next to "프로필
+ * 정보"/"기본 설정" instead — targeting the plain `header` element (rather
+ * than the shared `.sectionHeader` class name, which is scoped to
+ * layout.module.css and can't be referenced from this file) keeps the
+ * override local to My Page's sections. `center` (rather than
+ * `baseline`, used when this slot held the "수정하기" text button) is
+ * correct now that the action is an icon glyph, not a second line of
+ * text needing its own baseline aligned against the 18px heading.
+ */
+.myPageSection header {
+  align-items: center;
+  justify-content: flex-start;
+  gap: var(--space-7);
+}
+
+/*
+ * `Section`'s action slot (the last `<div>` in its header — the shared
+ * `.sectionAction` class name isn't referenceable here, same as
+ * `.sectionHeader` above) reserves a 44px touch-target height, which
+ * would push the small accordion chevron off-center against the 18px
+ * heading. Shrink it to the icon's own size instead.
+ */
+.myPageSection header > div:last-child {
+  min-height: auto;
+}
+
+/*
+ * Figma's My Page design (node 228:1176) marks each collapsible section
+ * ("프로필 정보", "기본 설정") with a small down chevron instead of a text
+ * action. Both sections render fully expanded with no wired-up collapse
+ * behavior yet, so this is a static indicator for now — same scope as
+ * the other disabled `TODO(post-beta)` controls on this screen.
+ *
+ * The chevron's shape comes from `ui.module.css`'s shared `.chevronMark`
+ * (composed onto this element in JSX); this block only positions it.
+ */
+.accordionMark {
+  position: relative;
+  width: var(--space-9);
+  height: var(--space-9);
+  flex: none;
+  color: var(--color-muted);
+}
+
+.accordionMark::after {
+  top: 40%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+/*
+ * Figma's profile rows use muted, medium-weight labels and values, not
+ * the shared `KeyValueList` default (light-weight ink labels, semibold
+ * ink values). Scoped the same way as `.myPageSection` above.
+ */
+.profileList.profileList dt {
+  color: var(--color-muted);
+  font-weight: var(--font-weight-medium);
+}
+
+.profileList.profileList dd {
+  font-weight: var(--font-weight-medium);
+}
+
+/*
+ * Figma spaces each profile row exactly 40px apart (label top-to-top),
+ * taller than the shared `KeyValueList` default of 32px. Override the
+ * row's box height directly instead of stacking on top of the shared
+ * `padding-block`, so the extra space is unambiguous.
+ */
+.profileList.profileList .keyValueRow {
+  min-height: var(--space-19);
+  padding-block: var(--space-0);
+}
+
+/*
+ * Figma shows the masked password as a normal `dd` value, then the
+ * "수정하기" link on its own row below the whole list, right-aligned
+ * to match the `dd` column rather than stacked inside it.
+ */
+.profilePasswordAction {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.profilePasswordLink {
+  min-height: auto;
+}
+
 .certificateHero {
   display: grid;
   justify-items: center;
@@ -393,25 +501,92 @@
   line-height: var(--line-height-tight);
 }
 
-.preferenceRow strong {
-  font-weight: var(--font-weight-medium);
-  text-align: right;
-}
-
+/*
+ * Traced directly from Figma's exported vector (node 177:774) instead of
+ * being redrawn with CSS — the earlier border-box + pseudo-element
+ * approximations never matched Figma's exact ribbon outline. `currentColor`
+ * lets the SVG's fill follow this rule's `color`, same as the rest of the
+ * screen's ink-colored icons/text.
+ */
 .bookmarkMark {
-  width: var(--space-8);
-  height: var(--space-10);
-  border: var(--border-thin) solid var(--color-ink);
-  border-bottom-color: var(--color-transparent);
+  flex: none;
+  width: 0.75rem;
+  height: 0.9375rem;
+  color: var(--color-ink);
 }
 
-.accountActions {
-  display: grid;
-  width: min(100%, var(--layout-account-actions-max));
-  gap: var(--space-5);
+/*
+ * New in Figma node 228:1176: a bordered "나의 RE:BORN 인증서 보기" link
+ * card between the "기본 설정" section and the footer links. Figma sits
+ * it ~27px below the SectionBand (not flush against it like the bands
+ * are against their own sections), so `.profileLayout`'s zero-gap flex
+ * stack needs an explicit top margin here.
+ */
+.certificateLinkCard {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: var(--space-14);
+  padding: var(--space-8) var(--space-9);
+  border: var(--border-thin) solid var(--color-ink);
+  border-radius: var(--radius-control);
+  color: var(--color-ink);
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
+}
+
+/*
+ * Same asset already used for `.journeyCard`'s "go to page" arrow on
+ * the home screen, rotated the same way (base glyph points up).
+ */
+.certificateLinkIcon {
+  width: var(--space-9);
+  height: auto;
+  transform: rotate(90deg);
+}
+
+/*
+ * Figma replaces the old full-width "로그아웃" button + centered "계정
+ * 탈퇴" link with two small underlined text links ("고객센터" /
+ * "로그아웃") side by side with a divider, mirroring the entry-capture
+ * screens' `.authLinks` pattern (not directly reusable here — that
+ * class lives in a different CSS module).
+ */
+.footerLinks {
+  display: flex;
+  min-height: var(--touch-target-min);
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-9);
   margin-top: auto;
-  margin-inline: auto;
   padding-block: var(--space-21) var(--space-9);
+}
+
+.footerLinks button,
+.footerLinks a {
+  display: inline-flex;
+  min-height: var(--touch-target-min);
+  align-items: center;
+  padding: var(--space-0);
+  background: var(--color-transparent);
+  color: var(--color-muted);
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-light);
+  text-decoration: underline;
+  text-underline-offset: var(--space-2);
+}
+
+.footerLinks button:disabled {
+  cursor: not-allowed;
+  opacity: var(--opacity-disabled);
+}
+
+.footerLinks span {
+  width: var(--border-thin);
+  height: var(--space-7);
+  background: var(--color-divider);
 }
 
 @media (min-width: 24rem) {
@@ -442,8 +617,8 @@
     grid-template-columns: auto minmax(var(--space-0), 1fr);
   }
 
-  .preferenceRow strong {
+  .preferenceRow .textLink {
     grid-column: 2;
-    text-align: left;
+    justify-self: start;
   }
 }

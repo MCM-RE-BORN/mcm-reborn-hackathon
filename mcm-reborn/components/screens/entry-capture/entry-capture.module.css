@@ -53,9 +53,16 @@
 }
 
 .introHero h1 {
+  /*
+   * `--line-height-tight` (1.25rem) is sized for body/control-sized text.
+   * This heading uses `--font-size-metric` (2.5rem) and wraps to two lines
+   * via <br />, so that line-height was shorter than the glyphs themselves
+   * and the two lines rendered on top of each other. Use a line-height
+   * scaled to the metric font size instead.
+   */
   font-size: var(--font-size-metric);
   font-weight: var(--font-weight-bold);
-  line-height: var(--line-height-tight);
+  line-height: var(--line-height-metric);
   letter-spacing: var(--letter-spacing-tight);
 }
 
@@ -139,24 +146,45 @@
   height: auto;
 }
 
-.journeyChevron {
-  width: var(--space-10);
-  height: var(--space-3);
+/*
+ * Login screen (Figma "로그인 화면") shows a bigger logo plus an
+ * "MCM RE:BORN" / "MODERN CREATION, REBORN" wordmark instead of the
+ * compact brand mark used elsewhere (e.g. signup). `--asset-size-brand`
+ * already exists in the token scale and matches the Figma logo width
+ * exactly, so reuse it here instead of a one-off value.
+ */
+.authLogoExpanded {
+  width: var(--asset-size-brand);
 }
 
-.authHeading {
+.authBrandExpanded {
+  gap: var(--space-11);
+}
+
+.authBrandCopy {
   display: grid;
-  gap: var(--space-5);
+  justify-items: center;
+  gap: var(--space-1);
 }
 
-.authHeading h1 {
+.authBrandCopy .authBrandTitle {
   font-size: var(--font-size-display);
   font-weight: var(--font-weight-bold);
   line-height: var(--line-height-tight);
   letter-spacing: var(--letter-spacing-tight);
 }
 
-.authHeading p,
+.authBrandCopy .authBrandSubtitle {
+  font-size: var(--font-size-control);
+  font-weight: var(--font-weight-light);
+  line-height: var(--line-height-tight);
+}
+
+.journeyChevron {
+  width: var(--space-10);
+  height: var(--space-3);
+}
+
 .betaCaption {
   color: var(--color-muted);
   font-size: var(--font-size-body);
@@ -167,6 +195,128 @@
 .authForm {
   display: grid;
   gap: var(--space-17);
+}
+
+/*
+ * Login screen's Figma design spaces its two fields much tighter
+ * (~12px) than the default form gap (32px, still used by signup, which
+ * has no confirmed design to match against yet).
+ */
+.authFormTight {
+  gap: var(--space-7);
+}
+
+/*
+ * Shared row layout for the split email (local / "@" / domain) and phone
+ * (country code / number) fields in the signup form (Figma node
+ * 228:1510). `min-width: 0` on the flexed inputs is needed because flex
+ * items default to `min-width: auto`, which lets their intrinsic content
+ * width push the row wider than its container instead of shrinking.
+ */
+.splitFieldRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+}
+
+.splitFieldRow input {
+  min-width: var(--space-0);
+  flex: 1;
+}
+
+.fieldDivider {
+  flex: none;
+  color: var(--color-ink);
+  font-size: var(--font-size-control);
+  font-weight: var(--font-weight-regular);
+  line-height: var(--line-height-tight);
+}
+
+/*
+ * Figma sizes the country-code selector at a fixed 68px next to the
+ * flexible phone-number input, rather than splitting the row evenly. The
+ * wrapper (rather than the `<select>` itself) carries that fixed width
+ * and the dropdown chevron, because a `<select>` doesn't reliably render
+ * `::after` pseudo-elements across browsers.
+ *
+ * The chevron's shape comes from `ui.module.css`'s shared `.chevronMark`
+ * (composed onto this element in JSX); this block only positions it.
+ */
+.phoneCountryCodeWrap {
+  position: relative;
+  flex: none;
+  width: 4.25rem;
+  color: var(--color-ink);
+}
+
+.phoneCountryCodeWrap::after {
+  top: 50%;
+  right: var(--space-6);
+  transform: translateY(-75%) rotate(45deg);
+}
+
+/*
+ * The doubled class selector (`.phoneCountryCode.phoneCountryCode`) is a
+ * deliberate specificity bump: `ui.module.css`'s `.input` rule also sets
+ * `width: 100%` on this element, and since the two rules live in
+ * different CSS modules their cascade order can't be controlled by
+ * source position alone. `width: 100%` here fills the wrapper above
+ * rather than fighting it.
+ */
+.phoneCountryCode.phoneCountryCode {
+  width: 100%;
+  flex: none;
+  padding-right: var(--space-13);
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+}
+
+.passwordField {
+  display: grid;
+  gap: var(--space-5);
+}
+
+/*
+ * Signup's Figma design shows password requirements as a small
+ * checklist (circle + label) rather than a single hint sentence.
+ */
+.passwordRules {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.passwordRules li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-5);
+  color: var(--color-muted);
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-regular);
+  line-height: var(--line-height-tight);
+}
+
+/*
+ * A satisfied rule switches to the same filled-circle "checked" look as
+ * the terms-agreement checkboxes below, so the checklist reads as a
+ * live check state instead of static bullet points.
+ */
+.passwordRuleMet {
+  color: var(--color-ink);
+}
+
+.passwordRuleMark {
+  position: relative;
+  width: var(--space-10);
+  height: var(--space-10);
+  flex: none;
+  border: var(--border-hairline) solid var(--color-muted);
+  border-radius: var(--radius-pill);
+}
+
+.passwordRuleMarkMet {
+  border-color: var(--color-ink);
+  background: var(--color-ink);
 }
 
 .authSubmit {
@@ -215,6 +365,62 @@
   text-align: center;
 }
 
+/*
+ * Signup's Figma design collapses the terms fieldset behind a
+ * "약관 동의 / 펼쳐보기" disclosure row. <details>/<summary> gives
+ * native toggle behavior without adding client-side state; browsers
+ * already auto-expand a <details> that contains a required field
+ * failing validation, so the required consent checkbox stays usable.
+ */
+.consentDisclosure {
+  display: grid;
+}
+
+.consentDisclosure summary {
+  display: flex;
+  min-height: var(--touch-target-min);
+  align-items: center;
+  justify-content: space-between;
+  list-style: none;
+  cursor: pointer;
+}
+
+.consentDisclosure summary::-webkit-details-marker {
+  display: none;
+}
+
+.consentSummaryLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-5);
+  color: var(--color-ink);
+  font-size: var(--font-size-control);
+  font-weight: var(--font-weight-regular);
+  line-height: var(--line-height-tight);
+}
+
+.consentChevron {
+  width: var(--space-7);
+  height: auto;
+}
+
+.consentDisclosure[open] .consentChevron {
+  transform: rotate(90deg);
+}
+
+.consentSummaryAction {
+  color: var(--color-link);
+  font-size: var(--font-size-control);
+  font-weight: var(--font-weight-regular);
+  line-height: var(--line-height-tight);
+  text-decoration: underline;
+  text-underline-offset: var(--space-2);
+}
+
+.consentGroupSpacing {
+  margin-top: var(--space-7);
+}
+
 .consentGroup,
 .productTypeGroup {
   display: grid;
@@ -241,12 +447,48 @@
   line-height: var(--line-height-tight);
 }
 
-.consentGroup input,
 .productTypeGroup input {
   width: var(--space-10);
   height: var(--space-10);
   margin: var(--space-0);
   accent-color: var(--color-ink);
+}
+
+/*
+ * Custom circular checkbox (native checkboxes render as a rounded
+ * square in most browsers). `appearance: none` clears the native box so
+ * the pill-radius border below can draw a full circle instead.
+ */
+.consentGroup input {
+  position: relative;
+  width: var(--space-10);
+  height: var(--space-10);
+  margin: var(--space-0);
+  appearance: none;
+  -webkit-appearance: none;
+  border: var(--border-hairline) solid var(--color-muted);
+  border-radius: var(--radius-pill);
+  flex: none;
+  cursor: pointer;
+}
+
+.consentGroup input:checked {
+  border-color: var(--color-ink);
+  background: var(--color-ink);
+}
+
+/* Shared checkmark glyph for the checked terms checkbox and a satisfied password rule. */
+.consentGroup input:checked::after,
+.passwordRuleMarkMet::after {
+  position: absolute;
+  top: 45%;
+  left: 50%;
+  width: var(--space-4);
+  height: var(--space-7);
+  border: solid var(--color-canvas);
+  border-width: 0 var(--border-focus) var(--border-focus) 0;
+  transform: translate(-50%, -50%) rotate(45deg);
+  content: "";
 }
 
 .homeContent {
@@ -295,9 +537,18 @@
 }
 
 .homeHeroCopy h1 {
+  /*
+   * Same overlap bug as `.introHero h1` above: `--line-height-tight`
+   * (1.25rem) is shorter than this `--font-size-display` (1.5rem) text,
+   * and HomeScreen's copy hardcodes a <br /> so it always renders two
+   * lines. `--line-height-relaxed` is already the established pairing
+   * for `--font-size-display` headings elsewhere (e.g. `.completeCopy
+   * h1`, `.submissionLead h2`), so reuse it here instead of the tight
+   * body-text line-height.
+   */
   font-size: var(--font-size-display);
   font-weight: var(--font-weight-bold);
-  line-height: var(--line-height-tight);
+  line-height: var(--line-height-relaxed);
   letter-spacing: var(--letter-spacing-tight);
 }
 

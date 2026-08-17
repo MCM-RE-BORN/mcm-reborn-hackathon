@@ -4,6 +4,7 @@ import styles from "./ui.module.css";
 type TextFieldProps = Omit<InputHTMLAttributes<HTMLInputElement>, "size"> & {
   density?: "compact" | "comfortable";
   error?: string;
+  hideLabel?: boolean;
   hint?: string;
   id: string;
   label: string;
@@ -15,6 +16,7 @@ export function TextField({
   className,
   density = "comfortable",
   error,
+  hideLabel = false,
   hint,
   id,
   label,
@@ -42,7 +44,7 @@ export function TextField({
 
   return (
     <div className={styles.field}>
-      <div className={styles.fieldLabelRow}>
+      <div className={hideLabel ? styles.visuallyHidden : styles.fieldLabelRow}>
         <label className={styles.fieldLabel} htmlFor={id}>
           {label}
           {required ? <span aria-hidden="true"> *</span> : null}

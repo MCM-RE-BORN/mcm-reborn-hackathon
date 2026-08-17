@@ -19,6 +19,30 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html data-scroll-behavior="smooth" lang="ko">
+      <head>
+        {/*
+         * `--font-family-sans` in globals.css names "Pretendard Variable"
+         * first, but nothing in the project ever loaded that font — every
+         * screen has been silently rendering in the OS's fallback system
+         * font instead, with different per-size metrics than Figma's
+         * Pretendard-based designs (this is what was causing "수정하기"
+         * to never quite baseline-align with "프로필 정보" no matter which
+         * flex alignment was tried on My Page). Loading the actual
+         * variable font via the CDN jsdelivr build (mirroring
+         * https://github.com/orioncactus/pretendard's own recommended
+         * usage) is the fix. This requires network access at runtime — a
+         * self-hosted `next/font/local` setup would drop that dependency,
+         * but installing the `pretendard` package needs `npm install`,
+         * which isn't runnable from this session; swap to that later if
+         * wanted.
+         */}
+        <link
+          as="style"
+          crossOrigin="anonymous"
+          href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@latest/dist/web/variable/pretendardvariable.css"
+          rel="stylesheet"
+        />
+      </head>
       <body>{children}</body>
     </html>
   );

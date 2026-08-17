@@ -16,8 +16,13 @@ export function PageHeader({
   rightSlot,
   title,
 }: PageHeaderProps) {
+  const hasCopy = Boolean(title || description);
+  const headerClassName = [styles.pageHeader, hasCopy ? "" : styles.pageHeaderCompact]
+    .filter(Boolean)
+    .join(" ");
+
   return (
-    <header className={styles.pageHeader}>
+    <header className={headerClassName}>
       <div className={styles.pageHeaderTopRow}>
         {backHref ? (
           <Link
