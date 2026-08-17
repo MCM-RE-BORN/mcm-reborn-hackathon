@@ -206,6 +206,79 @@
   gap: var(--space-7);
 }
 
+/*
+ * Shared row layout for the split email (local / "@" / domain) and phone
+ * (country code / number) fields in the signup form (Figma node
+ * 228:1510). `min-width: 0` on the flexed inputs is needed because flex
+ * items default to `min-width: auto`, which lets their intrinsic content
+ * width push the row wider than its container instead of shrinking.
+ */
+.splitFieldRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+}
+
+.splitFieldRow input {
+  min-width: var(--space-0);
+  flex: 1;
+}
+
+.fieldDivider {
+  flex: none;
+  color: var(--color-ink);
+  font-size: var(--font-size-control);
+  font-weight: var(--font-weight-regular);
+  line-height: var(--line-height-tight);
+}
+
+/*
+ * Figma sizes the country-code selector at a fixed 68px next to the
+ * flexible phone-number input, rather than splitting the row evenly. The
+ * wrapper (rather than the `<select>` itself) carries that fixed width
+ * and the dropdown chevron, because a `<select>` doesn't reliably render
+ * `::after` pseudo-elements across browsers.
+ */
+.phoneCountryCodeWrap {
+  position: relative;
+  flex: none;
+  width: 4.25rem;
+}
+
+/*
+ * Same border-corner-rotated-45deg technique as the checked-checkbox
+ * glyph below, just pointing down instead of used as a tick mark.
+ */
+.phoneCountryCodeWrap::after {
+  position: absolute;
+  top: 50%;
+  right: var(--space-6);
+  width: var(--space-4);
+  height: var(--space-4);
+  border-right: var(--border-focus) solid var(--color-ink);
+  border-bottom: var(--border-focus) solid var(--color-ink);
+  transform: translateY(-75%) rotate(45deg);
+  content: "";
+  pointer-events: none;
+}
+
+/*
+ * The doubled class selector (`.phoneCountryCode.phoneCountryCode`) is a
+ * deliberate specificity bump: `ui.module.css`'s `.input` rule also sets
+ * `width: 100%` on this element, and since the two rules live in
+ * different CSS modules their cascade order can't be controlled by
+ * source position alone. `width: 100%` here fills the wrapper above
+ * rather than fighting it.
+ */
+.phoneCountryCode.phoneCountryCode {
+  width: 100%;
+  flex: none;
+  padding-right: var(--space-13);
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+}
+
 .passwordField {
   display: grid;
   gap: var(--space-5);
