@@ -304,14 +304,17 @@
 /*
  * `Section`'s header uses `justify-content: space-between`, spreading
  * the title and its action to opposite edges of the row. Figma's My
- * Page design sits "수정하기" immediately next to "프로필 정보" instead —
- * targeting the plain `header` element (rather than the shared
- * `.sectionHeader` class name, which is scoped to layout.module.css and
- * can't be referenced from this file) keeps the override local to My
- * Page's sections.
+ * Page design sits the accordion chevron immediately next to "프로필
+ * 정보"/"기본 설정" instead — targeting the plain `header` element (rather
+ * than the shared `.sectionHeader` class name, which is scoped to
+ * layout.module.css and can't be referenced from this file) keeps the
+ * override local to My Page's sections. `center` (rather than
+ * `baseline`, used when this slot held the "수정하기" text button) is
+ * correct now that the action is an icon glyph, not a second line of
+ * text needing its own baseline aligned against the 18px heading.
  */
 .myPageSection header {
-  align-items: baseline;
+  align-items: center;
   justify-content: flex-start;
   gap: var(--space-7);
 }
@@ -319,22 +322,38 @@
 /*
  * `Section`'s action slot (the last `<div>` in its header — the shared
  * `.sectionAction` class name isn't referenceable here, same as
- * `.sectionHeader` above) reserves a 44px touch-target height. That
- * reserved box was throwing off alignment against the 18px heading, so
- * shrink it to the button's own text size here. `align-items: baseline`
- * above (rather than `center`) is the actual fix for the mismatch:
- * "프로필 정보" (18px) and "수정하기" (13px) share the same line-height, so
- * centering their boxes doesn't align their text baselines — only
- * `baseline` does, matching where the two sit on the same line in
- * Figma. Since this action is disabled (no real tap target yet),
- * dropping the reserved height is safe for now.
+ * `.sectionHeader` above) reserves a 44px touch-target height, which
+ * would push the small accordion chevron off-center against the 18px
+ * heading. Shrink it to the icon's own size instead.
  */
 .myPageSection header > div:last-child {
   min-height: auto;
 }
 
-.profileEditLink {
-  min-height: auto;
+/*
+ * Figma's My Page design (node 228:1176) marks each collapsible section
+ * ("프로필 정보", "기본 설정") with a small down chevron instead of a text
+ * action. Both sections render fully expanded with no wired-up collapse
+ * behavior yet, so this is a static indicator for now — same scope as
+ * the other disabled `TODO(post-beta)` controls on this screen.
+ */
+.accordionMark {
+  position: relative;
+  width: var(--space-9);
+  height: var(--space-9);
+  flex: none;
+}
+
+.accordionMark::after {
+  position: absolute;
+  top: 40%;
+  left: 50%;
+  width: var(--space-4);
+  height: var(--space-4);
+  border-right: var(--border-focus) solid var(--color-muted);
+  border-bottom: var(--border-focus) solid var(--color-muted);
+  transform: translate(-50%, -50%) rotate(45deg);
+  content: "";
 }
 
 /*
@@ -351,17 +370,25 @@
   font-weight: var(--font-weight-medium);
 }
 
-.profileContact {
-  display: grid;
-  gap: var(--space-2);
-  text-align: right;
+/*
+ * Figma spaces each profile row exactly 40px apart (label top-to-top),
+ * taller than the shared `KeyValueList` default of 32px. Override the
+ * row's box height directly instead of stacking on top of the shared
+ * `padding-block`, so the extra space is unambiguous.
+ */
+.profileList.profileList .keyValueRow {
+  min-height: var(--space-19);
+  padding-block: var(--space-0);
 }
 
-.profilePasswordValue {
-  display: inline-flex;
-  align-items: center;
+/*
+ * Figma shows the masked password as a normal `dd` value, then the
+ * "수정하기" link on its own row below the whole list, right-aligned
+ * to match the `dd` column rather than stacked inside it.
+ */
+.profilePasswordAction {
+  display: flex;
   justify-content: flex-end;
-  gap: var(--space-5);
 }
 
 .profilePasswordLink {
@@ -490,22 +517,78 @@
   color: var(--color-ink);
 }
 
-.accountActions {
-  display: grid;
-  width: min(100%, var(--layout-account-actions-max));
-  gap: var(--space-5);
-  margin-top: auto;
-  margin-inline: auto;
-  padding-block: var(--space-21) var(--space-9);
+/*
+ * New in Figma node 228:1176: a bordered "나의 RE:BORN 인증서 보기" link
+ * card between the "기본 설정" section and the footer links. Figma sits
+ * it ~27px below the SectionBand (not flush against it like the bands
+ * are against their own sections), so `.profileLayout`'s zero-gap flex
+ * stack needs an explicit top margin here.
+ */
+.certificateLinkCard {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: var(--space-14);
+  padding: var(--space-8) var(--space-9);
+  border: var(--border-thin) solid var(--color-ink);
+  border-radius: var(--radius-control);
+  color: var(--color-ink);
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
 }
 
 /*
- * Figma shows "계정 탈퇴" as a small centered text link under the
- * full-width "로그아웃" button, not a full-width danger button — center
- * it instead of letting the grid stretch it edge-to-edge.
+ * Same asset already used for `.journeyCard`'s "go to page" arrow on
+ * the home screen, rotated the same way (base glyph points up).
  */
-.accountDangerAction {
-  justify-self: center;
+.certificateLinkIcon {
+  width: var(--space-9);
+  height: auto;
+  transform: rotate(90deg);
+}
+
+/*
+ * Figma replaces the old full-width "로그아웃" button + centered "계정
+ * 탈퇴" link with two small underlined text links ("고객센터" /
+ * "로그아웃") side by side with a divider, mirroring the entry-capture
+ * screens' `.authLinks` pattern (not directly reusable here — that
+ * class lives in a different CSS module).
+ */
+.footerLinks {
+  display: flex;
+  min-height: var(--touch-target-min);
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-9);
+  margin-top: auto;
+  padding-block: var(--space-21) var(--space-9);
+}
+
+.footerLinks button,
+.footerLinks a {
+  display: inline-flex;
+  min-height: var(--touch-target-min);
+  align-items: center;
+  padding: var(--space-0);
+  background: var(--color-transparent);
+  color: var(--color-muted);
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-light);
+  text-decoration: underline;
+  text-underline-offset: var(--space-2);
+}
+
+.footerLinks button:disabled {
+  cursor: not-allowed;
+  opacity: var(--opacity-disabled);
+}
+
+.footerLinks span {
+  width: var(--border-thin);
+  height: var(--space-7);
+  background: var(--color-divider);
 }
 
 @media (min-width: 24rem) {

@@ -1,9 +1,11 @@
+import Image from "next/image";
+import Link from "next/link";
 import { AppShell } from "@/components/layout/AppShell";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Section } from "@/components/layout/Section";
-import { Button, ButtonLink } from "@/components/ui/Button";
 import { KeyValueList } from "@/components/ui/KeyValueList";
+import { SectionBand } from "@/components/ui/SectionBand";
 import { DEMO_ORDER } from "./demo-data";
 import type { DemoState } from "./demo-state";
 import { DemoStatePanel } from "./DemoStatePanel";
@@ -34,56 +36,44 @@ export function MyPageScreen({ state }: MyPageScreenProps) {
       ) : (
         <div className={styles.profileLayout}>
           <Section
-            action={
-              // TODO(post-beta): connect profile editing to the approved customer profile contract.
-              <button
-                className={`${styles.textLink} ${styles.profileEditLink}`}
-                disabled
-                type="button"
-              >
-                수정하기
-              </button>
-            }
+            action={<span aria-hidden="true" className={styles.accordionMark} />}
             className={styles.myPageSection}
             title="프로필 정보"
           >
             <KeyValueList
               className={styles.profileList}
               items={[
-                {
-                  label: "휴대폰",
-                  value: (
-                    <span className={styles.profileContact}>
-                      <span>{DEMO_ORDER.customer.name}</span>
-                      <span>{DEMO_ORDER.customer.phone}</span>
-                    </span>
-                  ),
-                },
+                { label: "이름", value: DEMO_ORDER.customer.name },
+                { label: "휴대폰", value: DEMO_ORDER.customer.phone },
                 {
                   label: "주소지",
                   value: `${DEMO_ORDER.customer.address} ${DEMO_ORDER.customer.addressDetail}`,
                 },
                 {
                   label: "비밀번호",
-                  value: (
-                    <span className={styles.profilePasswordValue}>
-                      <span>••••••••</span>
-                      {/* TODO(post-beta): connect password change to the approved auth contract. */}
-                      <button
-                        className={`${styles.textLink} ${styles.profilePasswordLink}`}
-                        disabled
-                        type="button"
-                      >
-                        변경하기
-                      </button>
-                    </span>
-                  ),
+                  value: "••••••••",
                 },
               ]}
             />
+            <div className={styles.profilePasswordAction}>
+              {/* TODO(post-beta): connect password change to the approved auth contract. */}
+              <button
+                className={`${styles.textLink} ${styles.profilePasswordLink}`}
+                disabled
+                type="button"
+              >
+                수정하기
+              </button>
+            </div>
           </Section>
 
-          <Section className={styles.myPageSection} title="기본 설정">
+          <SectionBand />
+
+          <Section
+            action={<span aria-hidden="true" className={styles.accordionMark} />}
+            className={styles.myPageSection}
+            title="기본 설정"
+          >
             <div className={styles.preferenceRow}>
               <svg
                 aria-hidden="true"
@@ -107,21 +97,30 @@ export function MyPageScreen({ state }: MyPageScreenProps) {
             </div>
           </Section>
 
-          <div className={styles.accountActions}>
+          <SectionBand />
+
+          {/* TODO(post-beta): confirm this destination once the beta certificate lookup flow is finalized. */}
+          <Link className={styles.certificateLinkCard} href="/certificates/demo">
+            나의 RE:BORN 인증서 보기
+            <Image
+              alt=""
+              aria-hidden="true"
+              className={styles.certificateLinkIcon}
+              height={9}
+              src="/assets/mvp-beta/icon-chevron-right.svg"
+              width={17}
+            />
+          </Link>
+
+          <nav aria-label="계정 도움말" className={styles.footerLinks}>
+            {/* TODO(post-beta): link to the approved customer-support destination. */}
+            <button className={styles.textLink} disabled type="button">
+              고객센터
+            </button>
+            <span aria-hidden="true" />
             {/* TODO(post-beta): revoke the authenticated session through the approved auth contract. */}
-            <ButtonLink fullWidth href="/login">
-              로그아웃
-            </ButtonLink>
-            {/* TODO(post-beta): add re-authentication and account deletion after contract approval. */}
-            <Button
-              className={styles.accountDangerAction}
-              disabled
-              type="button"
-              variant="ghost"
-            >
-              계정 탈퇴
-            </Button>
-          </div>
+            <Link href="/login">로그아웃</Link>
+          </nav>
         </div>
       )}
     </AppShell>
