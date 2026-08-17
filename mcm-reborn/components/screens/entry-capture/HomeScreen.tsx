@@ -43,7 +43,7 @@ function HomeStatus({ state }: HomeScreenProps) {
     return (
       <StatusPanel
         action={
-          <ButtonLink fullWidth href="/" variant="outline">
+          <ButtonLink fullWidth href="/home" variant="outline">
             다시 불러오기
           </ButtonLink>
         }
@@ -71,7 +71,7 @@ function HomeStatus({ state }: HomeScreenProps) {
         description={
           isPermission
             ? "내 접수 내역은 로그인 후 확인할 수 있어요."
-            : "현재 기기에서는 진행 중인 여정 대신 서비스 소개와 정적 데모 화면을 이용할 수 있어요."
+            : "현재 기기에서는 진행 중인 여정 대신 서비스 소개 화면을 이용할 수 있어요."
         }
         title={
           isPermission

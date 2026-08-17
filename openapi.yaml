@@ -1,21 +1,21 @@
 openapi: 3.1.0
 jsonSchemaDialect: https://json-schema.org/draft/2020-12/schema
 info:
-  title: MCM RE:BORN Hackathon API
-  version: 1.1.0
-  description: '2주 해커톤용 MCM RE:BORN API 계약입니다.
+  title: MCM RE:BORN Service Demo API
+  version: 2.0.0
+  description: 'MCM RE:BORN 시연형 MVP API의 breaking v2 계약입니다.
 
     실제 MCM 내부 시스템, PG, 택배, 정품 인증 또는 공인 ESG 산식과 연동하지 않습니다.
 
-    OpenAI 이미지 분석은 실제 API를 사용하되 hybrid 모드에서 Fixture로 폴백할 수 있습니다.
+    분석은 LIVE, SEEDED_ESTIMATE 또는 DEMO_FIXTURE 모드로 동일한 예상값 계약을 제공합니다.
 
-    사진 품질 미달은 재촬영 오류로 반환하고, 정품 관련 신호는 수동 검토 게이트로만 사용합니다.
+    모든 AI 결과는 사진 기반 예상치로 표시하며, 최종 판단은 주문 후 전문가 실물 검수에서 수행합니다.
 
     '
 servers:
-- url: /api/v1
+- url: /api/v2
   description: Same-origin Next.js Route Handlers
-- url: http://localhost:3000/api/v1
+- url: http://localhost:3000/api/v2
   description: Local development
 security:
 - bearerAuth: []
@@ -46,9 +46,9 @@ paths:
                 $ref: '#/components/schemas/HealthResponse'
               example:
                 status: ok
-                version: 1.0.0
-                timestamp: '2026-08-04T06:30:00Z'
-                aiMode: hybrid
+                version: 2.0.0
+                timestamp: '2026-08-17T06:30:00Z'
+                aiMode: DEMO_FIXTURE
   /auth/demo-login:
     post:
       tags:
@@ -100,7 +100,7 @@ paths:
       - Uploads
       operationId: createUploadUrls
       summary: 원제품 이미지 업로드 URL 발급
-      description: 고객 전용. JPEG, PNG, WebP를 파일당 6MB까지 허용합니다.
+      description: 고객 전용. JPG 또는 PNG를 파일당 10MB까지 허용합니다. URL은 점진 업로드를 위해 한 번에 1~4개 발급할 수 있습니다.
       requestBody:
         required: true
         content:
@@ -128,7 +128,7 @@ paths:
       summary: 원제품 이미지 분석 실행
       description: 'OpenAI Responses API와 Structured Output을 사용합니다.
 
-        AI_MODE=hybrid에서는 제공자 오류 시 Fixture 결과를 성공 응답으로 반환합니다.
+        LIVE 제공자 오류 시 준비된 DEMO_FIXTURE 결과를 동일한 예상값 계약으로 반환할 수 있습니다.
 
         이미지 품질이 분석에 충분하지 않으면 성공 분석을 생성하지 않고 IMAGE_QUALITY_INSUFFICIENT 오류와 재촬영 안내를 반환합니다.
 
@@ -160,13 +160,13 @@ paths:
         '422':
           $ref: '#/components/responses/ImageQualityInsufficient'
         '502':
-          description: AI 제공자 오류. AI_MODE=live일 때만 반환할 수 있습니다.
+          description: AI 제공자 오류. LIVE 모드에서 폴백을 사용하지 않을 때만 반환할 수 있습니다.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
         '504':
-          description: AI 제공자 시간 초과. AI_MODE=live일 때만 반환할 수 있습니다.
+          description: AI 제공자 시간 초과. LIVE 모드에서 폴백을 사용하지 않을 때만 반환할 수 있습니다.
           content:
             application/json:
               schema:
@@ -273,11 +273,9 @@ paths:
       - Applications
       operationId: createApplication
       summary: 업사이클링 신청 생성
-      description: '분석의 authenticitySignal이 NOT_EVALUATED일 때만 신청을 생성합니다.
+      description: '사진 기반 사전 확인이 ORDER_ELIGIBLE인 분석으로 주문을 생성합니다.
 
-        REVIEW_REQUIRED이면 신청을 생성하지 않고 수동 검토 대기 상태와 함께 AUTHENTICITY_REVIEW_REQUIRED 오류를 반환합니다.
-
-        이 신호는 정품 또는 가품 판정이 아닙니다.
+        사전 확인은 공식 정품 확정이 아니며, 최종 제작 가능 여부와 조건은 주문·수거 후 전문가 실물 검수에서 결정합니다.
 
         '
       parameters:
@@ -303,8 +301,6 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '409':
           $ref: '#/components/responses/Conflict'
-        '422':
-          $ref: '#/components/responses/AuthenticityReviewRequired'
     get:
       tags:
       - Applications
@@ -356,6 +352,7 @@ paths:
       - Applications
       operationId: completeMockPayment
       summary: Mock 결제 완료
+      description: SUCCESS이면 주문을 ORDER_PLACED로 전환합니다. FAILURE이면 PENDING_PAYMENT를 유지합니다.
       parameters:
       - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
@@ -517,15 +514,94 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
-  /admin/applications/{applicationId}/approve:
+  /admin/applications/{applicationId}/inspection:
     parameters:
     - $ref: '#/components/parameters/ApplicationId'
     post:
       tags:
       - Operator
-      operationId: approveApplication
-      summary: 신청 승인
-      description: PENDING_APPROVAL 상태에서만 가능하며 이후 공정은 자동 Mock 시뮬레이션합니다.
+      operationId: submitPhysicalInspection
+      summary: 주문 후 전문가 실물 검수 제출
+      description: PRODUCT_RECEIVED 또는 EXPERT_INSPECTION 상태에서만 수행합니다. 조건 변경이 없으면 PRODUCTION_READY, 변경이 있으면 CHANGE_APPROVAL_REQUIRED로 전환합니다.
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubmitPhysicalInspectionRequest'
+      responses:
+        '200':
+          description: 실물 검수 완료
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PhysicalInspectionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /applications/{applicationId}/change-request:
+    parameters:
+    - $ref: '#/components/parameters/ApplicationId'
+    get:
+      tags:
+      - Applications
+      operationId: getApplicationChangeRequest
+      summary: 실물 검수 후 변경 조건 조회
+      responses:
+        '200':
+          description: 고객 승인 대기 또는 처리된 변경 조건
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApplicationChangeRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /applications/{applicationId}/change-request/approve:
+    parameters:
+    - $ref: '#/components/parameters/ApplicationId'
+    post:
+      tags:
+      - Applications
+      operationId: approveApplicationChangeRequest
+      summary: 변경 조건 고객 승인
+      description: CHANGE_APPROVAL_REQUIRED 상태의 변경안을 승인하고 주문을 PRODUCTION_READY로 전환합니다.
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: 변경 조건 승인 완료
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApplicationChangeDecisionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /applications/{applicationId}/change-request/reject:
+    parameters:
+    - $ref: '#/components/parameters/ApplicationId'
+    post:
+      tags:
+      - Applications
+      operationId: rejectApplicationChangeRequest
+      summary: 변경 조건 고객 거절 및 주문 취소
+      description: 변경안을 거절하고 주문을 CANCELED로 전환합니다. 고객 승인 없이 제작을 시작하지 않습니다.
       parameters:
       - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
@@ -533,14 +609,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ApproveApplicationRequest'
+              $ref: '#/components/schemas/RejectApplicationChangeRequest'
       responses:
         '200':
-          description: 승인 완료
+          description: 변경 조건 거절 및 취소 완료
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApplicationApprovalResponse'
+                $ref: '#/components/schemas/ApplicationChangeDecisionResponse'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
@@ -600,7 +676,7 @@ components:
         type: string
         minLength: 8
         maxLength: 128
-      description: 생성, 결제, 승인 중복 방지 키
+      description: 생성, 결제, 실물 검수, 변경안 결정의 중복 처리를 막는 키
     Page:
       name: page
       in: query
@@ -697,104 +773,101 @@ components:
                     code: TOO_DARK
                     guidanceKo: 밝고 균일한 조명 아래에서 제품 전체가 보이도록 촬영해 주세요.
                 retryable: true
-    AuthenticityReviewRequired:
-      description: 정품 여부를 판정하지 않으며 수동 검토가 필요해 신청 생성을 차단함
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/AuthenticityReviewRequiredErrorResponse'
-          example:
-            error:
-              code: AUTHENTICITY_REVIEW_REQUIRED
-              message: 정품 여부 판정 없이 운영자 수동 검토가 필요합니다. 검토가 끝날 때까지 신청을 생성할 수 없습니다.
-              requestId: req_application_review_001
-              details:
-                analysisId: 20000000-0000-4000-8000-000000000003
-                authenticitySignal: REVIEW_REQUIRED
-                applicationCreationBlocked: true
-                manualReviewCaseId: 25000000-0000-4000-8000-000000000001
-                manualReviewStatus: PENDING
-                nextAction: AWAIT_MANUAL_REVIEW
   examples:
     AnalysisLiveExample:
       value:
-        id: 71d65a99-14bc-48b6-a58f-85043110aff1
+        id: 20000000-0000-4000-8000-000000000001
         status: COMPLETED
         modeUsed: LIVE
         sourceProduct:
-          category: TOTE_SHOPPER
+          category: BACKPACK
           materialType: COATED_CANVAS
-          confidence: 0.89
+          confidence: 0.87
         condition:
-          grade: B
-          overallDamageSeverity: 31
-          summary: 몸판은 대체로 양호하고 손잡이와 모서리에 마모가 있습니다.
+          grade: A
+          overallDamageSeverity: 18
+          summary: 외부 패널은 양호하고 하단 모서리에 가벼운 사용감이 보여요.
         damages:
-        - type: HANDLE_WEAR
-          location: TOP_HANDLE
-          severity: 54
-          confidence: 0.92
+        - type: EDGE_ABRASION
+          location: BOTTOM_CORNERS
+          severity: 22
+          confidence: 0.87
         imageQuality:
           status: ACCEPTABLE
           issues: []
-        authenticitySignal: NOT_EVALUATED
-        reusableMaterialRate: 65
-        estimatedReusableAreaCm2: 2470
+        authenticityPrecheck:
+          status: ORDER_ELIGIBLE
+          estimatePercent: 91
+          notice: 사진 기반 사전 확인이며 공식 정품 확정이 아닙니다.
+        estimateMeta:
+          mode: LIVE
+          confidencePercent: 87
+          notice: 사진 기반 AI 예상치이며 주문 후 전문가 실물 검수에서 변경될 수 있습니다.
+        estimatedReusableMaterialRate: 72
+        estimatedReusableAreaCm2: 3024
         longStripAvailable: false
         recommendations:
         - productId: 10000000-0000-4000-8000-000000000001
-          productCode: REBORN_POUCH
+          productCode: REBORN_PASSPORT_WALLET
           eligible: true
           score: 96
+          estimatedReusableMaterialRate: 72
           reasonCodes:
           - SUFFICIENT_AREA
           - PATTERN_VISIBILITY
         esgPreview:
-          methodologyVersion: DEMO_LCA_V1
-          estimatedCarbonSavingKgCo2e: 2.96
+          methodologyVersion: DEMO_LCA_V2
+          estimatedCarbonSavingKgCo2e: 3.63
           disclaimer: 해커톤용 추정치이며 공인 ESG 수치가 아닙니다.
         provider:
           name: OPENAI
           model: gpt-5.6
           requestId: resp_demo_live
         warnings: []
-        createdAt: '2026-08-04T06:30:00Z'
-        completedAt: '2026-08-04T06:30:08Z'
+        createdAt: '2026-08-17T05:00:00Z'
+        completedAt: '2026-08-17T05:00:08Z'
     AnalysisFallbackExample:
       value:
-        id: 71d65a99-14bc-48b6-a58f-85043110aff2
+        id: 20000000-0000-4000-8000-000000000001
         status: COMPLETED
-        modeUsed: FIXTURE_FALLBACK
+        modeUsed: DEMO_FIXTURE
         sourceProduct:
-          category: TOTE_SHOPPER
+          category: BACKPACK
           materialType: COATED_CANVAS
-          confidence: 0.82
+          confidence: 0.87
         condition:
-          grade: B
-          overallDamageSeverity: 35
-          summary: 준비된 데모 분석 결과입니다.
+          grade: A
+          overallDamageSeverity: 18
+          summary: 외부 패널은 양호하고 하단 모서리에 가벼운 사용감이 보여요.
         damages: []
         imageQuality:
           status: ACCEPTABLE
           issues: []
-        authenticitySignal: NOT_EVALUATED
-        reusableMaterialRate: 65
-        estimatedReusableAreaCm2: 2470
+        authenticityPrecheck:
+          status: ORDER_ELIGIBLE
+          estimatePercent: 91
+          notice: 사진 기반 사전 확인이며 공식 정품 확정이 아닙니다.
+        estimateMeta:
+          mode: DEMO_FIXTURE
+          confidencePercent: 87
+          notice: 준비된 데모 예상치이며 주문 후 전문가 실물 검수에서 변경될 수 있습니다.
+        estimatedReusableMaterialRate: 72
+        estimatedReusableAreaCm2: 3024
         longStripAvailable: false
         recommendations: []
         esgPreview:
-          methodologyVersion: DEMO_LCA_V1
-          estimatedCarbonSavingKgCo2e: 2.96
+          methodologyVersion: DEMO_LCA_V2
+          estimatedCarbonSavingKgCo2e: 3.63
           disclaimer: 해커톤용 추정치이며 공인 ESG 수치가 아닙니다.
         provider:
-          name: FIXTURE
-          model: TOTE_MODERATE_WEAR
+          name: DEMO_DATA
+          model: MCM_BACKPACK_CHANGE_APPROVED_20260817
           requestId: null
         warnings:
         - code: AI_PROVIDER_TIMEOUT
           message: 실제 AI 응답이 지연되어 준비된 데모 결과를 사용했습니다.
-        createdAt: '2026-08-04T06:30:00Z'
-        completedAt: '2026-08-04T06:30:05Z'
+        createdAt: '2026-08-17T05:00:00Z'
+        completedAt: '2026-08-17T05:00:05Z'
   schemas:
     HealthResponse:
       type: object
@@ -820,9 +893,9 @@ components:
     AiMode:
       type: string
       enum:
-      - live
-      - fixture
-      - hybrid
+      - DEMO_FIXTURE
+      - SEEDED_ESTIMATE
+      - LIVE
     DemoAccount:
       type: string
       enum:
@@ -890,10 +963,10 @@ components:
     UploadPurpose:
       type: string
       enum:
-      - SOURCE_PRODUCT
-      - DAMAGE_CLOSEUP
+      - SOURCE_FRONT
+      - SOURCE_SIDE
       - INTERIOR
-      - SERIAL
+      - ENGRAVING
     UploadFileRequest:
       type: object
       additionalProperties: false
@@ -912,11 +985,10 @@ components:
           enum:
           - image/jpeg
           - image/png
-          - image/webp
         sizeBytes:
           type: integer
           minimum: 1
-          maximum: 6291456
+          maximum: 10485760
         purpose:
           $ref: '#/components/schemas/UploadPurpose'
     PresignUploadRequest:
@@ -1017,14 +1089,17 @@ components:
     AnalysisStatus:
       type: string
       enum:
+      - RECEIVED
+      - ANALYZING
+      - SUPPLEMENT_REQUIRED
       - COMPLETED
       - FAILED
     AnalysisModeUsed:
       type: string
       enum:
+      - DEMO_FIXTURE
+      - SEEDED_ESTIMATE
       - LIVE
-      - FIXTURE
-      - FIXTURE_FALLBACK
     ImageQualityStatus:
       type: string
       enum:
@@ -1072,31 +1147,87 @@ components:
           maxItems: 7
           items:
             $ref: '#/components/schemas/ImageQualityIssue'
-    AuthenticitySignal:
+    EstimateMeta:
+      type: object
+      additionalProperties: false
+      description: AI 또는 데모 데이터로 산출된 모든 예상값에 공통으로 붙는 메타데이터입니다.
+      required:
+      - mode
+      - confidencePercent
+      - notice
+      properties:
+        mode:
+          $ref: '#/components/schemas/AnalysisModeUsed'
+        confidencePercent:
+          type: integer
+          minimum: 0
+          maximum: 100
+        notice:
+          type: string
+          minLength: 1
+    AuthenticityPrecheckStatus:
       type: string
-      description: 정품 또는 가품 판정이 아닙니다. NOT_EVALUATED는 평가하지 않았음을, REVIEW_REQUIRED는 신청 전 운영자 수동 검토가 필요함을 의미합니다.
       enum:
-      - NOT_EVALUATED
-      - REVIEW_REQUIRED
+      - ORDER_ELIGIBLE
+      - INELIGIBLE
+    AuthenticityPrecheck:
+      type: object
+      additionalProperties: false
+      description: 사진 기반 주문 가능성 사전 신호이며, 공식 정품 판정 또는 보증이 아닙니다.
+      required:
+      - status
+      - estimatePercent
+      - notice
+      properties:
+        status:
+          $ref: '#/components/schemas/AuthenticityPrecheckStatus'
+        estimatePercent:
+          type: integer
+          minimum: 0
+          maximum: 100
+        notice:
+          type: string
+          minLength: 1
     CreateAnalysisRequest:
       type: object
       additionalProperties: false
       required:
       - imageAssetIds
       - locale
+      - category
+      - purchaseYear
+      - useDuration
+      - desiredUse
       properties:
         imageAssetIds:
           type: array
-          minItems: 1
+          minItems: 3
           maxItems: 4
           uniqueItems: true
           items:
             type: string
             format: uuid
-        sourceCategoryHint:
-          oneOf:
-          - $ref: '#/components/schemas/SourceCategory'
-          - type: 'null'
+        category:
+          $ref: '#/components/schemas/SourceCategory'
+        purchaseYear:
+          type: integer
+          minimum: 1976
+          maximum: 2100
+        useDuration:
+          type: string
+          minLength: 1
+          maxLength: 80
+        desiredUse:
+          type: string
+          minLength: 1
+          maxLength: 200
+        serialNumber:
+          type: string
+          minLength: 1
+          maxLength: 100
+        conditionNote:
+          type: string
+          maxLength: 500
         locale:
           type: string
           enum:
@@ -1106,10 +1237,9 @@ components:
           - string
           - 'null'
           enum:
-          - TOTE_MODERATE_WEAR
-          - BACKPACK_LIGHT_WEAR
-          - CROSSBODY_HEAVY_WEAR
+          - MCM_BACKPACK_CHANGE_APPROVED_20260817
           - LOW_QUALITY_RECAPTURE
+          - INELIGIBLE_PRECHECK
           - null
     SourceProduct:
       type: object
@@ -1183,6 +1313,7 @@ components:
       - productCode
       - eligible
       - score
+      - estimatedReusableMaterialRate
       - reasonCodes
       properties:
         productId:
@@ -1193,6 +1324,10 @@ components:
         eligible:
           type: boolean
         score:
+          type: integer
+          minimum: 0
+          maximum: 100
+        estimatedReusableMaterialRate:
           type: integer
           minimum: 0
           maximum: 100
@@ -1210,7 +1345,7 @@ components:
       properties:
         methodologyVersion:
           type: string
-          const: DEMO_LCA_V1
+          const: DEMO_LCA_V2
         estimatedCarbonSavingKgCo2e:
           type: number
           minimum: 0
@@ -1228,7 +1363,7 @@ components:
           type: string
           enum:
           - OPENAI
-          - FIXTURE
+          - DEMO_DATA
         model:
           type: string
         requestId:
@@ -1257,8 +1392,9 @@ components:
       - condition
       - damages
       - imageQuality
-      - authenticitySignal
-      - reusableMaterialRate
+      - estimateMeta
+      - authenticityPrecheck
+      - estimatedReusableMaterialRate
       - estimatedReusableAreaCm2
       - longStripAvailable
       - recommendations
@@ -1293,9 +1429,11 @@ components:
                 const: ACCEPTABLE
               issues:
                 maxItems: 0
-        authenticitySignal:
-          $ref: '#/components/schemas/AuthenticitySignal'
-        reusableMaterialRate:
+        estimateMeta:
+          $ref: '#/components/schemas/EstimateMeta'
+        authenticityPrecheck:
+          $ref: '#/components/schemas/AuthenticityPrecheck'
+        estimatedReusableMaterialRate:
           type: integer
           minimum: 0
           maximum: 100
@@ -1320,7 +1458,9 @@ components:
           type: string
           format: date-time
         completedAt:
-          type: string
+          type:
+          - string
+          - 'null'
           format: date-time
     AnalysisListItem:
       type: object
@@ -1329,7 +1469,8 @@ components:
       - id
       - sourceCategory
       - conditionGrade
-      - reusableMaterialRate
+      - estimatedReusableMaterialRate
+      - estimateMeta
       - modeUsed
       - createdAt
       properties:
@@ -1340,8 +1481,12 @@ components:
           $ref: '#/components/schemas/SourceCategory'
         conditionGrade:
           $ref: '#/components/schemas/ConditionGrade'
-        reusableMaterialRate:
+        estimatedReusableMaterialRate:
           type: integer
+          minimum: 0
+          maximum: 100
+        estimateMeta:
+          $ref: '#/components/schemas/EstimateMeta'
         modeUsed:
           $ref: '#/components/schemas/AnalysisModeUsed'
         createdAt:
@@ -1350,17 +1495,17 @@ components:
     ProductCode:
       type: string
       enum:
-      - REBORN_POUCH
+      - REBORN_PASSPORT_WALLET
       - REBORN_CARD_WALLET
+      - REBORN_NAME_TAG
       - REBORN_KEYRING
-      - REBORN_BAG_STRAP
     ProductCategory:
       type: string
       enum:
-      - CLUTCH_POUCH
+      - PASSPORT_WALLET
       - CARD_WALLET
+      - NAME_TAG
       - KEYRING
-      - BAG_STRAP
     Money:
       type: object
       additionalProperties: false
@@ -1397,7 +1542,10 @@ components:
           minimum: 1
         aspectRatio:
           type: string
-          const: '4:5'
+          pattern: ^[1-9][0-9]*:[1-9][0-9]*$
+          examples:
+          - '250:271'
+          - '1:1'
     RecommendationView:
       type: object
       additionalProperties: false
@@ -1424,6 +1572,7 @@ components:
       - name
       - category
       - mockPrice
+      - estimatedDuration
       - requiredAreaCm2
       - listImage
       - has3d
@@ -1440,6 +1589,9 @@ components:
           $ref: '#/components/schemas/ProductCategory'
         mockPrice:
           $ref: '#/components/schemas/Money'
+        estimatedDuration:
+          type: string
+          minLength: 1
         requiredAreaCm2:
           type: integer
           minimum: 1
@@ -1574,6 +1726,7 @@ components:
       - name
       - category
       - mockPrice
+      - estimatedDuration
       - requiredAreaCm2
       - listImage
       - has3d
@@ -1594,6 +1747,9 @@ components:
           $ref: '#/components/schemas/ProductCategory'
         mockPrice:
           $ref: '#/components/schemas/Money'
+        estimatedDuration:
+          type: string
+          minLength: 1
         requiredAreaCm2:
           type: integer
           minimum: 1
@@ -1688,17 +1844,26 @@ components:
           $ref: '#/components/schemas/Consents'
     ApplicationStatus:
       type: string
+      description: 결제 성공은 ORDER_PLACED입니다. 실물 검수 완료 및 필요한 변경안의 고객 승인 전에는 IN_PRODUCTION으로 전환할 수 없습니다.
       enum:
       - PENDING_PAYMENT
-      - PENDING_APPROVAL
-      - APPROVED
-      - RECEIVING_PRODUCT
+      - ORDER_PLACED
+      - PICKUP_SCHEDULED
+      - PICKUP_IN_PROGRESS
       - PRODUCT_RECEIVED
+      - EXPERT_INSPECTION
+      - PRODUCTION_READY
+      - CHANGE_APPROVAL_REQUIRED
       - IN_PRODUCTION
       - QUALITY_CHECK
       - SHIPPED
+      - DELIVERED
       - COMPLETED
-      - ADDITIONAL_REVIEW_REQUIRED
+      - PRODUCTION_UNAVAILABLE
+      - CANCELED
+    ApplicationExceptionStatus:
+      type: string
+      enum:
       - PRODUCTION_UNAVAILABLE
       - CANCELED
     ApplicationSummary:
@@ -1741,7 +1906,7 @@ components:
       - shippingAddress
       - effectiveStatus
       - persistedStatus
-      - mockProgressProfile
+      - demoProgressProfile
       properties:
         id:
           type: string
@@ -1772,17 +1937,17 @@ components:
           $ref: '#/components/schemas/ApplicationStatus'
         statusOverride:
           oneOf:
-          - $ref: '#/components/schemas/ApplicationStatus'
+          - $ref: '#/components/schemas/ApplicationExceptionStatus'
           - type: 'null'
-        approvedAt:
+        inspectionCompletedAt:
           type:
           - string
           - 'null'
           format: date-time
-        mockProgressProfile:
+        demoProgressProfile:
           type: string
           enum:
-          - FAST_DEMO
+          - PRIMARY_SCENARIO
           - STATIC
     MockPaymentMethod:
       type: string
@@ -1882,10 +2047,10 @@ components:
     ShipmentStatus:
       type: string
       enum:
-      - PICKUP_RESERVED
+      - PICKUP_SCHEDULED
       - PICKUP_IN_PROGRESS
-      - AT_WORKSHOP
-      - OUT_FOR_DELIVERY
+      - PRODUCT_RECEIVED
+      - SHIPPED
       - DELIVERED
     MockShipment:
       type: object
@@ -1954,7 +2119,7 @@ components:
           minimum: 0
         methodologyVersion:
           type: string
-          const: DEMO_LCA_V1
+          const: DEMO_LCA_V2
         issuedAt:
           type: string
           format: date-time
@@ -1983,7 +2148,7 @@ components:
       - product
       - effectiveStatus
       - createdAt
-      - approvalAvailable
+      - inspectionAvailable
       properties:
         id:
           type: string
@@ -1999,7 +2164,7 @@ components:
         createdAt:
           type: string
           format: date-time
-        approvalAvailable:
+        inspectionAvailable:
           type: boolean
     OperatorApplicationDetail:
       type: object
@@ -2009,7 +2174,7 @@ components:
       - customer
       - analysis
       - sourceImages
-      - approvalAvailable
+      - inspectionAvailable
       properties:
         application:
           $ref: '#/components/schemas/ApplicationDetail'
@@ -2035,37 +2200,131 @@ components:
               signedUrl:
                 type: string
                 format: uri
-        approvalAvailable:
+        inspectionAvailable:
           type: boolean
-    ApproveApplicationRequest:
+    ApplicationTerms:
       type: object
       additionalProperties: false
       required:
-      - note
+      - productId
+      - amount
+      - estimatedDuration
+      - estimatedReusableMaterialRate
       properties:
-        note:
+        productId:
           type: string
-          maxLength: 500
-    ApplicationApprovalResponse:
+          format: uuid
+        amount:
+          $ref: '#/components/schemas/Money'
+        estimatedDuration:
+          type: string
+          minLength: 1
+        estimatedReusableMaterialRate:
+          type: integer
+          minimum: 0
+          maximum: 100
+    InspectionOutcome:
+      type: string
+      enum:
+      - NO_CHANGE
+      - CHANGE_REQUIRED
+      - PRODUCTION_UNAVAILABLE
+    SubmitPhysicalInspectionRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - outcome
+      - confirmedReusableMaterialRate
+      - confirmedReusableAreaCm2
+      - reason
+      properties:
+        outcome:
+          $ref: '#/components/schemas/InspectionOutcome'
+        confirmedReusableMaterialRate:
+          type: integer
+          minimum: 0
+          maximum: 100
+        confirmedReusableAreaCm2:
+          type: integer
+          minimum: 0
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 1000
+        proposedTerms:
+          oneOf:
+          - $ref: '#/components/schemas/ApplicationTerms'
+          - type: 'null'
+          description: outcome이 CHANGE_REQUIRED일 때 필수입니다.
+    ApplicationChangeRequestStatus:
+      type: string
+      enum:
+      - PENDING
+      - APPROVED
+      - REJECTED
+    ApplicationChangeRequest:
       type: object
       additionalProperties: false
       required:
       - id
+      - applicationId
+      - inspectionId
       - status
-      - approvedAt
-      - approvedBy
-      - mockProgressProfile
+      - reason
+      - previousTerms
+      - proposedTerms
+      - createdAt
       properties:
         id:
           type: string
           format: uuid
-        status:
+        applicationId:
           type: string
-          const: APPROVED
-        approvedAt:
+          format: uuid
+        inspectionId:
+          type: string
+          format: uuid
+        status:
+          $ref: '#/components/schemas/ApplicationChangeRequestStatus'
+        reason:
+          type: string
+        previousTerms:
+          $ref: '#/components/schemas/ApplicationTerms'
+        proposedTerms:
+          $ref: '#/components/schemas/ApplicationTerms'
+        createdAt:
           type: string
           format: date-time
-        approvedBy:
+        respondedAt:
+          type:
+          - string
+          - 'null'
+          format: date-time
+    PhysicalInspectionResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - applicationId
+      - outcome
+      - applicationStatus
+      - inspectedAt
+      - inspectedBy
+      properties:
+        id:
+          type: string
+          format: uuid
+        applicationId:
+          type: string
+          format: uuid
+        outcome:
+          $ref: '#/components/schemas/InspectionOutcome'
+        applicationStatus:
+          $ref: '#/components/schemas/ApplicationStatus'
+        inspectedAt:
+          type: string
+          format: date-time
+        inspectedBy:
           type: object
           additionalProperties: false
           required:
@@ -2077,11 +2336,46 @@ components:
               format: uuid
             displayName:
               type: string
-        mockProgressProfile:
+        changeRequest:
+          oneOf:
+          - $ref: '#/components/schemas/ApplicationChangeRequest'
+          - type: 'null'
+    RejectApplicationChangeRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - reason
+      properties:
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 300
+    ApplicationChangeDecisionResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - applicationId
+      - changeRequestId
+      - decision
+      - applicationStatus
+      - respondedAt
+      properties:
+        applicationId:
+          type: string
+          format: uuid
+        changeRequestId:
+          type: string
+          format: uuid
+        decision:
           type: string
           enum:
-          - FAST_DEMO
-          - STATIC
+          - APPROVED
+          - REJECTED
+        applicationStatus:
+          $ref: '#/components/schemas/ApplicationStatus'
+        respondedAt:
+          type: string
+          format: date-time
     AnalyticsEventName:
       type: string
       enum:
@@ -2092,7 +2386,9 @@ components:
       - PRODUCT_DETAIL_VIEWED
       - APPLICATION_CREATED
       - MOCK_PAYMENT_COMPLETED
-      - APPLICATION_APPROVED
+      - PHYSICAL_INSPECTION_COMPLETED
+      - APPLICATION_CHANGE_APPROVED
+      - APPLICATION_CHANGE_REJECTED
       - CERTIFICATE_VIEWED
     TrackEventRequest:
       type: object
@@ -2173,61 +2469,6 @@ components:
       properties:
         error:
           $ref: '#/components/schemas/ImageQualityInsufficientErrorObject'
-    AuthenticityReviewRequiredDetails:
-      type: object
-      additionalProperties: false
-      required:
-      - analysisId
-      - authenticitySignal
-      - applicationCreationBlocked
-      - manualReviewCaseId
-      - manualReviewStatus
-      - nextAction
-      properties:
-        analysisId:
-          type: string
-          format: uuid
-        authenticitySignal:
-          type: string
-          const: REVIEW_REQUIRED
-        applicationCreationBlocked:
-          type: boolean
-          const: true
-        manualReviewCaseId:
-          type: string
-          format: uuid
-        manualReviewStatus:
-          type: string
-          const: PENDING
-        nextAction:
-          type: string
-          const: AWAIT_MANUAL_REVIEW
-    AuthenticityReviewRequiredErrorObject:
-      type: object
-      additionalProperties: false
-      required:
-      - code
-      - message
-      - requestId
-      - details
-      properties:
-        code:
-          type: string
-          const: AUTHENTICITY_REVIEW_REQUIRED
-        message:
-          type: string
-        requestId:
-          type: string
-        details:
-          $ref: '#/components/schemas/AuthenticityReviewRequiredDetails'
-    AuthenticityReviewRequiredErrorResponse:
-      type: object
-      additionalProperties: false
-      required:
-      - error
-      properties:
-        error:
-          $ref: '#/components/schemas/AuthenticityReviewRequiredErrorObject'
     ErrorDetail:
       type: object
       additionalProperties: true

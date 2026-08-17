@@ -621,7 +621,8 @@
 .captureContent {
   display: grid;
   gap: var(--space-21);
-  padding-block: var(--space-9) var(--space-21);
+  padding-block: var(--space-9)
+    calc(var(--layout-sticky-action-height) + var(--space-21));
 }
 
 .captureGuide,
@@ -761,6 +762,10 @@
   text-align: center;
 }
 
+.captureSecondaryAction .captureAlbumMessage {
+  color: var(--color-ink);
+}
+
 .productInfo {
   padding-top: var(--space-21);
   border-top: var(--space-6) solid var(--color-surface);
@@ -801,6 +806,37 @@
   outline-offset: var(--space-1);
 }
 
+.captureSelectField {
+  display: grid;
+  gap: var(--space-5);
+  color: var(--color-ink);
+  font-size: var(--font-size-control);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
+}
+
+.captureSelectField b {
+  font-weight: inherit;
+}
+
+.captureSelectField select {
+  width: 100%;
+  height: var(--control-height-lg);
+  padding-inline: var(--space-6);
+  border: var(--border-hairline) solid var(--color-ink);
+  border-radius: var(--radius-control);
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  font: inherit;
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-light);
+}
+
+.captureSelectField select:focus-visible {
+  outline: var(--border-focus) solid var(--color-ink);
+  outline-offset: var(--space-1);
+}
+
 .cameraContent {
   position: relative;
   min-height: 100dvh;
@@ -809,17 +845,36 @@
 }
 
 .cameraBackground {
-  z-index: var(--z-behind);
+  z-index: var(--space-0);
   object-fit: cover;
   object-position: center;
   transform: scale(1.35);
 }
 
+.cameraVideo,
+.cameraCapturedPreview {
+  position: absolute;
+  z-index: var(--space-0);
+  inset: var(--space-0);
+  width: 100%;
+  height: 100%;
+  background: var(--color-ink);
+  object-fit: cover;
+  object-position: center;
+}
+
 .cameraScrim {
   position: absolute;
-  z-index: var(--z-behind);
+  z-index: 1;
   inset: var(--space-0);
-  background: var(--color-scrim);
+  background: linear-gradient(
+    to bottom,
+    var(--color-scrim) 0%,
+    var(--color-transparent) 36%,
+    var(--color-transparent) 60%,
+    var(--color-scrim) 100%
+  );
+  pointer-events: none;
 }
 
 .cameraBack {
@@ -894,8 +949,24 @@
   display: grid;
   width: var(--space-25);
   height: var(--space-25);
+  padding: var(--space-0);
+  border: var(--space-0);
   place-items: center;
   border-radius: var(--radius-pill);
+  appearance: none;
+  background: var(--color-transparent);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.cameraShutter:disabled {
+  cursor: wait;
+  opacity: var(--opacity-disabled);
+}
+
+.cameraShutter:focus-visible {
+  outline: var(--border-focus) solid var(--color-canvas);
+  outline-offset: var(--space-2);
 }
 
 .cameraShutter img:first-child {
@@ -918,6 +989,22 @@
   place-items: center;
   padding: calc(var(--safe-area-top) + var(--space-25)) var(--layout-gutter)
     calc(var(--safe-area-bottom) + var(--space-25));
+}
+
+.cameraReviewActions {
+  position: absolute;
+  z-index: var(--z-sticky);
+  right: var(--layout-gutter);
+  bottom: calc(var(--safe-area-bottom) + var(--space-17));
+  left: var(--layout-gutter);
+  display: grid;
+  grid-template-columns: repeat(2, minmax(var(--space-0), 1fr));
+  gap: var(--space-7);
+}
+
+.cameraStatusActions {
+  display: grid;
+  gap: var(--space-7);
 }
 
 @media (max-width: 22rem) {

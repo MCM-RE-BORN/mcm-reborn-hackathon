@@ -3,13 +3,15 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { StickyActionBar } from "@/components/layout/StickyActionBar";
 import { ButtonLink } from "@/components/ui/Button";
 import { KeyValueList } from "@/components/ui/KeyValueList";
+import { DEMO_SCENARIO } from "@/data/demo-scenario";
 import { DemoStatePanel } from "./DemoStatePanel";
 import { RecycleGauge } from "./RecycleGauge";
+import { SubmissionProductSummary } from "./SubmissionProductSummary";
 import styles from "./analysis-design.module.css";
 import type { DemoState } from "./types";
 
 type AnalysisResultScreenProps = {
-  ineligibleReason?: "quality" | "review";
+  ineligibleReason?: "precheck" | "quality";
   state: DemoState;
 };
 
@@ -26,12 +28,12 @@ function IneligibleAnalysis({
         <h2>
           {isQualityIssue
             ? "사진 품질을 확인할 수 없어요"
-            : "수동 검토가 필요해 신청이 보류됐어요"}
+            : "사진만으로 서비스 대상을 확인하기 어려워요"}
         </h2>
         <p>
           {isQualityIssue
-            ? "제품 전체와 손상 부위가 선명하게 보이지 않아 IMAGE_QUALITY_INSUFFICIENT 오류가 반환됐습니다. 이 결과는 정품·가품 판정이나 소재 등급이 아닙니다. 밝은 곳에서 흔들림 없이 다시 촬영해 주세요."
-            : "REVIEW_REQUIRED는 정품·가품 판정이 아니라 추가 확인이 필요하다는 신호입니다. PENDING 수동 검토 건만 생성되며, 검토 전에는 신청·결제 레코드를 만들지 않습니다."}
+            ? "제품 전체와 손상 부위가 선명하게 보이지 않아요. 밝은 곳에서 흔들림 없이 다시 촬영해 주세요."
+            : "현재 사진에서는 제품 식별 정보가 충분히 보이지 않아 주문 적합성을 안내하기 어렵습니다. 이 결과는 정품·가품의 공식 판정이 아니며, 각인과 내부 라벨을 선명하게 다시 등록할 수 있어요."}
         </p>
       </section>
 
@@ -40,42 +42,29 @@ function IneligibleAnalysis({
         items={
           isQualityIssue
             ? [
-                { label: "오류 코드", value: "IMAGE_QUALITY_INSUFFICIENT" },
-                { label: "품질 상태", value: "RECAPTURE_REQUIRED" },
+                { label: "확인 결과", value: "사진 품질 보완 필요" },
+                { label: "부족한 항목", value: "밝기 · 선명도" },
                 { label: "다음 행동", value: "사진 재촬영" },
-                { label: "신청 생성", value: "분석 전 단계" },
               ]
             : [
-                { label: "정품 신호", value: "REVIEW_REQUIRED" },
-                { label: "수동 검토", value: "PENDING" },
-                { label: "다음 행동", value: "AWAIT_MANUAL_REVIEW" },
-                { label: "신청 생성", value: "차단됨" },
+                { label: "확인 결과", value: "사진 사전 확인 불충분" },
+                { label: "보완할 사진", value: "각인 · 내부 라벨" },
+                { label: "다음 행동", value: "사진과 식별 정보 재등록" },
               ]
         }
       />
 
       <aside className={styles.contractNotice}>
-        <strong>예외 상태 안내</strong>
+        <strong>주문 전 사전 확인</strong>
         <p>
-          사진 품질 미달은 재촬영으로, 수동 검토 신호는 검토 대기로 각각
-          처리합니다. 두 상태 모두 C등급 소재 손상 결과와 구분됩니다.
+          사진 사전 확인은 주문 가능 여부를 안내하기 위한 예상 단계입니다.
+          주문 후 수거된 제품의 공식 확인은 MCM 장인의 실물 검수에서
+          이루어집니다.
         </p>
       </aside>
 
       <ButtonLink fullWidth href="/products/new">
         {isQualityIssue ? "사진 다시 등록하기" : "다른 제품 등록하기"}
-      </ButtonLink>
-      <ButtonLink
-        className={styles.centeredLink}
-        href={
-          isQualityIssue
-            ? "/submissions/demo/ineligible"
-            : "/submissions/demo/ineligible?reason=quality"
-        }
-        size="small"
-        variant="ghost"
-      >
-        {isQualityIssue ? "수동 검토 예시 보기" : "사진 품질 미달 예시 보기"}
       </ButtonLink>
     </div>
   );
@@ -108,7 +97,7 @@ function LimitedAnalysis() {
       </ButtonLink>
       <ButtonLink
         className={styles.centeredLink}
-        href="/"
+        href="/home"
         size="small"
         variant="ghost"
       >
@@ -131,7 +120,7 @@ export function AnalysisResultScreen({
         header={
           <PageHeader
             backHref="/submissions/demo"
-            title="원단 재활용 가능률"
+            title="AI 예상 재활용률"
           />
         }
       >
@@ -168,7 +157,7 @@ export function AnalysisResultScreen({
         header={
           <PageHeader
             backHref="/submissions/demo"
-            title="원단 재활용 가능률"
+            title="AI 예상 재활용률"
           />
         }
       >
@@ -192,35 +181,40 @@ export function AnalysisResultScreen({
       header={
         <PageHeader
           backHref="/submissions/demo"
-          title="원단 재활용 가능률"
+          title="AI 예상 재활용률"
         />
       }
     >
       <div className={styles.analysisContent}>
-        <RecycleGauge grade="A" value={72} />
+        <RecycleGauge
+          grade={DEMO_SCENARIO.analysis.conditionGrade}
+          value={DEMO_SCENARIO.analysis.expectedReusableMaterialRate}
+        />
+
+        <SubmissionProductSummary />
 
         <div className={styles.analysisDetails}>
           <KeyValueList
             items={[
               {
-                label: "정품 신호",
-                value: "별도 판정 없음",
+                label: "사진 사전 적합성",
+                value: `주문 가능 · 예상 ${DEMO_SCENARIO.analysis.authenticityPrecheckPercent}%`,
               },
               {
-                label: "신청 상태",
-                value: "진행 가능",
+                label: "AI 예상 신뢰도",
+                value: `${DEMO_SCENARIO.analysis.estimateConfidencePercent}%`,
               },
               {
-                label: "원단 상태",
-                value: "양호(경미한 마모)",
+                label: "AI 예상 상태",
+                value: DEMO_SCENARIO.analysis.conditionSummary,
               },
               {
                 label: "활용 가능 부위",
-                value: "전면 가죽 / 손잡이",
+                value: DEMO_SCENARIO.analysis.reusableAreas,
               },
               {
-                label: "제작 가능 제품",
-                value: "지갑 / 파우치 / 키링",
+                label: "예상 제약 부위",
+                value: DEMO_SCENARIO.analysis.constrainedAreas,
               },
             ]}
           />
@@ -229,10 +223,10 @@ export function AnalysisResultScreen({
         <aside className={styles.contractNotice}>
           <strong>사진 기반 사전 분석</strong>
           <p>
-            AI는 정품 여부를 확정하지 않습니다. 현재 값은
-            NOT_EVALUATED로 신청 진행이 가능하며, REVIEW_REQUIRED가 반환되면
-            정품 판정이 아닌 추가 확인 신호로 처리되어 수동 검토 전까지
-            신청이 보류됩니다.
+            표시된 {DEMO_SCENARIO.analysis.expectedReusableMaterialRate}%는
+            제출 사진을 바탕으로 만든 예상치이며 제작 가능성을 확정하지
+            않습니다. 결제와 주문 후 MCM 공식 장인이 실물을 확인하며, 최종
+            재단 범위·디자인·견적이 달라지면 고객 승인 후 제작을 시작합니다.
           </p>
         </aside>
       </div>

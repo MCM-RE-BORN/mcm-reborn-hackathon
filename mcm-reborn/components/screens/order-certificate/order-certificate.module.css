@@ -150,6 +150,13 @@
   font-weight: var(--font-weight-semibold);
 }
 
+.environmentNotice {
+  color: var(--color-muted);
+  font-size: var(--font-size-label);
+  font-weight: var(--font-weight-regular);
+  line-height: var(--line-height-reading);
+}
+
 .completeLayout {
   display: flex;
   width: 100%;
@@ -275,6 +282,46 @@
   width: 100%;
   height: var(--border-thin);
   background: var(--color-divider);
+}
+
+.changeComparison {
+  display: grid;
+  gap: var(--space-7);
+}
+
+.changeCard,
+.changeCardEmphasis {
+  display: grid;
+  min-width: var(--space-0);
+  gap: var(--space-7);
+  padding: var(--space-9);
+  border: var(--border-hairline) solid var(--color-divider);
+  border-radius: var(--radius-control);
+  background: var(--color-canvas);
+}
+
+.changeCardEmphasis {
+  border-color: var(--color-ink);
+  background: var(--color-surface);
+}
+
+.changeCard h3,
+.changeCardEmphasis h3 {
+  color: var(--color-ink);
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
+}
+
+.decisionNotice {
+  color: var(--color-muted);
+  font-size: var(--font-size-label);
+  line-height: var(--line-height-reading);
+}
+
+.decisionActions {
+  display: grid;
+  gap: var(--space-5);
 }
 
 .certificateLayout,
@@ -422,6 +469,13 @@
   line-height: var(--line-height-tight);
 }
 
+.certificateHero > span {
+  max-width: var(--layout-content-max);
+  color: var(--color-muted);
+  font-size: var(--font-size-label);
+  line-height: var(--line-height-reading);
+}
+
 .legalDemoNote {
   margin-top: var(--space-9);
 }
@@ -449,11 +503,21 @@
   color: var(--color-ink);
   font-size: var(--font-size-body);
   font-weight: var(--font-weight-medium);
+  text-align: center;
+  text-decoration: none;
+  transition:
+    border-color var(--duration-fast) var(--ease-standard),
+    background var(--duration-fast) var(--ease-standard);
 }
 
-.passportEntry:disabled {
-  cursor: not-allowed;
-  opacity: var(--opacity-disabled);
+.passportEntry:hover {
+  border-color: var(--color-ink);
+  background: var(--color-surface);
+}
+
+.passportEntry:focus-visible {
+  outline: var(--border-thin) solid var(--color-ink);
+  outline-offset: var(--space-2);
 }
 
 .nfcMark {
@@ -472,6 +536,10 @@
   gap: var(--space-5);
   margin-top: auto;
   padding-block: var(--space-13) var(--space-9);
+}
+
+.verificationPanel {
+  scroll-margin-top: var(--layout-header-height);
 }
 
 .textLink {
@@ -591,6 +659,10 @@
 
 @media (min-width: 24rem) {
   .scheduleGrid {
+    grid-template-columns: repeat(2, minmax(var(--space-0), 1fr));
+  }
+
+  .changeComparison {
     grid-template-columns: repeat(2, minmax(var(--space-0), 1fr));
   }
 }

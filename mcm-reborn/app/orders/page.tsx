@@ -11,12 +11,14 @@ function firstValue(value: string | string[] | undefined) {
 export default async function OrdersAliasPage({
   searchParams,
 }: OrdersAliasPageProps) {
-  const { panel, state } = await searchParams;
+  const { panel, stage, state } = await searchParams;
   const params = new URLSearchParams();
   const panelValue = firstValue(panel);
+  const stageValue = firstValue(stage);
   const stateValue = firstValue(state);
 
   if (panelValue) params.set("panel", panelValue);
+  if (stageValue) params.set("stage", stageValue);
   if (stateValue) params.set("state", stateValue);
 
   redirect(`/orders/demo${params.size ? `?${params.toString()}` : ""}`);

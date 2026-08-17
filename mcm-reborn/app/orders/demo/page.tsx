@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import {
   OrderDetailsScreen,
   resolveDemoState,
+  resolveOrderStage,
   type DemoSearchParams,
 } from "@/components/screens/order-certificate";
 
@@ -15,17 +16,29 @@ export default async function OrderDetailsPage({
   searchParams: DemoSearchParams;
 }) {
   const query = await searchParams;
-  const requestedState =
-    query.panel === "change-request" ? "change-request" : query.state;
-  const state = resolveDemoState(requestedState, [
+  const firstValue = (value: string | string[] | undefined) =>
+    Array.isArray(value) ? value[0] : value;
+  const legacyState = firstValue(query.state);
+  const legacyPanel = firstValue(query.panel);
+  const requestedStage =
+    legacyState === "canceled"
+      ? "canceled"
+      : legacyState === "change-request" || legacyPanel === "change-request"
+        ? "change-required"
+        : query.stage;
+  const state = resolveDemoState(
+    legacyState === "canceled" || legacyState === "change-request"
+      ? undefined
+      : query.state,
+    [
     "normal",
     "loading",
     "empty",
     "error",
     "permission",
-    "change-request",
-    "canceled",
-  ]);
+    ],
+  );
+  const stage = resolveOrderStage(requestedStage);
 
-  return <OrderDetailsScreen state={state} />;
+  return <OrderDetailsScreen stage={stage} state={state} />;
 }

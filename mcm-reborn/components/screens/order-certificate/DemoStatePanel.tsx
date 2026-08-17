@@ -51,7 +51,7 @@ export function DemoStatePanel({
       title: `${subject}이(가) 아직 잠겨 있습니다`,
     },
     loading: {
-      description: "데모 데이터를 안전하게 준비하고 있습니다.",
+      description: "정보를 안전하게 준비하고 있습니다.",
       title: `${subject}을(를) 불러오는 중입니다`,
     },
     permission: {
@@ -68,7 +68,7 @@ export function DemoStatePanel({
             다시 시도
           </ButtonLink>
         ) : state === "canceled" ? (
-          <ButtonLink fullWidth href="/">
+          <ButtonLink fullWidth href="/home">
             홈으로 돌아가기
           </ButtonLink>
         ) : state === "permission" ? (
@@ -76,7 +76,7 @@ export function DemoStatePanel({
             로그인으로 이동
           </ButtonLink>
         ) : state === "locked" ? (
-          <ButtonLink fullWidth href="/orders/demo">
+          <ButtonLink fullWidth href="/orders/demo?stage=pickup">
             신청 내역 확인하기
           </ButtonLink>
         ) : undefined

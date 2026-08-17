@@ -1,11 +1,11 @@
-import { HomeScreen } from "@/components/screens/entry-capture/HomeScreen";
+import { IntroScreen } from "@/components/screens/entry-capture/IntroScreen";
 import {
   type EntryPageProps,
   readEntrySearchParams,
 } from "@/components/screens/entry-capture/page-state";
 
-export default async function HomePage({ searchParams }: EntryPageProps) {
+export default async function LandingPage({ searchParams }: EntryPageProps) {
   const { state } = await readEntrySearchParams(searchParams);
 
-  return <HomeScreen state={state} />;
+  return <IntroScreen state={state} />;
 }

@@ -62,11 +62,11 @@ function AuthState({ kind, state }: { kind: "login" | "signup"; state: PageState
     return (
       <StatusPanel
         action={
-          <ButtonLink fullWidth href="/">
+          <ButtonLink fullWidth href="/home">
             홈으로 이동
           </ButtonLink>
         }
-        description="베타 세션이 이미 연결되어 있어 인증 화면 대신 홈을 이용할 수 있어요."
+        description="이미 로그인되어 있어 인증 화면 대신 홈을 이용할 수 있어요."
         title="이미 로그인한 상태예요"
         tone="permission"
       />
@@ -81,7 +81,7 @@ function AuthState({ kind, state }: { kind: "login" | "signup"; state: PageState
             서비스 소개로 돌아가기
           </ButtonLink>
         }
-        description="현재 베타 세션에서는 이 인증 화면을 사용할 수 없습니다. 잠시 후 다시 시도해 주세요."
+        description="현재 세션에서는 이 인증 화면을 사용할 수 없습니다. 잠시 후 다시 시도해 주세요."
         title="인증 화면 이용이 제한되어 있어요"
         tone="permission"
       />
@@ -103,7 +103,7 @@ export function LoginScreen({ state }: AuthScreenProps) {
         {showForm ? (
           <>
             <form
-              action="/"
+              action="/home"
               className={`${styles.authForm} ${styles.authFormTight}`}
               method="get"
             >
@@ -126,7 +126,7 @@ export function LoginScreen({ state }: AuthScreenProps) {
                 required
                 type="password"
               />
-              {/* TODO(post-beta): connect login to the approved authentication contract. */}
+              {/* TODO(integration): connect login to the approved authentication contract. */}
               <button className={styles.authSubmit} type="submit">
                 로그인
               </button>
@@ -143,7 +143,7 @@ export function LoginScreen({ state }: AuthScreenProps) {
           <AuthState kind="login" state={state} />
         )}
         <p className={styles.betaCaption}>
-          베타 화면에서는 입력한 인증 정보를 저장하거나 전송하지 않습니다.
+          이 시연에서는 입력한 인증 정보를 저장하거나 전송하지 않습니다.
         </p>
       </div>
     </AppShell>
@@ -158,7 +158,7 @@ export function SignupScreen({ state }: AuthScreenProps) {
     <AppShell header={<PageHeader backHref="/login" title="회원가입" />}>
       <div className={styles.authContent}>
         {showForm ? (
-          <form action="/" className={styles.authForm} method="get">
+          <form action="/home" className={styles.authForm} method="get">
             <TextField
               autoComplete="name"
               density="compact"
@@ -208,7 +208,7 @@ export function SignupScreen({ state }: AuthScreenProps) {
                 </label>
               </fieldset>
             </details>
-            {/* TODO(post-beta): connect signup, consent records, and duplicate-email validation. */}
+            {/* TODO(integration): connect signup, consent records, and duplicate-email validation. */}
             <button className={styles.authSubmit} type="submit">
               가입하기
             </button>
@@ -217,7 +217,7 @@ export function SignupScreen({ state }: AuthScreenProps) {
           <AuthState kind="signup" state={state} />
         )}
         <p className={styles.betaCaption}>
-          베타 화면에서는 입력한 회원 정보를 저장하거나 전송하지 않습니다.
+          이 시연에서는 입력한 회원 정보를 저장하거나 전송하지 않습니다.
         </p>
       </div>
     </AppShell>
