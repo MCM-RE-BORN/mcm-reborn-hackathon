@@ -12,7 +12,7 @@
 | `.github/` | Copilot 지침, 이슈·PR 템플릿 |
 | `openapi.yaml` | HTTP API의 기계 판독 기준 |
 | `mock-data.json` | 데모 Fixture 계약 |
-| `supabase-schema.sql` | bootstrap DB·RLS·Storage 계약 |
+| `supabase-schema.sql`, `supabase/migrations/`, `supabase/rollbacks/` | 신규 DB bootstrap과 기존 DB의 버전 migration·구조 rollback 계약 |
 | `MCM_REBORN_API_GUIDE.md`, `examples/`, `prompts/` | 구현 가이드와 기준 예시 |
 | `.env.example` | 저장소의 환경변수 이름과 안전한 기본값 |
 | `.gitattributes`, `.gitignore` | 줄바꿈 정규화와 생성물·비밀 환경파일 제외 규칙 |
@@ -22,23 +22,29 @@
 
 ## 앱 소유 영역
 
-`mcm-reborn/`은 Next.js `16.3.0`, React `19.2.8` 실행 앱의 루트다. 현재는 기본 scaffold이며 MVP 기능 구현 완료 상태가 아니다.
+`mcm-reborn/`은 Next.js `16.3.0`, React `19.2.8` 실행 앱의 루트다. 현재는 고객 데모 화면, 실제 브라우저 카메라와 중앙 Fixture 여정, 운영자 lifecycle command Route Handler가 구현되어 있다. 전체 인증·HTTP API·DB 영속화·외부 서비스 연동이 완료된 제품은 아니다.
 
-| 향후 경로 | 책임 |
+| 현재 경로 | 책임과 구현 상태 |
 |---|---|
-| `mcm-reborn/app/` | App Router 페이지, 레이아웃, Route Handler |
-| `mcm-reborn/app/api/v1/` | `openapi.yaml`을 구현하는 HTTP API Route Handler |
-| `mcm-reborn/components/` | 여러 화면에서 재사용하는 UI 컴포넌트 |
+| `mcm-reborn/app/` | App Router 페이지와 레이아웃. `/`·`/intro`는 서비스 소개, `/home`은 홈을 렌더한다. `app/api/v2/admin/applications/[applicationId]/lifecycle-commands`만 Route Handler로 구현됨 |
+| `mcm-reborn/server/` | lifecycle command의 Bearer 인증, 서버 전용 멱등성 예약·캐시, Supabase RPC와 operator RLS 조회 helper |
+| `mcm-reborn/components/` | 레이아웃, 공용 UI와 화면별 데모 컴포넌트 |
+| `mcm-reborn/data/demo-scenario.ts` | 접수·분석·추천·주문·검수·보증서에 공통으로 쓰는 중앙 Fixture |
+| `mcm-reborn/public/assets/` | 저장소에 공개 가능한 데모·카탈로그 자산. 고객이 촬영한 원본의 저장 위치가 아님 |
+
+| 향후 경로 | 도입할 때의 책임 |
+|---|---|
+| `mcm-reborn/app/api/v2/`의 나머지 경로 | API 계약 v2.0.0을 구현할 OpenAPI 3.1.0 기반 HTTP Route Handler |
 | `mcm-reborn/server/` | 인증, 도메인 서비스, Supabase·OpenAI adapter와 서버 전용 로직 |
 | `mcm-reborn/lib/` | Supabase·OpenAPI 연결 등 프레임워크 공용 유틸리티 |
 | `mcm-reborn/contracts/` | OpenAPI에서 파생하거나 수동 관리하는 앱 타입·상수 |
 | `mcm-reborn/public/assets/products/` | 공개 가능한 제품 목록·poster 이미지 |
 | `mcm-reborn/public/assets/models/` | 공개 가능한 GLB·glTF 자산 |
-| `mcm-reborn/tests/` | 향후 단위·통합 테스트 |
+| `mcm-reborn/tests/` | 단위·통합·브라우저 테스트 |
 
-고객 원본 사진은 `public/`에 넣지 않고 Supabase private bucket에 저장한다. 비밀키, 실제 고객 데이터와 운영 로그도 저장소에 추가하지 않는다.
+영속 저장을 도입할 때 고객 원본 사진은 `public/`에 넣지 않고 Supabase private bucket에 저장해야 한다. 비밀키, 실제 고객 데이터와 운영 로그도 저장소에 추가하지 않는다.
 
-DB migration 체계를 도입하면 루트 `supabase/migrations/`를 사용하고 `supabase-schema.sql` bootstrap과의 관계·롤백 절차를 계약 변경 이슈에 기록한다.
+신규 DB의 전체 bootstrap 기준은 `supabase-schema.sql`이다. 기존 DB에는 루트 `supabase/migrations/`의 버전 migration을 순서대로 적용하고, 구조 롤백은 대응하는 `supabase/rollbacks/` 파일과 데이터 안전 조건을 따른다. lifecycle 무결성은 `202608180001_lifecycle_integrity.sql`, 정확히 4장 촬영 계약은 `202608180002_capture_four_views.sql`과 각각의 rollback으로 관리하며 bootstrap·migration·rollback을 같은 계약 변경 단위로 검증한다.
 
 ## 지침 적용 순서
 
@@ -46,7 +52,7 @@ DB migration 체계를 도입하면 루트 `supabase/migrations/`를 사용하�
 
 ## 환경 설정
 
-루트 `.env.example`을 단일 기준으로 유지한다. 실제 로컬 값은 추적하지 않는 `mcm-reborn/.env.local`에 둔다.
+루트 `.env.example`을 환경변수 이름의 단일 기준으로 유지한다. 실제 연동을 개발할 때의 로컬 값은 추적하지 않는 `mcm-reborn/.env.local`에 둔다. 현재 Fixture 중심 브라우저 데모를 실행하는 데 Supabase·OpenAI 비밀값은 필요하지 않다.
 
 ```powershell
 Copy-Item .\.env.example .\mcm-reborn\.env.local

@@ -1,0 +1,1079 @@
+.eyebrow {
+  color: var(--color-muted);
+  font-size: var(--font-size-label);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-tight);
+  letter-spacing: var(--letter-spacing-tight);
+}
+
+.visuallyHidden {
+  position: absolute;
+  width: var(--border-thin);
+  height: var(--border-thin);
+  padding: var(--space-0);
+  border: var(--space-0);
+  margin: calc(var(--border-thin) * -1);
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.startContent {
+  min-height: 100dvh;
+}
+
+.startScreen {
+  position: relative;
+  display: block;
+  min-height: 100dvh;
+  overflow: hidden;
+  background: var(--color-ink);
+  color: var(--color-canvas);
+}
+
+.startImage {
+  object-fit: cover;
+  object-position: center;
+}
+
+.startScrim {
+  position: absolute;
+  inset: var(--space-0);
+  background: rgb(18 18 18 / 48%);
+}
+
+.startTagline {
+  position: absolute;
+  right: var(--layout-gutter);
+  bottom: calc(var(--safe-area-bottom) + var(--space-16));
+  left: var(--layout-gutter);
+  color: var(--color-canvas);
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-light);
+  line-height: var(--line-height-tight);
+  text-align: center;
+}
+
+.startScreen:focus-visible {
+  outline-color: var(--color-canvas);
+  outline-offset: calc(var(--space-2) * -1);
+}
+
+.introContent {
+  gap: var(--space-19);
+  padding-block: var(--space-17) var(--space-14);
+}
+
+.introBrand {
+  display: flex;
+  min-height: var(--touch-target-min);
+  align-items: center;
+  gap: var(--space-7);
+}
+
+.introBrand p,
+.authBrand p {
+  font-size: var(--font-size-label);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
+  letter-spacing: var(--letter-spacing-tight);
+}
+
+.introLogo,
+.authLogo {
+  width: var(--space-21);
+  height: auto;
+  object-fit: contain;
+}
+
+.introHero {
+  display: grid;
+  gap: var(--space-9);
+  padding-block: var(--space-21) var(--space-17);
+  border-block: var(--border-thin) solid var(--color-divider);
+}
+
+.introHero h1 {
+  /*
+   * `--line-height-tight` (1.25rem) is sized for body/control-sized text.
+   * This heading uses `--font-size-metric` (2.5rem) and wraps to two lines
+   * via <br />, so that line-height was shorter than the glyphs themselves
+   * and the two lines rendered on top of each other. Use a line-height
+   * scaled to the metric font size instead.
+   */
+  font-size: var(--font-size-metric);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-metric);
+  letter-spacing: var(--letter-spacing-tight);
+}
+
+.introHero > p:last-child {
+  max-width: var(--layout-content-max);
+  color: var(--color-ink-soft);
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-light);
+  line-height: var(--line-height-reading);
+}
+
+.introSteps {
+  display: grid;
+  gap: var(--space-0);
+}
+
+.introSteps li {
+  display: grid;
+  min-height: var(--space-24);
+  grid-template-columns: var(--space-17) minmax(var(--space-0), 1fr);
+  gap: var(--space-9);
+  align-items: start;
+  padding-block: var(--space-9);
+  border-bottom: var(--border-thin) solid var(--color-divider);
+}
+
+.introSteps li > span {
+  color: var(--color-muted);
+  font-size: var(--font-size-label);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-tight);
+}
+
+.introSteps li div {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.introSteps h2 {
+  font-size: var(--font-size-control);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
+}
+
+.introSteps p,
+.notice {
+  color: var(--color-muted);
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-light);
+  line-height: var(--line-height-reading);
+}
+
+.notice {
+  padding: var(--space-9);
+  border-left: var(--border-focus) solid var(--color-ink);
+  background: var(--color-surface);
+}
+
+.introActions {
+  display: grid;
+  gap: var(--space-4);
+  margin-top: auto;
+}
+
+.authContent {
+  display: grid;
+  align-content: start;
+  gap: var(--space-17);
+  padding-block: var(--space-13) var(--space-21);
+}
+
+.authContentLogin {
+  padding-top: 10rem;
+}
+
+.authContentLogin .authBrand {
+  margin-bottom: var(--space-7);
+}
+
+.authContentLogin .authFormTight button {
+  margin-top: 0.5625rem;
+}
+
+.authContentLogin .authLinks {
+  margin-top: -1.3125rem;
+}
+
+.authBrand {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-5);
+  padding-block: var(--space-9);
+}
+
+.authLogo {
+  width: var(--space-22);
+  height: auto;
+}
+
+/*
+ * Login screen (Figma "로그인 화면") shows a bigger logo plus an
+ * "MCM RE:BORN" / "MODERN CREATION, REBORN" wordmark instead of the
+ * compact brand mark used elsewhere (e.g. signup). `--asset-size-brand`
+ * already exists in the token scale and matches the Figma logo width
+ * exactly, so reuse it here instead of a one-off value.
+ */
+.authLogoExpanded {
+  width: var(--asset-size-brand);
+}
+
+.authBrandExpanded {
+  gap: var(--space-11);
+  padding-block: var(--space-0);
+}
+
+.authBrandCopy {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-1);
+}
+
+.authBrandCopy .authBrandTitle {
+  font-size: var(--font-size-display);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-relaxed);
+  letter-spacing: var(--letter-spacing-tight);
+}
+
+.authBrandCopy .authBrandSubtitle {
+  font-size: var(--font-size-control);
+  font-weight: var(--font-weight-light);
+  line-height: var(--line-height-tight);
+}
+
+.journeyChevron {
+  width: var(--space-10);
+  height: var(--space-3);
+}
+
+.betaCaption {
+  color: var(--color-muted);
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-light);
+  line-height: var(--line-height-reading);
+}
+
+.authForm {
+  display: grid;
+  gap: var(--space-17);
+}
+
+/*
+ * Login screen's Figma design spaces its two fields much tighter
+ * (~12px) than the default form gap (32px, still used by signup, which
+ * has no confirmed design to match against yet).
+ */
+.authFormTight {
+  gap: var(--space-7);
+}
+
+/*
+ * Shared row layout for the split email (local / "@" / domain) and phone
+ * (country code / number) fields in the signup form (Figma node
+ * 228:1510). `min-width: 0` on the flexed inputs is needed because flex
+ * items default to `min-width: auto`, which lets their intrinsic content
+ * width push the row wider than its container instead of shrinking.
+ */
+.splitFieldRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+}
+
+.splitFieldRow input {
+  min-width: var(--space-0);
+  flex: 1;
+}
+
+.fieldDivider {
+  flex: none;
+  color: var(--color-ink);
+  font-size: var(--font-size-control);
+  font-weight: var(--font-weight-regular);
+  line-height: var(--line-height-tight);
+}
+
+/*
+ * Figma sizes the country-code selector at a fixed 68px next to the
+ * flexible phone-number input, rather than splitting the row evenly. The
+ * wrapper (rather than the `<select>` itself) carries that fixed width
+ * and the dropdown chevron, because a `<select>` doesn't reliably render
+ * `::after` pseudo-elements across browsers.
+ *
+ * The chevron's shape comes from `ui.module.css`'s shared `.chevronMark`
+ * (composed onto this element in JSX); this block only positions it.
+ */
+.phoneCountryCodeWrap {
+  position: relative;
+  flex: none;
+  width: 4.25rem;
+  color: var(--color-ink);
+}
+
+.phoneCountryCodeWrap::after {
+  top: 50%;
+  right: var(--space-6);
+  transform: translateY(-75%) rotate(45deg);
+}
+
+/*
+ * The doubled class selector (`.phoneCountryCode.phoneCountryCode`) is a
+ * deliberate specificity bump: `ui.module.css`'s `.input` rule also sets
+ * `width: 100%` on this element, and since the two rules live in
+ * different CSS modules their cascade order can't be controlled by
+ * source position alone. `width: 100%` here fills the wrapper above
+ * rather than fighting it.
+ */
+.phoneCountryCode.phoneCountryCode {
+  width: 100%;
+  flex: none;
+  padding-right: var(--space-13);
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+}
+
+.passwordField {
+  display: grid;
+  gap: var(--space-5);
+}
+
+/*
+ * Signup's Figma design shows password requirements as a small
+ * checklist (circle + label) rather than a single hint sentence.
+ */
+.passwordRules {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.passwordRules li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-5);
+  color: var(--color-muted);
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-regular);
+  line-height: var(--line-height-tight);
+}
+
+/*
+ * A satisfied rule switches to the same filled-circle "checked" look as
+ * the terms-agreement checkboxes below, so the checklist reads as a
+ * live check state instead of static bullet points.
+ */
+.passwordRuleMet {
+  color: var(--color-ink);
+}
+
+.passwordRuleMark {
+  position: relative;
+  width: var(--space-10);
+  height: var(--space-10);
+  flex: none;
+  border: var(--border-hairline) solid var(--color-muted);
+  border-radius: var(--radius-pill);
+}
+
+.passwordRuleMarkMet {
+  border-color: var(--color-ink);
+  background: var(--color-ink);
+}
+
+.authSubmit {
+  display: inline-flex;
+  width: 100%;
+  min-height: var(--control-height-xl);
+  align-items: center;
+  justify-content: center;
+  padding-inline: var(--space-10);
+  border: var(--border-thin) solid var(--color-ink);
+  border-radius: var(--radius-control);
+  background: var(--color-ink);
+  color: var(--color-canvas);
+  font-size: var(--font-size-control);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
+  cursor: pointer;
+}
+
+.authLinks {
+  display: flex;
+  min-height: var(--touch-target-min);
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-9);
+  color: var(--color-link);
+  font-size: var(--font-size-label);
+  line-height: var(--line-height-tight);
+}
+
+.authLinks a {
+  display: inline-flex;
+  min-height: var(--touch-target-min);
+  align-items: center;
+  text-decoration: underline;
+  text-underline-offset: var(--space-2);
+}
+
+.authLinks span {
+  width: var(--border-thin);
+  height: var(--space-7);
+  background: var(--color-divider);
+}
+
+.betaCaption {
+  text-align: center;
+}
+
+/*
+ * Signup's Figma design collapses the terms fieldset behind a
+ * "약관 동의 / 펼쳐보기" disclosure row. <details>/<summary> gives
+ * native toggle behavior without adding client-side state; browsers
+ * already auto-expand a <details> that contains a required field
+ * failing validation, so the required consent checkbox stays usable.
+ */
+.consentDisclosure {
+  display: grid;
+}
+
+.consentDisclosure summary {
+  display: flex;
+  min-height: var(--touch-target-min);
+  align-items: center;
+  justify-content: space-between;
+  list-style: none;
+  cursor: pointer;
+}
+
+.consentDisclosure summary::-webkit-details-marker {
+  display: none;
+}
+
+.consentSummaryLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-5);
+  color: var(--color-ink);
+  font-size: var(--font-size-control);
+  font-weight: var(--font-weight-regular);
+  line-height: var(--line-height-tight);
+}
+
+.consentChevron {
+  width: var(--space-7);
+  height: auto;
+}
+
+.consentDisclosure[open] .consentChevron {
+  transform: rotate(90deg);
+}
+
+.consentSummaryAction {
+  color: var(--color-link);
+  font-size: var(--font-size-control);
+  font-weight: var(--font-weight-regular);
+  line-height: var(--line-height-tight);
+  text-decoration: underline;
+  text-underline-offset: var(--space-2);
+}
+
+.consentGroupSpacing {
+  margin-top: var(--space-7);
+}
+
+.consentGroup,
+.productTypeGroup {
+  display: grid;
+  gap: var(--space-7);
+  padding: var(--space-0);
+  border: var(--space-0);
+}
+
+.consentGroup legend,
+.productTypeGroup legend {
+  margin-bottom: var(--space-7);
+  font-size: var(--font-size-control);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
+}
+
+.consentGroup label {
+  display: flex;
+  min-height: var(--touch-target-min);
+  align-items: center;
+  gap: var(--space-7);
+  color: var(--color-ink-soft);
+  font-size: var(--font-size-body);
+  line-height: var(--line-height-tight);
+}
+
+.productTypeGroup input {
+  width: var(--space-10);
+  height: var(--space-10);
+  margin: var(--space-0);
+  accent-color: var(--color-ink);
+}
+
+/*
+ * Custom circular checkbox (native checkboxes render as a rounded
+ * square in most browsers). `appearance: none` clears the native box so
+ * the pill-radius border below can draw a full circle instead.
+ */
+.consentGroup input {
+  position: relative;
+  width: var(--space-10);
+  height: var(--space-10);
+  margin: var(--space-0);
+  appearance: none;
+  -webkit-appearance: none;
+  border: var(--border-hairline) solid var(--color-muted);
+  border-radius: var(--radius-pill);
+  flex: none;
+  cursor: pointer;
+}
+
+.consentGroup input:checked {
+  border-color: var(--color-ink);
+  background: var(--color-ink);
+}
+
+/* Shared checkmark glyph for the checked terms checkbox and a satisfied password rule. */
+.consentGroup input:checked::after,
+.passwordRuleMarkMet::after {
+  position: absolute;
+  top: 45%;
+  left: 50%;
+  width: var(--space-4);
+  height: var(--space-7);
+  border: solid var(--color-canvas);
+  border-width: 0 var(--border-focus) var(--border-focus) 0;
+  transform: translate(-50%, -50%) rotate(45deg);
+  content: "";
+}
+
+.homeContent {
+  min-height: var(--space-0);
+  max-height: calc(
+    100dvh - var(--layout-bottom-nav-height) - var(--safe-area-bottom)
+  );
+}
+
+.homeHero {
+  position: relative;
+  height: clamp(28rem, 62.5dvh, 34.125rem);
+  min-height: var(--space-0);
+  flex: 0 1 auto;
+  overflow: hidden;
+  background: var(--color-canvas);
+  isolation: isolate;
+}
+
+.homeHeroMask {
+  position: absolute;
+  z-index: var(--space-0);
+  inset: var(--space-0) -1.125rem;
+  background: #000000;
+  -webkit-mask-image: url("/assets/mvp-beta/home-hero-mask.svg");
+  mask-image: url("/assets/mvp-beta/home-hero-mask.svg");
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-size: 100% 100%;
+  mask-size: 100% 100%;
+}
+
+.homeHeroMedia {
+  position: absolute;
+  z-index: 1;
+  inset: var(--space-0) -1.125rem;
+  display: block;
+  width: calc(100% + 2.25rem);
+  height: 100%;
+  overflow: hidden;
+  background: #000000;
+  pointer-events: none;
+  -webkit-mask-image: url("/assets/mvp-beta/home-hero-mask.svg");
+  mask-image: url("/assets/mvp-beta/home-hero-mask.svg");
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-size: 100% 100%;
+  mask-size: 100% 100%;
+}
+
+.homeHeroVideo {
+  position: absolute;
+  top: var(--space-0);
+  left: var(--space-0);
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 402 / 874;
+}
+
+.homeIntro {
+  position: relative;
+  z-index: 1;
+  flex: none;
+  padding: 2.1875rem var(--layout-gutter) var(--space-13);
+  background: var(--color-canvas);
+}
+
+.homeIntro h1 {
+  font-size: var(--font-size-title);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-tight);
+  letter-spacing: var(--letter-spacing-tight);
+}
+
+.homeTagline {
+  margin-top: var(--space-5);
+  color: var(--color-muted);
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-light);
+  line-height: var(--line-height-tight);
+}
+
+.homeDescription {
+  margin-top: var(--space-5);
+  color: var(--color-ink);
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-regular);
+  line-height: var(--line-height-tight);
+}
+
+.homePrimaryAction {
+  width: calc(100% + 0.5625rem);
+  margin-top: var(--space-13);
+  margin-inline: calc(var(--space-2) * -1) calc(var(--space-3) * -1);
+}
+
+.homeState {
+  padding: var(--space-0) var(--layout-gutter) var(--space-17);
+}
+
+.captureContent {
+  display: grid;
+  gap: var(--space-21);
+  padding-block: var(--space-0)
+    calc(var(--layout-sticky-action-height) + var(--space-21));
+}
+
+.captureGuide,
+.productInfo {
+  display: grid;
+  gap: var(--space-14);
+}
+
+.captureSectionHeading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-9);
+}
+
+.captureSectionHeading > div {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.captureSectionHeading h2 {
+  font-size: var(--font-size-control);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
+}
+
+.captureSectionHeading p,
+.captureSectionHeading > span,
+.captureRule,
+.captureSecondaryAction p {
+  color: var(--color-muted);
+  font-size: var(--font-size-label);
+  font-weight: var(--font-weight-regular);
+  line-height: var(--line-height-reading);
+}
+
+.captureSectionHeading > span {
+  flex: none;
+}
+
+.captureGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(var(--space-0), 1fr));
+  gap: var(--space-8);
+}
+
+.captureSlot {
+  position: relative;
+  display: grid;
+  min-height: var(--touch-target-min);
+  place-items: center;
+  overflow: hidden;
+  border: var(--border-hairline) solid var(--color-muted);
+  border-radius: var(--radius-image);
+  background: var(--color-surface);
+}
+
+.captureSlotHero,
+.captureSlotSerial {
+  grid-column: 1 / -1;
+}
+
+.captureSlotHero {
+  aspect-ratio: 350 / 286;
+}
+
+.captureSlotHalf {
+  aspect-ratio: 168 / 115;
+}
+
+.captureSlotSerial {
+  min-height: var(--space-24);
+}
+
+.captureSlot:hover {
+  border-color: var(--color-ink);
+}
+
+.captureSlot > img {
+  object-fit: cover;
+  object-position: center;
+}
+
+.captureSlotCompleted::after {
+  position: absolute;
+  inset: var(--space-0);
+  background: var(--color-scrim);
+  content: "";
+}
+
+.captureAddMark {
+  display: grid;
+  width: var(--touch-target-min);
+  height: var(--touch-target-min);
+  place-items: center;
+  border: var(--border-thin) solid var(--color-muted);
+  border-radius: var(--radius-pill);
+  color: var(--color-muted);
+  font-size: var(--font-size-display);
+  font-weight: var(--font-weight-light);
+}
+
+.captureSlotLabel {
+  position: absolute;
+  z-index: var(--z-sticky);
+  right: var(--space-7);
+  bottom: var(--space-7);
+  left: var(--space-7);
+  padding: var(--space-5) var(--space-7);
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  font-size: var(--font-size-label);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-tight);
+  text-align: center;
+}
+
+.captureSlotCompleted .captureSlotLabel {
+  background: var(--color-ink);
+  color: var(--color-canvas);
+}
+
+.captureRule {
+  padding: var(--space-7) var(--space-9);
+  background: var(--color-surface);
+  text-align: center;
+}
+
+.captureBarcode {
+  width: auto;
+  height: var(--space-17);
+}
+
+.captureSecondaryAction {
+  display: grid;
+  gap: var(--space-5);
+  text-align: center;
+}
+
+.captureSecondaryAction .captureAlbumMessage {
+  color: var(--color-ink);
+}
+
+.productInfo {
+  padding-top: var(--space-21);
+  border-top: var(--space-6) solid var(--color-surface);
+}
+
+.productTypeGroup {
+  grid-template-columns: repeat(3, minmax(var(--space-0), 1fr));
+}
+
+.productTypeGroup legend {
+  grid-column: 1 / -1;
+}
+
+.productTypeGroup label {
+  position: relative;
+  display: grid;
+  min-height: var(--touch-target-min);
+  place-items: center;
+  border: var(--border-hairline) solid var(--color-muted);
+  border-radius: var(--radius-control);
+  font-size: var(--font-size-body);
+  line-height: var(--line-height-tight);
+}
+
+.productTypeGroup input {
+  position: absolute;
+  opacity: var(--space-0);
+}
+
+.productTypeGroup label:has(input:checked) {
+  border-color: var(--color-ink);
+  background: var(--color-ink);
+  color: var(--color-canvas);
+}
+
+.productTypeGroup label:focus-within {
+  outline: var(--border-focus) solid var(--color-ink);
+  outline-offset: var(--space-1);
+}
+
+.captureSelectField {
+  display: grid;
+  gap: var(--space-5);
+  color: var(--color-ink);
+  font-size: var(--font-size-control);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
+}
+
+.captureSelectField b {
+  font-weight: inherit;
+}
+
+.captureSelectField select {
+  width: 100%;
+  height: var(--control-height-lg);
+  padding-inline: var(--space-6);
+  border: var(--border-hairline) solid var(--color-ink);
+  border-radius: var(--radius-control);
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  font: inherit;
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-light);
+}
+
+.captureSelectField select:focus-visible {
+  outline: var(--border-focus) solid var(--color-ink);
+  outline-offset: var(--space-1);
+}
+
+.cameraContent {
+  position: relative;
+  min-height: 100dvh;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.cameraBackground {
+  z-index: var(--space-0);
+  object-fit: cover;
+  object-position: center;
+  transform: scale(1.35);
+}
+
+.cameraVideo,
+.cameraCapturedPreview {
+  position: absolute;
+  z-index: var(--space-0);
+  inset: var(--space-0);
+  width: 100%;
+  height: 100%;
+  background: var(--color-ink);
+  object-fit: cover;
+  object-position: center;
+}
+
+.cameraScrim {
+  position: absolute;
+  z-index: 1;
+  inset: var(--space-0);
+  background: linear-gradient(
+    to bottom,
+    var(--color-scrim) 0%,
+    var(--color-transparent) 36%,
+    var(--color-transparent) 60%,
+    var(--color-scrim) 100%
+  );
+  pointer-events: none;
+}
+
+.cameraBack {
+  position: absolute;
+  z-index: var(--z-overlay);
+  top: calc(var(--safe-area-top) + var(--space-13));
+  left: var(--layout-gutter);
+  display: grid;
+  width: var(--touch-target-min);
+  height: var(--touch-target-min);
+  place-items: center start;
+  background: var(--color-transparent);
+}
+
+.cameraGuideCopy {
+  position: absolute;
+  z-index: var(--z-sticky);
+  top: calc(var(--safe-area-top) + var(--space-25));
+  right: var(--layout-gutter);
+  left: var(--layout-gutter);
+  display: grid;
+  gap: var(--space-3);
+  color: var(--color-canvas);
+  text-align: center;
+}
+
+.cameraGuideCopy p {
+  font-size: var(--font-size-control);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
+}
+
+.cameraGuideCopy span {
+  font-size: var(--font-size-label);
+  font-weight: var(--font-weight-light);
+  line-height: var(--line-height-tight);
+}
+
+.cameraGuide {
+  position: absolute;
+  z-index: var(--z-sticky);
+  top: 50%;
+  left: 50%;
+  width: calc(var(--space-29) + var(--space-29) + var(--space-20) + var(--space-4));
+  max-width: calc(100% - (var(--layout-gutter) * 2));
+  aspect-ratio: 286.803 / 244.866;
+  transform: translate(-50%, -50%);
+}
+
+.cameraGuide img {
+  object-fit: contain;
+}
+
+.cameraControls {
+  position: absolute;
+  z-index: var(--z-sticky);
+  right: var(--layout-gutter);
+  bottom: calc(var(--safe-area-bottom) + var(--space-17));
+  left: var(--layout-gutter);
+  display: grid;
+  grid-template-columns: minmax(var(--space-0), 1fr) var(--space-25) minmax(var(--space-0), 1fr);
+  align-items: center;
+  color: var(--color-canvas);
+  font-size: var(--font-size-label);
+  line-height: var(--line-height-tight);
+  text-align: center;
+}
+
+.cameraShutter {
+  position: relative;
+  display: grid;
+  width: var(--space-25);
+  height: var(--space-25);
+  padding: var(--space-0);
+  border: var(--space-0);
+  place-items: center;
+  border-radius: var(--radius-pill);
+  appearance: none;
+  background: var(--color-transparent);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.cameraShutter:disabled {
+  cursor: wait;
+  opacity: var(--opacity-disabled);
+}
+
+.cameraShutter:focus-visible {
+  outline: var(--border-focus) solid var(--color-canvas);
+  outline-offset: var(--space-2);
+}
+
+.cameraShutter img:first-child {
+  z-index: var(--z-sticky);
+  margin: auto;
+  object-fit: contain;
+  transform: scale(0.825);
+}
+
+.cameraShutter img:last-child {
+  z-index: var(--z-behind);
+  object-fit: contain;
+}
+
+.cameraState {
+  position: relative;
+  z-index: var(--z-sticky);
+  display: grid;
+  min-height: 100dvh;
+  place-items: center;
+  padding: calc(var(--safe-area-top) + var(--space-25)) var(--layout-gutter)
+    calc(var(--safe-area-bottom) + var(--space-25));
+}
+
+.cameraReviewActions {
+  position: absolute;
+  z-index: var(--z-sticky);
+  right: var(--layout-gutter);
+  bottom: calc(var(--safe-area-bottom) + var(--space-17));
+  left: var(--layout-gutter);
+  display: grid;
+  grid-template-columns: repeat(2, minmax(var(--space-0), 1fr));
+  gap: var(--space-7);
+}
+
+.cameraStatusActions {
+  display: grid;
+  gap: var(--space-7);
+}
+
+@media (max-width: 22rem) {
+  .introHero h1 {
+    font-size: var(--font-size-display);
+  }
+
+  .homeHero {
+    height: min(55dvh, 29rem);
+  }
+
+  .captureGrid {
+    gap: var(--space-5);
+  }
+
+  .captureSlotHalf {
+    aspect-ratio: 1;
+  }
+
+  .productTypeGroup {
+    grid-template-columns: minmax(var(--space-0), 1fr);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .homeHeroMedia {
+    display: none;
+  }
+}
+
+@media (min-width: 48rem) {
+  .homeContent {
+    max-height: calc(
+      100dvh - (var(--space-13) * 2) - var(--layout-bottom-nav-height) -
+        var(--safe-area-bottom)
+    );
+  }
+
+  .cameraContent,
+  .cameraState {
+    min-height: calc(100dvh - (var(--space-13) * 2));
+  }
+}
