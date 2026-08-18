@@ -154,6 +154,23 @@ create table public.analyses (
   )
 );
 
+create table public.analysis_external_ai_consents (
+  id uuid primary key default gen_random_uuid(),
+  customer_id uuid not null references auth.users(id) on delete cascade,
+  request_hash text not null
+    constraint analysis_external_ai_consents_request_hash_check
+    check (request_hash ~ '^[0-9a-f]{64}$'),
+  privacy_notice_version text not null
+    constraint analysis_external_ai_consents_notice_version_check
+    check (
+      length(trim(privacy_notice_version)) between 1 and 100
+      and privacy_notice_version = trim(privacy_notice_version)
+    ),
+  accepted_at timestamptz not null,
+  analysis_id uuid references public.analyses(id) on delete restrict,
+  unique (customer_id, request_hash)
+);
+
 create table public.analysis_images (
   analysis_id uuid not null references public.analyses(id) on delete cascade,
   media_asset_id uuid not null references public.media_assets(id) on delete cascade,
@@ -175,6 +192,7 @@ create table public.products (
   dimensions jsonb not null,
   list_image jsonb not null,
   model_3d jsonb not null,
+  model_3d_ready boolean not null default false,
   option_groups jsonb not null default '[]'::jsonb,
   active boolean not null default true,
   sort_order integer not null default 0,
@@ -226,7 +244,19 @@ create table public.applications (
   ),
   constraint applications_consents_contract check (
     consents = '{"serviceAndPrivacyTermsAccepted":true,"aiEstimateNoticeAccepted":true,"inspectionChangeNoticeAccepted":true}'::jsonb
-  )
+  ),
+  constraint applications_initial_terms_contract check (
+    public.is_valid_application_terms(initial_terms)
+    and lower(initial_terms->>'productId') = product_id::text
+  ),
+  constraint applications_final_terms_contract check (
+    final_terms is null
+    or (
+      public.is_valid_application_terms(final_terms)
+      and lower(final_terms->>'productId') = product_id::text
+    )
+  ),
+  constraint applications_analysis_id_unique unique (analysis_id)
 );
 
 create table public.application_status_history (
@@ -319,7 +349,20 @@ create table public.analytics_events (
   application_id uuid references public.applications(id) on delete set null,
   metadata jsonb not null default '{}'::jsonb,
   occurred_at timestamptz not null,
-  received_at timestamptz not null default now()
+  received_at timestamptz not null default now(),
+  constraint analytics_events_event_name_check check (event_name in (
+    'ANALYSIS_STARTED',
+    'ANALYSIS_COMPLETED',
+    'ANALYSIS_FALLBACK_USED',
+    'PRODUCT_LIST_VIEWED',
+    'PRODUCT_DETAIL_VIEWED',
+    'APPLICATION_CREATED',
+    'MOCK_PAYMENT_COMPLETED',
+    'PHYSICAL_INSPECTION_COMPLETED',
+    'APPLICATION_CHANGE_APPROVED',
+    'APPLICATION_CHANGE_REJECTED',
+    'CERTIFICATE_VIEWED'
+  ))
 );
 
 create table public.idempotency_keys (
@@ -339,6 +382,7 @@ create index applications_customer_created_idx on public.applications(customer_i
 create index applications_status_created_idx on public.applications(persisted_status, created_at desc);
 create index application_status_history_idx on public.application_status_history(application_id, occurred_at);
 create index analytics_events_name_time_idx on public.analytics_events(event_name, occurred_at desc);
+create index analytics_events_user_received_idx on public.analytics_events(user_id, received_at desc);
 
 create or replace function public.set_updated_at()
 returns trigger
@@ -347,6 +391,149 @@ as $$
 begin
   new.updated_at = now();
   return new;
+end;
+$$;
+
+create or replace function public.enforce_external_ai_consent_analysis_owner()
+returns trigger
+language plpgsql
+set search_path = public, pg_temp
+as $$
+begin
+  if tg_op = 'INSERT' and new.analysis_id is not null then
+    raise exception 'external AI consent must be recorded before analysis creation'
+      using errcode = '23514';
+  end if;
+
+  if tg_op = 'UPDATE' then
+    if (
+      new.customer_id,
+      new.request_hash,
+      new.privacy_notice_version,
+      new.accepted_at
+    ) is distinct from (
+      old.customer_id,
+      old.request_hash,
+      old.privacy_notice_version,
+      old.accepted_at
+    ) then
+      raise exception 'external AI consent evidence is immutable'
+        using errcode = '23514';
+    end if;
+
+    if old.analysis_id is not null or new.analysis_id is null then
+      raise exception 'external AI consent analysis can be linked exactly once'
+        using errcode = '23514';
+    end if;
+  end if;
+
+  if new.analysis_id is not null and not exists (
+    select 1
+    from public.analyses a
+    where a.id = new.analysis_id
+      and a.customer_id = new.customer_id
+      and a.status = 'COMPLETED'
+  ) then
+    raise exception 'external AI consent analysis must be completed and belong to the same customer'
+      using errcode = '23503';
+  end if;
+
+  return new;
+end;
+$$;
+
+create trigger analysis_external_ai_consents_enforce_owner
+before insert or update
+on public.analysis_external_ai_consents
+for each row execute function public.enforce_external_ai_consent_analysis_owner();
+
+create or replace function public.can_delete_pending_source_product(
+  p_bucket text,
+  p_path text
+)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public, pg_temp
+as $$
+  select auth.uid() is not null
+    and exists (
+      select 1
+      from public.media_assets ma
+      where ma.owner_id = auth.uid()
+        and ma.bucket = p_bucket
+        and ma.path = p_path
+        and ma.upload_status = 'PENDING'
+        and not exists (
+          select 1
+          from public.analysis_images ai
+          where ai.media_asset_id = ma.id
+        )
+    );
+$$;
+
+create or replace function public.record_analytics_event(
+  p_user_id uuid,
+  p_session_id uuid,
+  p_event_name text,
+  p_occurred_at timestamptz,
+  p_analysis_id uuid default null,
+  p_product_id uuid default null,
+  p_application_id uuid default null,
+  p_metadata jsonb default '{}'::jsonb
+)
+returns uuid
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  recent_event_count integer;
+  created_event_id uuid;
+begin
+  if p_user_id is null then
+    raise exception 'analytics event user is required'
+      using errcode = '22004';
+  end if;
+
+  perform pg_advisory_xact_lock(hashtextextended(p_user_id::text, 0));
+
+  select count(*)
+  into recent_event_count
+  from public.analytics_events ae
+  where ae.user_id = p_user_id
+    and ae.received_at >= clock_timestamp() - interval '60 seconds';
+
+  if recent_event_count >= 60 then
+    raise exception 'analytics event rate limit exceeded'
+      using errcode = 'P0001';
+  end if;
+
+  insert into public.analytics_events (
+    user_id,
+    session_id,
+    event_name,
+    analysis_id,
+    product_id,
+    application_id,
+    metadata,
+    occurred_at,
+    received_at
+  ) values (
+    p_user_id,
+    p_session_id,
+    p_event_name,
+    p_analysis_id,
+    p_product_id,
+    p_application_id,
+    coalesce(p_metadata, '{}'::jsonb),
+    p_occurred_at,
+    clock_timestamp()
+  )
+  returning id into created_event_id;
+
+  return created_event_id;
 end;
 $$;
 
@@ -515,6 +702,11 @@ begin
     update public.applications
     set persisted_status = 'ORDER_PLACED'
     where id = new.application_id and persisted_status = 'PENDING_PAYMENT';
+
+    if not found then
+      raise exception 'successful mock payment requires a PENDING_PAYMENT application'
+        using errcode = '23514';
+    end if;
   end if;
   return new;
 end;
@@ -899,35 +1091,69 @@ end;
 $$;
 
 create trigger application_change_requests_prepare_decision
-before update of status on public.application_change_requests
+before update on public.application_change_requests
 for each row execute function public.prepare_change_request_decision();
 
 create or replace function public.apply_change_request_decision()
 returns trigger
 language plpgsql
-set search_path = public
+security definer
+set search_path = public, pg_temp
 as $$
+declare
+  decision_user_id uuid := auth.uid();
 begin
-  if old.status = 'PENDING' and new.status in ('APPROVED', 'REJECTED') then
-    update public.applications
-    set persisted_status = case new.status
-        when 'APPROVED' then 'PRODUCTION_READY'::public.application_status
-        else 'CANCELED'::public.application_status
-      end,
-      final_terms = case when new.status = 'APPROVED' then new.proposed_terms else final_terms end
-    where id = new.application_id and persisted_status = 'CHANGE_APPROVAL_REQUIRED';
+  if decision_user_id is null then
+    raise exception 'authenticated customer required for change decision'
+      using errcode = '42501';
+  end if;
 
-    if not found then
-      raise exception 'change decision requires CHANGE_APPROVAL_REQUIRED status';
-    end if;
+  if old.status <> 'PENDING'
+     or new.status not in ('APPROVED', 'REJECTED')
+     or new.status is not distinct from old.status then
+    raise exception 'change request decision requires the first PENDING transition'
+      using errcode = '23514';
+  end if;
+
+  if new.application_id is distinct from old.application_id
+     or new.responded_by is distinct from decision_user_id then
+    raise exception 'change request decision identity mismatch'
+      using errcode = '42501';
+  end if;
+
+  if not exists (
+    select 1
+    from public.applications a
+    where a.id = new.application_id
+      and a.customer_id = decision_user_id
+  ) then
+    raise exception 'change request decision requires application ownership'
+      using errcode = '42501';
+  end if;
+
+  update public.applications a
+  set persisted_status = case new.status
+      when 'APPROVED' then 'PRODUCTION_READY'::public.application_status
+      else 'CANCELED'::public.application_status
+    end,
+    final_terms = case when new.status = 'APPROVED' then new.proposed_terms else a.final_terms end
+  where a.id = new.application_id
+    and a.customer_id = decision_user_id
+    and a.persisted_status = 'CHANGE_APPROVAL_REQUIRED';
+
+  if not found then
+    raise exception 'change decision requires CHANGE_APPROVAL_REQUIRED status';
   end if;
   return new;
 end;
 $$;
 
 create trigger application_change_requests_apply_decision
-after update of status on public.application_change_requests
+after update on public.application_change_requests
 for each row execute function public.apply_change_request_decision();
+
+revoke all on function public.apply_change_request_decision()
+from public, anon, authenticated;
 
 create or replace function public.enforce_certificate_issuance_state()
 returns trigger
@@ -985,6 +1211,7 @@ for each row execute function public.protect_issued_certificate_application_stat
 alter table public.profiles enable row level security;
 alter table public.media_assets enable row level security;
 alter table public.analyses enable row level security;
+alter table public.analysis_external_ai_consents enable row level security;
 alter table public.analysis_images enable row level security;
 alter table public.products enable row level security;
 alter table public.analysis_recommendations enable row level security;
@@ -1005,6 +1232,9 @@ create policy media_assets_owner_read on public.media_assets for select
 using (owner_id = auth.uid() or public.is_operator());
 create policy analyses_owner_read on public.analyses for select
 using (customer_id = auth.uid() or public.is_operator());
+create policy analysis_external_ai_consents_owner_read
+on public.analysis_external_ai_consents for select to authenticated
+using (customer_id = auth.uid());
 create policy applications_owner_read on public.applications for select
 using (customer_id = auth.uid() or public.is_operator());
 create policy application_history_owner_read on public.application_status_history for select
@@ -1024,19 +1254,59 @@ with check (public.is_operator());
 create policy change_requests_operator_insert on public.application_change_requests for insert
 with check (public.is_operator());
 create policy change_requests_customer_decide on public.application_change_requests for update
-using (exists (select 1 from public.applications a where a.id = application_id and a.customer_id = auth.uid()))
+using (
+  status = 'PENDING'
+  and exists (
+    select 1
+    from public.applications a
+    where a.id = application_id and a.customer_id = auth.uid()
+  )
+)
 with check (status in ('APPROVED', 'REJECTED'));
-create policy analytics_events_insert on public.analytics_events for insert
-with check (user_id is null or user_id = auth.uid());
 
 revoke insert, update, delete on public.analyses, public.analysis_images,
   public.analysis_recommendations, public.applications, public.application_status_history,
   public.mock_payments, public.mock_shipments, public.esg_certificates,
   public.idempotency_keys from anon, authenticated;
+revoke all on public.analysis_external_ai_consents
+from public, anon, authenticated;
+revoke all on public.analysis_external_ai_consents from service_role;
+grant select on public.analysis_external_ai_consents to authenticated;
+grant select, insert on public.analysis_external_ai_consents to service_role;
+grant update (analysis_id) on public.analysis_external_ai_consents to service_role;
 revoke insert, update, delete on public.physical_inspections from anon, authenticated;
 revoke insert, update, delete on public.application_change_requests from anon, authenticated;
+revoke insert on public.analytics_events
+from public, anon, authenticated, service_role;
 grant update (status, response_reason)
   on public.application_change_requests to authenticated;
+
+revoke all on function public.enforce_external_ai_consent_analysis_owner()
+from public, anon, authenticated;
+revoke all on function public.can_delete_pending_source_product(text, text)
+from public, anon, authenticated;
+grant execute on function public.can_delete_pending_source_product(text, text)
+to authenticated;
+revoke all on function public.record_analytics_event(
+  uuid,
+  uuid,
+  text,
+  timestamptz,
+  uuid,
+  uuid,
+  uuid,
+  jsonb
+) from public, anon, authenticated, service_role;
+grant execute on function public.record_analytics_event(
+  uuid,
+  uuid,
+  text,
+  timestamptz,
+  uuid,
+  uuid,
+  uuid,
+  jsonb
+) to service_role;
 
 revoke all on function public.submit_physical_inspection(
   uuid,
@@ -1074,22 +1344,25 @@ grant execute on function public.advance_application_lifecycle(
 
 insert into public.products (
   id, code, name, category, description, required_area_cm2, mock_price_krw,
-  estimated_duration, dimensions, list_image, model_3d, option_groups, sort_order
+  estimated_duration, dimensions, list_image, model_3d, model_3d_ready,
+  option_groups, sort_order
 ) values
 (
   '10000000-0000-4000-8000-000000000001', 'REBORN_PASSPORT_WALLET', 'RE:BORN 여권지갑',
   'PASSPORT_WALLET', 'MCM 비세토스 패턴을 살린 여권지갑입니다.', 850, 180000, '3~4주',
   '{"widthMm":110,"heightMm":145,"depthMm":12}'::jsonb,
   '{"url":"/assets/mvp-beta/recommendation-passport-wallet.png","alt":"RE:BORN 여권지갑","width":250,"height":271,"aspectRatio":"250:271"}'::jsonb,
-  '{"format":"GLB","url":"/assets/models/passport-wallet.glb","posterUrl":"/assets/products/passport-wallet/poster.webp"}'::jsonb,
-  '[]'::jsonb, 1
+  '{"format":"GLB","url":"/assets/models/passport-wallet.glb","posterUrl":"/assets/products/passport-wallet/poster.webp","environmentImageUrl":"/assets/3d/studio.hdr","cameraOrbit":"0deg 75deg 105%","cameraTarget":"0m 0m 0m","fieldOfView":"30deg","autoRotate":true,"availableVariants":[{"key":"COGNAC_GOLD","label":"코냑·골드"}]}'::jsonb,
+  false,
+  '[{"key":"edgeColor","label":"엣지 색상","required":true,"type":"SELECT","options":[{"value":"COGNAC","label":"코냑","modelVariant":"COGNAC_GOLD"}]},{"key":"initials","label":"이니셜","required":false,"type":"TEXT","maxLength":3}]'::jsonb, 1
 ),
 (
   '10000000-0000-4000-8000-000000000002', 'REBORN_CARD_WALLET', 'RE:BORN 카드지갑',
   'CARD_WALLET', '상태가 좋은 패턴 영역을 선별한 카드지갑입니다.', 300, 150000, '2~3주',
   '{"widthMm":105,"heightMm":75,"depthMm":8}'::jsonb,
   '{"url":"/assets/mvp-beta/recommendation-card-holder.png","alt":"RE:BORN 카드지갑","width":250,"height":271,"aspectRatio":"250:271"}'::jsonb,
-  '{"format":"GLB","url":"/assets/models/card-wallet.glb","posterUrl":"/assets/products/card-wallet/poster.webp"}'::jsonb,
+  '{"format":"GLB","url":"/assets/models/card-wallet.glb","posterUrl":"/assets/products/card-wallet/poster.webp","environmentImageUrl":"/assets/3d/studio.hdr","cameraOrbit":"20deg 75deg 110%","cameraTarget":"0m 0m 0m","fieldOfView":"28deg","autoRotate":true,"availableVariants":[{"key":"COGNAC_GOLD","label":"코냑·골드"}]}'::jsonb,
+  false,
   '[]'::jsonb, 2
 ),
 (
@@ -1097,7 +1370,8 @@ insert into public.products (
   'NAME_TAG', '잔여 패턴 소재를 활용한 캐리어 네임택입니다.', 180, 95000, '약 2주',
   '{"widthMm":70,"heightMm":110,"depthMm":6}'::jsonb,
   '{"url":"/assets/mvp-beta/recommendation-luggage-name-tag-v2.webp","alt":"RE:BORN 캐리어 네임택","width":600,"height":600,"aspectRatio":"1:1"}'::jsonb,
-  '{"format":"GLB","url":"/assets/models/name-tag.glb","posterUrl":"/assets/products/name-tag/poster.webp"}'::jsonb,
+  '{"format":"GLB","url":"/assets/models/name-tag.glb","posterUrl":"/assets/products/name-tag/poster.webp","environmentImageUrl":"/assets/3d/studio.hdr","cameraOrbit":"0deg 75deg 110%","cameraTarget":"0m 0m 0m","fieldOfView":"28deg","autoRotate":true,"availableVariants":[{"key":"GOLD","label":"골드"}]}'::jsonb,
+  false,
   '[]'::jsonb, 3
 ),
 (
@@ -1105,7 +1379,8 @@ insert into public.products (
   'KEYRING', '작은 잔여 소재까지 활용한 키링입니다.', 80, 75000, '1~2주',
   '{"widthMm":45,"heightMm":90,"depthMm":5}'::jsonb,
   '{"url":"/assets/mvp-beta/recommendation-keyring-v2.webp","alt":"RE:BORN 키링","width":600,"height":600,"aspectRatio":"1:1"}'::jsonb,
-  '{"format":"GLB","url":"/assets/models/keyring.glb","posterUrl":"/assets/products/keyring/poster.webp"}'::jsonb,
+  '{"format":"GLB","url":"/assets/models/keyring.glb","posterUrl":"/assets/products/keyring/poster.webp","environmentImageUrl":"/assets/3d/studio.hdr","cameraOrbit":"0deg 75deg 115%","cameraTarget":"0m 0m 0m","fieldOfView":"25deg","autoRotate":true,"availableVariants":[{"key":"GOLD_RING","label":"골드 링"}]}'::jsonb,
+  false,
   '[]'::jsonb, 4
 )
 on conflict (id) do update set
@@ -1119,6 +1394,7 @@ on conflict (id) do update set
   dimensions = excluded.dimensions,
   list_image = excluded.list_image,
   model_3d = excluded.model_3d,
+  model_3d_ready = excluded.model_3d_ready,
   option_groups = excluded.option_groups,
   sort_order = excluded.sort_order,
   active = true;
@@ -1139,8 +1415,24 @@ with check (
   bucket_id = 'source-products'
   and (storage.foldername(name))[1] = auth.uid()::text
   and lower(storage.extension(name)) in ('jpg', 'jpeg', 'png')
+  and exists (
+    select 1
+    from public.media_assets ma
+    where ma.owner_id = auth.uid()
+      and ma.bucket = bucket_id
+      and ma.path = name
+      and ma.upload_status = 'PENDING'
+      and (
+        (ma.mime_type = 'image/jpeg' and lower(storage.extension(name)) in ('jpg', 'jpeg'))
+        or (ma.mime_type = 'image/png' and lower(storage.extension(name)) = 'png')
+      )
+  )
 );
 create policy source_products_select_own_folder on storage.objects for select to authenticated
 using (bucket_id = 'source-products' and ((storage.foldername(name))[1] = auth.uid()::text or public.is_operator()));
 create policy source_products_delete_own_folder on storage.objects for delete to authenticated
-using (bucket_id = 'source-products' and (storage.foldername(name))[1] = auth.uid()::text);
+using (
+  bucket_id = 'source-products'
+  and (storage.foldername(name))[1] = auth.uid()::text
+  and public.can_delete_pending_source_product(bucket_id, name)
+);
