@@ -39,9 +39,9 @@
 | 파일당 최대 크기 | `10485760` bytes (10 MiB) |
 | 용도 | `SOURCE_FRONT`, `SOURCE_SIDE`, `INTERIOR`, `ENGRAVING` |
 | Presign 1회 요청 | 1~4개 |
-| 분석 생성에 연결할 사진 | 3~4개 |
+| 분석 생성에 연결할 사진 | 좌측면·우측면·하단·후면 4개 |
 
-`POST /uploads/presign`은 점진 업로드를 위해 1개 사진만 요청해도 됩니다. 최종 `POST /analyses`에서는 업로드가 완료된 서로 다른 자산 3~4개가 필요합니다. Route Handler를 구현할 때는 자산 소유자, 업로드 완료 여부, MIME, 크기, 목적을 다시 검증해야 합니다.
+`POST /uploads/presign`은 점진 업로드를 위해 1개 사진만 요청해도 됩니다. 최종 `POST /analyses`에서는 업로드가 완료된 서로 다른 자산 4개를 좌측면·우측면·하단·후면 순서로 전달해야 합니다. 촬영 방향은 프런트 세션과 배열 순서로 관리하며 기존 Storage `purpose` enum을 방향별로 확장하지 않습니다. Route Handler를 구현할 때는 자산 소유자, 업로드 완료 여부, MIME, 크기, 목적을 다시 검증해야 합니다.
 
 `mock-data.json.primaryScenario.source.images`의 WebP 경로는 앱에 번들된 표시용 Fixture입니다. 고객이 Presign으로 올리는 소스 파일의 허용 MIME에는 WebP가 포함되지 않습니다.
 
@@ -49,10 +49,10 @@
 {
   "files": [
     {
-      "fileName": "front.jpg",
+      "fileName": "left-side.jpg",
       "contentType": "image/jpeg",
       "sizeBytes": 5242880,
-      "purpose": "SOURCE_FRONT"
+      "purpose": "SOURCE_SIDE"
     }
   ]
 }
@@ -318,7 +318,7 @@ Supabase RPC `submit_physical_inspection`은 같은 트랜잭션에서 만든 `c
 | Method | Path | 역할 |
 |---|---|---|
 | POST | `/uploads/presign` | 소스 사진 점진 업로드 URL 발급 |
-| POST | `/analyses` | 3~4장과 제품 정보로 분석 생성 |
+| POST | `/analyses` | 필수 구도 4장과 제품 정보로 분석 생성 |
 | GET | `/analyses/{analysisId}` | 분석 상태·예상 결과 조회 |
 | GET | `/products` | 최종 제품 4종 조회 |
 | POST | `/applications` | 주문 생성 |
@@ -333,7 +333,7 @@ Supabase RPC `submit_physical_inspection`은 같은 트랜잭션에서 만든 `c
 
 ## 10. 구현·검증 체크리스트
 
-- [ ] Presign은 1~4개, 분석 생성은 3~4개 제한을 서로 다르게 적용한다.
+- [ ] Presign은 1~4개, 분석 생성은 정확히 4개 제한을 서로 다르게 적용한다.
 - [ ] 소스 업로드는 JPG/PNG와 파일당 10 MiB만 허용한다.
 - [ ] 분석 요청의 제품 정보 필수·선택 필드를 구분한다.
 - [ ] 분석 enum을 OpenAPI, TypeScript, SQL, Mock에서 동일하게 사용한다.
@@ -352,9 +352,11 @@ Supabase RPC `submit_physical_inspection`은 같은 트랜잭션에서 만든 `c
 
 - 신규 DB는 `supabase-schema.sql`을 bootstrap 기준으로 사용합니다.
 - 기존 DB는 `supabase/migrations/202608180001_lifecycle_integrity.sql`을 적용합니다. 이 migration은 수거 일정·동의와 `CHANGE_REQUIRED.proposed_terms`를 backfill한 뒤 제약을 검증하고 lifecycle RPC·보증서 trigger를 설치합니다.
+- 이어서 `supabase/migrations/202608180002_capture_four_views.sql`을 적용해 분석 상태 전이 시 좌측면·우측면·하단·후면의 업로드 사진이 정확히 4장인지 DB에서도 강제합니다. 기존 완료 분석은 이력으로 유지하고, 진행 중인 3장 분석은 사진을 임의 생성하지 않으며 네 번째 사진을 받은 뒤 다음 상태로 진행합니다.
 - legacy 동의 키의 자동 변환은 정확히 모두 `true`인 `PRIMARY_SCENARIO` 데모 행으로 제한합니다. 기존 주문에 최초 이력이 없으면 `created_at` 시각의 `PENDING_PAYMENT`를 `MIGRATION_BACKFILL_INITIAL_STATUS` 표식으로 보완합니다.
 - 증명할 수 없는 동의·변경안·기존 보증서가 있으면 migration은 값을 만들어 내지 않고 중단합니다. 운영자가 해당 행을 검토한 뒤 재실행해야 합니다.
 - 구조 롤백은 쓰기를 중지한 뒤 `supabase/rollbacks/202608180001_lifecycle_integrity.sql`을 사용합니다. migration 뒤 생성된 주문이 있으면 자동 롤백을 중단하므로 별도 매핑 또는 point-in-time restore가 필요합니다.
+- 사진 계약만 되돌릴 때는 역순으로 `supabase/rollbacks/202608180002_capture_four_views.sql`을 먼저 적용합니다. 이 롤백은 기존 3~4장 guard만 복원하며 저장된 사진이나 분석 이력은 삭제하지 않습니다.
 
 ## 11. v1 → v2 마이그레이션 이력
 

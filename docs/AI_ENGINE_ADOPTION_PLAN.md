@@ -69,7 +69,7 @@
 
 ### Lane A — 고객 스마트폰 사전 예상 목표
 
-입력은 Canonical의 정면·측면·내부·각인 JPG/PNG 3~4장이다.
+입력은 Canonical의 좌측면·우측면·하단·후면 JPG/PNG 4장이다.
 
 ```text
 CaptureAsset → QualityGate → deterministic EstimateRun
@@ -128,7 +128,7 @@ API 계약 v2.0.0(OpenAPI 3.1.0)의 `Analysis`는 `estimatedReusableAreaCm2`를 
 다음은 향후 API·DB에 추가할 최소안이며 현재 캡처 세션이나 API 계약에 모두 존재하는 필드가 아니다.
 
 ```text
-assetId, slot(FRONT|SIDE|INTERIOR|ENGRAVING)
+assetId, slot(LEFT_SIDE|RIGHT_SIDE|BOTTOM|REAR)
 source(CAMERA|FILE_PICKER|DEMO_FIXTURE), capturedAt
 contentSha256, mimeType, widthPx, heightPx, bytes
 orientationNormalized, exifRemoved, captureClientVersion
@@ -190,7 +190,7 @@ Order → PhysicalInspection → SourcePanelRevision[]
 
 현재 API 계약 v2.0.0에는 독립된 `ABSTAIN` 결과가 없다. 향후 additive 상태·사유·다음 행동 계약을 승인한 뒤, Lane A는 다음 중 하나면 단일 제작 가능 수치를 내지 않도록 한다.
 
-- 필수 3장 미만, 핵심 슬롯 누락, 초점·노출·반사·잘림 실패
+- 필수 4슬롯 중 하나라도 누락, 초점·노출·반사·잘림 실패
 - 동일 패널 식별·coverage 부족, SKU·소재·크기 불명확
 - 광택·검은 소재·변형 때문에 결함이 관찰되지 않음
 - 추천 근거가 보이지 않는 영역이나 합성 영역에 의존

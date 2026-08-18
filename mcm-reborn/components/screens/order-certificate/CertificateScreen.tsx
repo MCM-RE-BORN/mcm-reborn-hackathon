@@ -1,7 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
 import { AppShell } from "@/components/layout/AppShell";
-import { BottomNav } from "@/components/layout/BottomNav";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Section } from "@/components/layout/Section";
 import { ButtonLink } from "@/components/ui/Button";
@@ -34,12 +33,6 @@ export function CertificateScreen({
 
   return (
     <AppShell
-      footer={
-        <BottomNav
-          active="certificate"
-          certificateState={state === "normal" ? "issued" : "locked"}
-        />
-      }
       header={<PageHeader backHref="/orders/demo?stage=completed" />}
     >
       {state !== "normal" ? (

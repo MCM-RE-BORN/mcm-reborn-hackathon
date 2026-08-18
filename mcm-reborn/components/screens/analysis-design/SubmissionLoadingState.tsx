@@ -10,7 +10,7 @@ export function SubmissionLoadingState() {
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
-      router.replace("/submissions/demo");
+      router.replace("/submissions/demo/analysis");
     }, 1600);
 
     return () => window.clearTimeout(timer);
@@ -19,7 +19,12 @@ export function SubmissionLoadingState() {
   return (
     <StatusPanel
       action={
-        <ButtonLink fullWidth href="/submissions/demo" variant="outline">
+        <ButtonLink
+          fullWidth
+          href="/submissions/demo/analysis"
+          replace
+          variant="outline"
+        >
           분석 완료 결과 바로 보기
         </ButtonLink>
       }

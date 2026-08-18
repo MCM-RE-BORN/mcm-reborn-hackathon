@@ -1,34 +1,34 @@
 export const CAPTURE_SLOTS = [
   {
-    id: "front",
-    label: "정면",
-    className: "captureSlotHero",
-    guide: "제품 정면을 가이드 안에 맞춰주세요",
-  },
-  {
-    id: "side",
-    label: "측면",
+    id: "leftSide",
+    label: "좌측면",
     className: "captureSlotHalf",
-    guide: "제품 측면이 잘 보이도록 맞춰주세요",
+    guide: "제품의 좌측면 전체가 보이도록 맞춰주세요",
   },
   {
-    id: "inside",
-    label: "내부",
+    id: "rightSide",
+    label: "우측면",
     className: "captureSlotHalf",
-    guide: "가방 내부를 밝고 선명하게 촬영해주세요",
+    guide: "제품의 우측면 전체가 보이도록 맞춰주세요",
   },
   {
-    id: "engraving",
-    label: "각인",
-    className: "captureSlotSerial",
-    guide: "제품 각인이 선명하게 보이도록 맞춰주세요",
+    id: "bottom",
+    label: "하단",
+    className: "captureSlotHalf",
+    guide: "제품을 기울여 하단 전체가 보이도록 맞춰주세요",
+  },
+  {
+    id: "rear",
+    label: "후면",
+    className: "captureSlotHalf",
+    guide: "제품의 후면 전체가 보이도록 맞춰주세요",
   },
 ] as const;
 
 export type CaptureSlotId = (typeof CAPTURE_SLOTS)[number]["id"];
 
-export const DEFAULT_CAPTURE_SLOT: CaptureSlotId = "front";
-export const MIN_REQUIRED_CAPTURES = 3;
+export const DEFAULT_CAPTURE_SLOT: CaptureSlotId = "leftSide";
+export const MIN_REQUIRED_CAPTURES = CAPTURE_SLOTS.length;
 
 const CAPTURE_SLOT_IDS = new Set<CaptureSlotId>(
   CAPTURE_SLOTS.map((slot) => slot.id),

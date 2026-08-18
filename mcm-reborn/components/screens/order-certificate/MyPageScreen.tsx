@@ -1,8 +1,8 @@
-import Image from "next/image";
-import Link from "next/link";
 import { AppShell } from "@/components/layout/AppShell";
+import { BottomNav } from "@/components/layout/BottomNav";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Section } from "@/components/layout/Section";
+import { ActionButtonLink } from "@/components/ui/ActionButtonLink";
 import { KeyValueList } from "@/components/ui/KeyValueList";
 import { SectionBand } from "@/components/ui/SectionBand";
 import fieldStyles from "@/components/ui/ui.module.css";
@@ -40,6 +40,7 @@ export function MyPageScreen({ state }: MyPageScreenProps) {
 
   return (
     <AppShell
+      footer={<BottomNav active="mypage" />}
       header={<PageHeader backHref="/home" title="마이페이지" />}
     >
       {state !== "normal" ? (
@@ -118,20 +119,13 @@ export function MyPageScreen({ state }: MyPageScreenProps) {
           <SectionBand />
 
           {/* TODO(integration): connect this entry to the authenticated certificate lookup. */}
-          <Link
-            className={styles.certificateLinkCard}
+          <ActionButtonLink
+            className={styles.certificateAction}
+            fullWidth
             href="/certificates/demo?state=locked"
           >
             나의 RE:BORN 인증서 보기
-            <Image
-              alt=""
-              aria-hidden="true"
-              className={styles.certificateLinkIcon}
-              height={9}
-              src="/assets/mvp-beta/icon-chevron-right.svg"
-              width={17}
-            />
-          </Link>
+          </ActionButtonLink>
 
           <nav aria-label="계정 도움말" className={styles.footerLinks}>
             {/* TODO(integration): link to the approved customer-support destination. */}

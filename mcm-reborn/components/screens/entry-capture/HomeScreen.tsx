@@ -1,6 +1,6 @@
-import Image from "next/image";
 import { AppShell } from "@/components/layout/AppShell";
 import { BottomNav } from "@/components/layout/BottomNav";
+import { ActionButtonLink } from "@/components/ui/ActionButtonLink";
 import { ButtonLink } from "@/components/ui/Button";
 import { StatusPanel } from "@/components/ui/StatusPanel";
 import type { PageState } from "./page-state";
@@ -92,6 +92,21 @@ export function HomeScreen({ state }: HomeScreenProps) {
     >
       <section className={styles.homeHero} aria-hidden="true">
         <span className={styles.homeHeroMask} />
+        <span className={styles.homeHeroMedia}>
+          <video
+            autoPlay
+            className={styles.homeHeroVideo}
+            loop
+            muted
+            playsInline
+            preload="metadata"
+          >
+            <source
+              src="/assets/mvp-beta/home-hero-video.mp4"
+              type="video/mp4"
+            />
+          </video>
+        </span>
       </section>
 
       <section className={styles.homeIntro} aria-labelledby="home-hero-title">
@@ -104,21 +119,13 @@ export function HomeScreen({ state }: HomeScreenProps) {
           <br />
           장인이 완성하는 맞춤 리폼
         </p>
-        <ButtonLink
+        <ActionButtonLink
           className={styles.homePrimaryAction}
           fullWidth
           href="/products/new"
-          size="small"
         >
-          <span>상품 진단 시작하기</span>
-          <Image
-            alt=""
-            aria-hidden="true"
-            height={9}
-            src="/assets/mvp-beta/icon-chevron-right.svg"
-            width={17}
-          />
-        </ButtonLink>
+          상품 진단하기
+        </ActionButtonLink>
       </section>
 
       {state !== "normal" ? (

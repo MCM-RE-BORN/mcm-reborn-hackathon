@@ -101,6 +101,21 @@
   width: 100%;
 }
 
+.actionButtonLink {
+  min-height: var(--control-height-lg);
+  justify-content: space-between;
+  padding: 0.8125rem;
+  border-radius: var(--space-2);
+  font-size: var(--font-size-control);
+  line-height: var(--line-height-tight);
+}
+
+.actionButtonLink img {
+  width: var(--icon-size-sm);
+  height: var(--space-7);
+  flex: none;
+}
+
 .field {
   display: grid;
   gap: var(--space-4);
@@ -351,6 +366,7 @@
 }
 
 .stepper {
+  position: relative;
   display: grid;
   grid-template-columns: repeat(var(--step-count), minmax(var(--space-0), 1fr));
   width: 100%;
@@ -366,7 +382,7 @@
 
 .step:not(:last-child)::after {
   position: absolute;
-  z-index: var(--z-behind);
+  z-index: 0;
   top: calc(var(--space-5) - var(--border-hairline));
   left: 50%;
   width: 100%;
@@ -376,6 +392,8 @@
 }
 
 .stepDot {
+  position: relative;
+  z-index: 1;
   width: var(--space-6);
   height: var(--space-6);
   border: var(--border-thin) solid var(--color-muted);
