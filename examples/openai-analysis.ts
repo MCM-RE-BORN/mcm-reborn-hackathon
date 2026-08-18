@@ -17,7 +17,7 @@ const ImageQualityIssueCodeSchema = z.enum([
 ]);
 
 const ImageQualityIssueSchema = z.object({
-  imageIndex: z.number().int().min(0).max(3),
+  imageIndex: z.number().int().min(0).max(6),
   code: ImageQualityIssueCodeSchema,
   guidanceKo: z.string().min(1).max(120),
 });
@@ -137,7 +137,7 @@ export async function analyzeBagImages(
   if (!process.env.OPENAI_API_KEY) {
     throw new Error('OPENAI_API_KEY_MISSING');
   }
-  if (imageUrls.length !== 4) {
+  if (imageUrls.length !== 7) {
     throw new Error('IMAGE_COUNT_OUT_OF_RANGE');
   }
 
@@ -158,7 +158,7 @@ export async function analyzeBagImages(
         content: [
           {
             type: 'input_text',
-            text: '첨부 이미지를 동일한 하나의 가방으로 보고 분석하세요.',
+            text: '첨부 이미지를 정면, 후면, 상단, 하단, 좌측면, 우측면, 일련번호 순서의 동일한 하나의 가방으로 보고 분석하세요.',
           },
           ...imageUrls.map((imageUrl) => ({
             type: 'input_image' as const,

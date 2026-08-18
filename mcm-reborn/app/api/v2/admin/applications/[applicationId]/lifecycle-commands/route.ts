@@ -11,32 +11,21 @@ import {
   type JsonObject,
   type OperatorCommandContext,
 } from "@/server/operator-api";
+import {
+  isLifecycleCommandTarget,
+  type LifecycleCommandTarget,
+} from "@/data/application-lifecycle";
 
 export const runtime = "nodejs";
 
-const LIFECYCLE_TARGETS = [
-  "PICKUP_SCHEDULED",
-  "PICKUP_IN_PROGRESS",
-  "PRODUCT_RECEIVED",
-  "EXPERT_INSPECTION",
-  "IN_PRODUCTION",
-  "QUALITY_CHECK",
-  "SHIPPED",
-  "DELIVERED",
-  "COMPLETED",
-  "PRODUCTION_UNAVAILABLE",
-  "CANCELED",
-] as const;
 const DEFAULT_CARRIER_CODE = "MCM_REBORN_DEMO";
 const DEFAULT_CARRIER_NAME = "MCM RE:BORN Demo Logistics";
-
-type LifecycleTarget = (typeof LIFECYCLE_TARGETS)[number];
 
 type LifecycleCommand = {
   carrierCode: string | null;
   carrierName: string | null;
   note: string | null;
-  targetStatus: LifecycleTarget;
+  targetStatus: LifecycleCommandTarget;
   trackingNumber: string | null;
 };
 
@@ -90,7 +79,7 @@ function normalizeLifecycleCommand(value: unknown): LifecycleCommand {
     "targetStatus",
     40,
   );
-  if (!isLifecycleTarget(targetStatus)) {
+  if (!isLifecycleCommandTarget(targetStatus)) {
     rejectInvalidField("targetStatus");
   }
 
@@ -213,10 +202,6 @@ async function readShipment(
     trackingNumber: shipment.tracking_number,
     trackingUrl: null,
   };
-}
-
-function isLifecycleTarget(value: string): value is LifecycleTarget {
-  return (LIFECYCLE_TARGETS as readonly string[]).includes(value);
 }
 
 function singleRpcRow(rows: LifecycleRpcRow[]): LifecycleRpcRow {

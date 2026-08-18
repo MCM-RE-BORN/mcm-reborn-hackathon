@@ -130,7 +130,7 @@ paths:
 
         LIVE 제공자 오류 시 준비된 DEMO_FIXTURE 결과를 동일한 예상값 계약으로 반환할 수 있습니다.
 
-        분석 입력은 좌측면, 우측면, 하단, 후면 순서의 서로 다른 사진 4장입니다.
+        분석 입력은 정면, 후면, 상단, 하단, 좌측면, 우측면, 일련번호 순서의 서로 다른 사진 7장입니다.
 
         이미지 품질이 분석에 충분하지 않으면 성공 분석을 생성하지 않고 IMAGE_QUALITY_INSUFFICIENT 오류와 재촬영 안내를 반환합니다.
 
@@ -1313,9 +1313,9 @@ components:
       properties:
         imageAssetIds:
           type: array
-          description: 좌측면, 우측면, 하단, 후면 촬영 자산 ID를 이 순서로 전달합니다. 네 슬롯은 모두 필수입니다.
-          minItems: 4
-          maxItems: 4
+          description: 정면, 후면, 상단, 하단, 좌측면, 우측면, 일련번호 촬영 자산 ID를 이 순서로 전달합니다. 일곱 슬롯은 모두 필수입니다.
+          minItems: 7
+          maxItems: 7
           uniqueItems: true
           items:
             type: string

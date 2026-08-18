@@ -157,7 +157,8 @@ create table public.analyses (
 create table public.analysis_images (
   analysis_id uuid not null references public.analyses(id) on delete cascade,
   media_asset_id uuid not null references public.media_assets(id) on delete cascade,
-  display_order integer not null check (display_order between 0 and 3),
+  display_order integer not null
+    constraint analysis_images_display_order_check check (display_order between 0 and 6),
   primary key (analysis_id, media_asset_id),
   unique (analysis_id, display_order)
 );
@@ -385,8 +386,8 @@ begin
       and ma.owner_id = new.customer_id
       and ma.upload_status = 'UPLOADED';
 
-    if uploaded_photo_count <> 4 then
-      raise exception 'analysis requires exactly 4 uploaded owner photos';
+    if uploaded_photo_count <> 7 then
+      raise exception 'analysis requires exactly 7 uploaded owner photos';
     end if;
   end if;
   return new;

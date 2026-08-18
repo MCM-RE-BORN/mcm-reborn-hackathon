@@ -45,6 +45,15 @@ PRODUCT_CODES = {
     'REBORN_KEYRING',
 }
 UPLOAD_PURPOSES = {'SOURCE_FRONT', 'SOURCE_SIDE', 'INTERIOR', 'ENGRAVING'}
+ANALYSIS_CAPTURE_SLOTS = [
+    'FRONT',
+    'REAR',
+    'TOP',
+    'BOTTOM',
+    'LEFT_SIDE',
+    'RIGHT_SIDE',
+    'SERIAL_NUMBER',
+]
 PRIMARY_SCENARIO_KEY = 'MCM_BACKPACK_CHANGE_APPROVED_20260817'
 INSPECTION_OUTCOMES = {'NO_CHANGE', 'CHANGE_REQUIRED', 'PRODUCTION_UNAVAILABLE'}
 LIFECYCLE_COMMAND_TARGET_STATUSES = {
@@ -160,12 +169,13 @@ def validate_openapi(openapi: dict[str, Any]) -> tuple[int, int]:
 
     create_analysis = schemas['CreateAnalysisRequest']
     image_ids = create_analysis['properties']['imageAssetIds']
-    if (image_ids.get('minItems'), image_ids.get('maxItems')) != (4, 4):
-        fail('CreateAnalysisRequest must require exactly four source photos')
+    if (image_ids.get('minItems'), image_ids.get('maxItems')) != (7, 7):
+        fail('CreateAnalysisRequest must require exactly seven source photos')
     if image_ids.get('description') != (
-        '좌측면, 우측면, 하단, 후면 촬영 자산 ID를 이 순서로 전달합니다. 네 슬롯은 모두 필수입니다.'
+        '정면, 후면, 상단, 하단, 좌측면, 우측면, 일련번호 촬영 자산 ID를 이 순서로 전달합니다. '
+        '일곱 슬롯은 모두 필수입니다.'
     ):
-        fail('CreateAnalysisRequest must define the four required capture slots in order')
+        fail('CreateAnalysisRequest must define the seven required capture slots in order')
     required_input = {
         'imageAssetIds',
         'locale',
@@ -511,9 +521,9 @@ def validate_mock(mock: dict[str, Any], version: str) -> tuple[int, int, int]:
         fail('Mock upload purposes differ from OpenAPI')
     if upload.get('presignFileCount') != {'min': 1, 'max': 4}:
         fail('Mock presign count must be 1..4')
-    if upload.get('analysisFileCount') != {'min': 4, 'max': 4}:
-        fail('Mock analysis count must be exactly four')
-    if upload.get('analysisSlots') != ['LEFT_SIDE', 'RIGHT_SIDE', 'BOTTOM', 'REAR']:
+    if upload.get('analysisFileCount') != {'min': 7, 'max': 7}:
+        fail('Mock analysis count must be exactly seven')
+    if upload.get('analysisSlots') != ANALYSIS_CAPTURE_SLOTS:
         fail('Mock analysis slots must preserve the required capture order')
 
     products = [item for item in mock.get('products', []) if item.get('active')]
@@ -665,10 +675,13 @@ def validate_mock(mock: dict[str, Any], version: str) -> tuple[int, int, int]:
         'name': 'MCM 비세토스 모노그램 백팩',
         'category': 'BACKPACK',
         'images': [
-            {'purpose': 'SOURCE_FRONT', 'url': '/assets/mvp-beta/source-backpack-front.webp'},
-            {'purpose': 'SOURCE_SIDE', 'url': '/assets/mvp-beta/source-backpack-side.webp'},
-            {'purpose': 'INTERIOR', 'url': '/assets/mvp-beta/source-backpack-interior.webp'},
-            {'purpose': 'ENGRAVING', 'url': '/assets/mvp-beta/source-backpack-engraving.webp'},
+            {'slot': 'FRONT', 'purpose': 'SOURCE_FRONT', 'url': '/assets/mvp-beta/source-backpack-front.webp'},
+            {'slot': 'REAR', 'purpose': 'SOURCE_FRONT', 'url': '/assets/mvp-beta/source-backpack-front.webp'},
+            {'slot': 'TOP', 'purpose': 'SOURCE_FRONT', 'url': '/assets/mvp-beta/source-backpack-front.webp'},
+            {'slot': 'BOTTOM', 'purpose': 'SOURCE_FRONT', 'url': '/assets/mvp-beta/source-backpack-front.webp'},
+            {'slot': 'LEFT_SIDE', 'purpose': 'SOURCE_SIDE', 'url': '/assets/mvp-beta/source-backpack-side.webp'},
+            {'slot': 'RIGHT_SIDE', 'purpose': 'SOURCE_SIDE', 'url': '/assets/mvp-beta/source-backpack-side.webp'},
+            {'slot': 'SERIAL_NUMBER', 'purpose': 'ENGRAVING', 'url': '/assets/mvp-beta/source-backpack-engraving.webp'},
         ],
     }:
         fail('Primary source must be the canonical MCM Visetos monogram backpack')
@@ -811,7 +824,8 @@ def validate_sql(sql: str) -> None:
             '10 MiB source limit': 'size_bytes <= 10485760',
             'JPG/PNG source MIME': "mime_type in ('image/jpeg', 'image/png')",
             'product input purchase year': 'purchase_year integer not null',
-            'exactly-four photo DB guard': 'analysis requires exactly 4 uploaded owner photos',
+            'seven-position display order': 'analysis_images_display_order_check check (display_order between 0 and 6)',
+            'exactly-seven photo DB guard': 'analysis requires exactly 7 uploaded owner photos',
             'estimate confidence': 'estimate_confidence_percent integer check',
             'estimated reusable rate': 'estimated_reusable_material_rate integer check',
             'recommendation reusable rate': 'estimated_reusable_material_rate integer not null',
@@ -868,6 +882,9 @@ def validate_sql(sql: str) -> None:
         'jsonb_object_length',
         'analysis requires 3 to 4 uploaded owner photos',
         'uploaded_photo_count not between 3 and 4',
+        'analysis requires exactly 4 uploaded owner photos',
+        'uploaded_photo_count <> 4',
+        'display_order between 0 and 3',
     ]
     present = [fragment for fragment in forbidden if fragment in sql]
     if present:
@@ -900,6 +917,38 @@ def validate_capture_four_view_migrations(up_migration: str, rollback: str) -> N
     )
     if re.search(r'\bcascade\b', rollback, flags=re.IGNORECASE):
         fail('Capture four-view rollback must not use broad CASCADE drops')
+
+
+def validate_capture_seven_view_migrations(up_migration: str, rollback: str) -> None:
+    require_fragments(
+        up_migration,
+        '202608180003 capture seven-view up migration',
+        {
+            'transaction start': 'begin;',
+            'transaction commit': 'commit;',
+            'display order constraint': 'analysis_images_display_order_check',
+            'seven-position display order': 'display_order between 0 and 6',
+            'analysis photo trigger function': 'create or replace function public.enforce_analysis_photo_contract()',
+            'exactly-seven guard': 'uploaded_photo_count <> 7',
+            'exactly-seven error': 'analysis requires exactly 7 uploaded owner photos',
+            'no fabricated capture backfill': 'does not fabricate capture assets or direction metadata',
+        },
+    )
+    require_fragments(
+        rollback,
+        '202608180003 capture seven-view rollback',
+        {
+            'transaction start': 'begin;',
+            'transaction commit': 'commit;',
+            'manual row safety stop': 'rollback requires manual handling of analysis images with display_order above 3',
+            'restore four-position order': 'display_order between 0 and 3',
+            'analysis photo trigger function': 'create or replace function public.enforce_analysis_photo_contract()',
+            'restore exact-four guard': 'uploaded_photo_count <> 4',
+            'restore exact-four error': 'analysis requires exactly 4 uploaded owner photos',
+        },
+    )
+    if re.search(r'\bcascade\b', rollback, flags=re.IGNORECASE):
+        fail('Capture seven-view rollback must not use broad CASCADE drops')
 
 
 def validate_lifecycle_migrations(up_migration: str, rollback: str) -> None:
@@ -956,6 +1005,119 @@ def validate_lifecycle_migrations(up_migration: str, rollback: str) -> None:
         fail('Lifecycle rollback must not use broad CASCADE drops')
 
 
+def validate_capture_ui(
+    capture_config: str,
+    capture_photos: str,
+    capture_screen: str,
+    camera_screen: str,
+    capture_session: str,
+    page_state: str,
+    capture_progress: str,
+    capture_action: str,
+    demo_scenario: str,
+) -> None:
+    expected_ids = [
+        'front',
+        'rear',
+        'top',
+        'bottom',
+        'leftSide',
+        'rightSide',
+        'serialNumber',
+    ]
+    expected_labels = ['정면', '후면', '상단', '하단', '좌측면', '우측면', '일련번호']
+    if re.findall(r'\bid: "([^"]+)"', capture_config) != expected_ids:
+        fail('Capture UI slot IDs must preserve the seven-view order')
+    if re.findall(r'\blabel: "([^"]+)"', capture_config) != expected_labels:
+        fail('Capture UI labels must preserve the seven-view order')
+    require_fragments(
+        capture_config,
+        'capture-config.ts',
+        {
+            'front default': 'DEFAULT_CAPTURE_SLOT: CaptureSlotId = "front"',
+            'all slots required': 'MIN_REQUIRED_CAPTURES = CAPTURE_SLOTS.length',
+            'serial full-width slot': 'className: "captureSlotSerial"',
+        },
+    )
+    require_fragments(
+        capture_photos,
+        'ProductCapturePhotos.tsx',
+        {
+            'seven-photo guidance': '일곱 사진이 모두 필요합니다.',
+            'serial placeholder': 'slot.id === "serialNumber"',
+            'dynamic completion count': '사진 ${CAPTURE_SLOTS.length}장 등록 완료',
+            'seven-photo rule': '7장 · 파일당 최대 10MB',
+        },
+    )
+    require_fragments(
+        capture_screen,
+        'ProductCaptureScreen.tsx',
+        {
+            'seven required labels': '정면, 후면, 상단, 하단, 좌측면, 우측면, 일련번호',
+            'all photos required': '사진이 모두 필요해요.',
+        },
+    )
+    require_fragments(
+        camera_screen,
+        'CameraScreen.tsx',
+        {
+            'slot-safe camera props': 'slot: CaptureSlotId;',
+            'completed slot query': 'completedSlots.join(",")',
+            'ordered completion round trip': 'const nextCompletedSlots = CAPTURE_SLOTS.filter(',
+            'ordered completion IDs': '.map((captureSlot) => captureSlot.id)',
+            'dynamic camera total': '{CAPTURE_SLOTS.length}',
+        },
+    )
+    require_fragments(
+        capture_session,
+        'CaptureSessionProvider.tsx',
+        {
+            'slot-keyed capture session': 'Partial<Record<CaptureSlotId, CaptureAsset>>',
+            'slot-safe setter': 'setCapture: (slot: CaptureSlotId, blob: Blob, fileName: string)',
+            'slot-safe remover': 'removeCapture: (slot: CaptureSlotId)',
+        },
+    )
+    require_fragments(
+        page_state,
+        'page-state.ts',
+        {
+            'query slot validation': 'isCaptureSlotId(slot)',
+            'query slot de-duplication': 'new Set(',
+            'captured slot fallback': 'capturedSlots.push(slot)',
+        },
+    )
+    require_fragments(
+        capture_progress,
+        'capture-progress.ts',
+        {
+            'canonical slot counting': 'return CAPTURE_SLOTS.filter(',
+            'session-or-query completion': 'captures[slot.id] || capturedSlotSet.has(slot.id)',
+        },
+    )
+    require_fragments(
+        capture_action,
+        'ProductCaptureAction.tsx',
+        {
+            'canonical minimum gate': 'MIN_REQUIRED_CAPTURES - completedCount',
+            'zero remaining submit gate': 'remainingCount === 0 && hasRequiredDetails',
+            'analysis submission CTA': 'AI 분석 접수하기',
+        },
+    )
+    require_fragments(
+        demo_scenario,
+        'demo-scenario.ts',
+        {
+            'front fallback': 'front: "/assets/mvp-beta/source-backpack-front.webp"',
+            'rear fallback': 'rear: "/assets/mvp-beta/source-backpack-front.webp"',
+            'top fallback': 'top: "/assets/mvp-beta/source-backpack-front.webp"',
+            'bottom fallback': 'bottom: "/assets/mvp-beta/source-backpack-front.webp"',
+            'left fallback': 'leftSide: "/assets/mvp-beta/source-backpack-side.webp"',
+            'right fallback': 'rightSide: "/assets/mvp-beta/source-backpack-side.webp"',
+            'serial fallback': 'serialNumber: "/assets/mvp-beta/source-backpack-engraving.webp"',
+        },
+    )
+
+
 def validate_prompt_and_examples(
     prompt: str,
     provider: str,
@@ -970,8 +1132,8 @@ def validate_prompt_and_examples(
             'eligible status': 'ORDER_ELIGIBLE',
             'ineligible status': 'INELIGIBLE',
             'official-decision disclaimer': 'not an official authenticity determination or guarantee',
-            'four-image rule': 'four supplied images',
-            'four-view order': 'left side, right side, bottom, and rear views',
+            'seven-image rule': 'seven supplied images',
+            'seven-view order': 'front, rear, top, bottom, left side, right side, and serial-number detail views',
         },
     )
     require_fragments(
@@ -982,7 +1144,9 @@ def validate_prompt_and_examples(
             'canonical scenario key': PRIMARY_SCENARIO_KEY,
             'v2 modes': "mode: 'LIVE'",
             'estimate confidence': 'confidencePercent:',
-            'four-image requirement': 'imageUrls.length !== 4',
+            'seven-image requirement': 'imageUrls.length !== 7',
+            'seven-image index range': 'imageIndex: z.number().int().min(0).max(6)',
+            'ordered seven-view request': '정면, 후면, 상단, 하단, 좌측면, 우측면, 일련번호 순서',
             'recapture error': 'ImageQualityInsufficientError',
         },
     )
@@ -1067,6 +1231,9 @@ def validate_guide(guide: str) -> None:
         'supabase/rollbacks/202608180001_lifecycle_integrity.sql',
         'supabase/migrations/202608180002_capture_four_views.sql',
         'supabase/rollbacks/202608180002_capture_four_views.sql',
+        'supabase/migrations/202608180003_capture_seven_views.sql',
+        'supabase/rollbacks/202608180003_capture_seven_views.sql',
+        '정면·후면·상단·하단·좌측면·우측면·일련번호 7개',
     ):
         if fragment not in current_guidance:
             fail(f'API guide is missing canonical v2 value: {fragment}')
@@ -1110,6 +1277,12 @@ def main() -> None:
     capture_rollback = (
         ROOT / 'supabase' / 'rollbacks' / '202608180002_capture_four_views.sql'
     ).read_text(encoding='utf-8')
+    seven_view_migration = (
+        ROOT / 'supabase' / 'migrations' / '202608180003_capture_seven_views.sql'
+    ).read_text(encoding='utf-8')
+    seven_view_rollback = (
+        ROOT / 'supabase' / 'rollbacks' / '202608180003_capture_seven_views.sql'
+    ).read_text(encoding='utf-8')
     guide = (ROOT / 'MCM_REBORN_API_GUIDE.md').read_text(encoding='utf-8')
     prompt = (ROOT / 'prompts' / 'bag-analysis.system.txt').read_text(encoding='utf-8')
     provider = (ROOT / 'examples' / 'openai-analysis.ts').read_text(encoding='utf-8')
@@ -1117,6 +1290,41 @@ def main() -> None:
     mock_status = (ROOT / 'examples' / 'mock-status.ts').read_text(encoding='utf-8')
     readme = (ROOT / 'README.md').read_text(encoding='utf-8')
     env_example = (ROOT / '.env.example').read_text(encoding='utf-8')
+    capture_config = (
+        ROOT / 'mcm-reborn' / 'components' / 'screens' / 'entry-capture'
+        / 'capture-config.ts'
+    ).read_text(encoding='utf-8')
+    capture_photos = (
+        ROOT / 'mcm-reborn' / 'components' / 'screens' / 'entry-capture'
+        / 'ProductCapturePhotos.tsx'
+    ).read_text(encoding='utf-8')
+    capture_screen = (
+        ROOT / 'mcm-reborn' / 'components' / 'screens' / 'entry-capture'
+        / 'ProductCaptureScreen.tsx'
+    ).read_text(encoding='utf-8')
+    camera_screen = (
+        ROOT / 'mcm-reborn' / 'components' / 'screens' / 'entry-capture'
+        / 'CameraScreen.tsx'
+    ).read_text(encoding='utf-8')
+    capture_session = (
+        ROOT / 'mcm-reborn' / 'components' / 'screens' / 'entry-capture'
+        / 'CaptureSessionProvider.tsx'
+    ).read_text(encoding='utf-8')
+    page_state = (
+        ROOT / 'mcm-reborn' / 'components' / 'screens' / 'entry-capture'
+        / 'page-state.ts'
+    ).read_text(encoding='utf-8')
+    capture_progress = (
+        ROOT / 'mcm-reborn' / 'components' / 'screens' / 'entry-capture'
+        / 'capture-progress.ts'
+    ).read_text(encoding='utf-8')
+    capture_action = (
+        ROOT / 'mcm-reborn' / 'components' / 'screens' / 'entry-capture'
+        / 'ProductCaptureAction.tsx'
+    ).read_text(encoding='utf-8')
+    demo_scenario = (
+        ROOT / 'mcm-reborn' / 'data' / 'demo-scenario.ts'
+    ).read_text(encoding='utf-8')
 
     operation_count, schema_count = validate_openapi(openapi)
     product_count, recapture_count, shipment_count = validate_mock(
@@ -1126,6 +1334,21 @@ def main() -> None:
     validate_sql(sql)
     validate_lifecycle_migrations(lifecycle_migration, lifecycle_rollback)
     validate_capture_four_view_migrations(capture_migration, capture_rollback)
+    validate_capture_seven_view_migrations(
+        seven_view_migration,
+        seven_view_rollback,
+    )
+    validate_capture_ui(
+        capture_config,
+        capture_photos,
+        capture_screen,
+        camera_screen,
+        capture_session,
+        page_state,
+        capture_progress,
+        capture_action,
+        demo_scenario,
+    )
     validate_prompt_and_examples(prompt, provider, recommendation, mock_status)
     validate_guide(guide)
     validate_readme_and_env(readme, env_example)
@@ -1138,7 +1361,7 @@ def main() -> None:
         f'{product_count} products,',
         f'{recapture_count} recapture fixture,',
         f'{shipment_count} canonical shipment,',
-        'versioned lifecycle and capture migrations with rollbacks,',
+        'versioned lifecycle, four-view, and seven-view migrations with rollbacks,',
         'one canonical order RB-20260817-0001.',
     )
 

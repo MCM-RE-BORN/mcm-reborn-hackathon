@@ -17,8 +17,8 @@ MCM RE:BORN은 사용자가 보유한 MCM 가방을 모바일로 촬영하고, �
 | 구분 | MVP 역할 |
 |---|---|
 | `CUSTOMER` | 촬영·업로드, 사진 기반 AI 예상 분석, 추천·목업 확인, Mock 주문·결제, 변경 조건 승인, 진행·보증서 조회 |
-| `OPERATOR` | 계약상 주문 상태 조회, 주문 후 실물 검수와 guarded lifecycle command를 수행하는 보조 역할. 현재 실행 앱에는 lifecycle command Route Handler만 있고 독립 운영자 계정·화면과 실물 검수 Route Handler는 없으며 주문 전 장인 승인 게이트도 수행하지 않음 |
-| 공식 장인 검수 | 독립 계정이 아닌 Mock 공정. 주문·수거 후 `EXPERT_INSPECTION`에서 실물 조건을 점검 |
+| `OPERATOR` | 계약상 주문 상태 조회와 guarded lifecycle command를 수행한다. PC `/operations` 통합 콘솔에서 단계별 관리자·장인 담당과 Fixture 목록·상세·다음 단계 진행을 시연하며 주문 전 승인 게이트는 수행하지 않음 |
+| 공식 장인 검수 | 별도 인증 역할이 아닌 운영 콘솔의 데모 보기와 Mock 공정. 주문·수거 후 `EXPERT_INSPECTION`에서 실물 조건을 점검 |
 | 채널 | 웹만 지원 |
 
 ## MVP 시스템 경계
@@ -36,7 +36,7 @@ MCM RE:BORN은 사용자가 보유한 MCM 가방을 모바일로 촬영하고, �
 - Supabase Auth·RLS는 실제 연동 시 지켜야 할 계약 경계다. lifecycle command Route Handler는 Bearer 인증과 운영자 RLS/RPC를 사용하지만, 현재 고객 로그인·주문·검수·보증서 화면은 영속 인증이나 DB 저장이 없는 데모 UI다.
 - 저장소 루트에는 OpenAPI·Mock·DB·구현 예시가 있고, 실제 웹 앱 루트는 `mcm-reborn/`이다.
 - 앱 구현 상태는 코드와 검증 결과로 판단한다. 과거 문서의 “Next.js 기본 scaffold만 존재” 설명은 historical이다.
-- 현재 웹 라우트에서 `/`와 `/intro`는 서비스 소개를, `/home`은 홈을 렌더한다. 공통 하단 내비게이션의 `/orders`는 신청 목록이고 `/orders/demo`는 선택한 신청 상세다. `mcm-reborn/app/api/v2/admin/applications/[applicationId]/lifecycle-commands`만 실행 Route Handler이며 나머지 OpenAPI 경로는 아직 계약·Fixture·bootstrap 산출물이다.
+- 현재 웹 라우트에서 `/`와 `/intro`는 서비스 소개를, `/home`은 홈을 렌더한다. 공통 하단 내비게이션의 `/orders`는 신청 목록이고 `/orders/demo`는 선택한 신청 상세다. PC `/operations`와 `/operations/[applicationId]`는 Fixture 기반 최소 운영 콘솔이다. `mcm-reborn/app/api/v2/admin/applications/[applicationId]/lifecycle-commands`만 실행 Route Handler이며 나머지 OpenAPI 경로는 아직 계약·Fixture·bootstrap 산출물이다.
 
 ## 기술 경계
 
@@ -71,9 +71,9 @@ HTTP 필드·상태 코드의 기계 판독 기준은 `openapi.yaml`이다. 제�
 
 다음은 별도 승인 없이는 MVP에 포함하지 않는다.
 
-- 고객, 장인, 브랜드 관리자를 분리한 다중 역할 제품
+- 고객, 장인, 브랜드 관리자를 실제 인증·권한으로 분리한 다중 역할 제품
 - 실제 정품 판정 서비스와 가품 처리 정책
-- 실제 장인 배정·실물 검수 시스템과 외부 운영 콘솔
+- 실제 장인 배정·실물 검수 입력 시스템과 외부 운영 API 연동
 - 실제 결제 취소·환불, 제작 기록, 지연 관리, 생산 용량 제어
 - 최종 QC 확장, A/S 문의와 불변 감사 로그
 - iOS 앱과 장기 KPI·탄소 회계 운영 체계

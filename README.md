@@ -37,8 +37,8 @@
 
 ## 확정된 UX 계약
 
-- 고객용 웹과 `OPERATOR` 통합 운영 대시보드를 구현합니다.
-- 운영자 대시보드는 주문 목록·상세와 주문 후 실물 검수 제출 기능을 제공합니다.
+- 고객용 웹과 `OPERATOR` 경계의 최소 PC 운영 콘솔을 구현합니다.
+- `/operations` 콘솔은 중앙 Fixture 신청 목록·상세와 단계별 관리자·장인 담당 표시, 다음 단계 진행을 제공합니다. 실제 영속 쓰기는 현행 v2 lifecycle command에 연결한 뒤 활성화합니다.
 - 분석 모드는 `DEMO_FIXTURE`, `SEEDED_ESTIMATE`, `LIVE` 중 하나이며 모두 같은 예상값 응답 계약을 사용합니다.
 - `LIVE` 제공자 오류 시 발표 안정성을 위해 검증된 `DEMO_FIXTURE` 응답으로 폴백할 수 있습니다.
 - 사진 품질이 분석 기준에 못 미치면 폴백 성공으로 바꾸지 않고 `422 IMAGE_QUALITY_INSUFFICIENT`와 한국어 재촬영 안내를 반환합니다.
@@ -57,7 +57,7 @@
 4. SQL이 생성한 `source-products` private bucket과 Storage 정책을 확인합니다.
 5. 보유한 목록 이미지와 GLB·glTF 자산을 `mock-data.json`의 경로에 맞게 배치하거나 URL을 수정합니다.
 6. 루트의 `.env.example`을 `mcm-reborn/.env.local`로 복사하고 OpenAI·Supabase 값을 설정합니다.
-7. 구현된 운영자 lifecycle command 외의 Route Handler는 `openapi.yaml`을 기준으로 추가합니다.
+7. `/operations` 콘솔을 live 데이터에 연결할 때는 구형 `/api/v1` 승인 API가 아니라 구현된 v2 lifecycle command와 `openapi.yaml`을 기준으로 추가합니다.
 8. `examples/openai-analysis.ts`와 프롬프트를 AI Provider에 적용합니다.
 9. `mock-data.json`의 중앙 시나리오 `MCM_BACKPACK_CHANGE_APPROVED_20260817`와 단일 대표 주문 `RB-20260817-0001`에 연결된 상태 이력·검수·변경안·보증서를 Seed합니다.
 10. 대표 주문, 저품질 재촬영, `INELIGIBLE` 사진 보완, AI 장애 폴백, 실물 검수 후 변경 승인 흐름을 각각 리허설합니다.

@@ -27,7 +27,7 @@
 
 ## 현재 MVP 불변조건
 
-- 분석 업로드는 좌측면·우측면·하단·후면 4슬롯이 모두 필수다. 허용 형식은 JPG/JPEG·PNG, 파일당 최대 10MB다. Presign은 점진 업로드를 위해 한 번에 1~4개를 허용하고, 최종 `POST /analyses`는 네 자산 ID를 슬롯 순서대로 받는다.
+- 분석 업로드는 정면·후면·상단·하단·좌측면·우측면 6면과 일련번호 사진, 총 7슬롯이 모두 필수다. 허용 형식은 JPG/JPEG·PNG, 파일당 최대 10MB다. Presign은 점진 업로드를 위해 한 번에 1~4개를 허용하므로 7장은 여러 요청으로 올릴 수 있고, 최종 `POST /analyses`는 일곱 자산 ID를 이 슬롯 순서대로 받는다.
 - `POST /analyses`의 사진 품질 미달은 `422 IMAGE_QUALITY_INSUFFICIENT`다. `details.imageQuality.status`는 `RECAPTURE_REQUIRED`이며 각 문제에는 `assetId`, 문제 코드와 `guidanceKo`가 있다.
 - 사진 품질 미달은 AI 제공자 장애가 아니므로 hybrid 폴백으로 성공 처리하지 않고 성공 분석도 생성하지 않는다.
 - AI 분석 결과는 실제 모델, 중앙 Fixture 또는 재현 가능한 예상치일 수 있으며 분석 모드를 식별할 수 있어야 한다.
@@ -67,7 +67,9 @@ REVIEW_REQUIRED → AWAIT_MANUAL_REVIEW → application creation blocked
 
 계약 버전은 `2.0.0`을 유지한다. 이 변경은 외부에 배포된 v2 서버가 없던 상태에서 승인된 breaking v2 계약의 누락을 완성했으며, lifecycle endpoint와 배송 Fixture는 추가 계약이다. 이후 lifecycle Route Handler가 이 계약의 첫 실행 경로로 추가되었다. `CHANGE_REQUIRED`에서 `proposedTerms`를 필수로 하는 조건은 이미 문서화된 변경안 생성 불변조건을 JSON Schema로 강제하는 보완이다. v2가 외부 소비자에게 배포된 뒤 동일한 필수 조건을 추가한다면 같은 버전을 덮어쓰지 않고 별도 계약 버전으로 올려야 한다.
 
-기존 DB는 fresh bootstrap 파일만 재적용하지 않는다. `supabase/migrations/202608180001_lifecycle_integrity.sql`에서 lifecycle 제약·함수·trigger와 필요한 backfill을 적용한 뒤, `supabase/migrations/202608180002_capture_four_views.sql`로 분석 전이의 정확히 4장 조건을 활성화한다. 사진을 합성하는 backfill은 하지 않으므로 진행 중인 3장 분석은 네 번째 사진 보완 뒤에만 계속할 수 있다. 롤백은 역순의 대응 파일을 사용하며 OpenAPI·DB 중 한쪽만 되돌리지 않는다.
+기존 DB는 fresh bootstrap 파일만 재적용하지 않는다. `202608180001_lifecycle_integrity.sql`, `202608180002_capture_four_views.sql` 적용 뒤 `supabase/migrations/202608180003_capture_seven_views.sql`로 분석 전이의 정확히 7장 조건을 활성화한다. 사진을 합성하는 backfill은 하지 않으므로 진행 중인 4장 분석은 나머지 구도와 일련번호 사진을 보완한 뒤에만 계속할 수 있다. 롤백은 역순의 대응 파일을 사용하며 OpenAPI·DB 중 한쪽만 되돌리지 않는다.
+
+관리자·장인 콘솔의 현재 화면 전환은 중앙 Fixture를 사용한다. 서버 쓰기를 연결할 때는 별도 장인 역할 enum을 추가하지 않고 기존 `OPERATOR` 권한 아래에서 현행 v2 lifecycle command를 호출한다. `feature-backend`의 `/api/v1` 목록·상세·`PENDING_APPROVAL → APPROVED` 계약은 이 문서의 상태 모델과 호환되지 않으므로 직접 소비하지 않는다.
 
 ## 변경 게이트
 

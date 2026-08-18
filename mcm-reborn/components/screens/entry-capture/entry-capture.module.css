@@ -599,7 +599,9 @@
 
 .homeHeroVideo {
   position: absolute;
-  top: var(--space-0);
+  /* The source clip includes an exported mobile OS status bar. Crop that
+     presentation-only chrome while keeping the actual hero motion. */
+  top: -5rem;
   left: var(--space-0);
   display: block;
   width: 100%;
