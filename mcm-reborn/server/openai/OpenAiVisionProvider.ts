@@ -2,56 +2,42 @@ import OpenAI from 'openai';
 import { zodResponseFormat } from 'openai/helpers/zod';
 import {
   BagVisionSchema,
-  BagVisionResult,
   assertImageQualityContract,
 } from '@/contracts/analysis';
-import { ImageQualityInsufficientError } from '@/contracts/errors';
+import type {
+  VisionAnalyzeInput,
+  VisionAnalyzeResult,
+  VisionProvider,
+} from './types';
 
-const BAG_ANALYSIS_SYSTEM_PROMPT = `You are the visual inspection component of a hackathon prototype named MCM RE:BORN.
-Analyze all supplied images as different views of one customer-owned bag.
+const BAG_ANALYSIS_SYSTEM_PROMPT = `You are the visual inspection component of a service-demo prototype named MCM RE:BORN.
+Analyze exactly seven supplied images as ordered views of one customer-owned bag: front, rear, top, bottom, left side, right side, and serial-number detail.
 
 Return only data matching the supplied structured-output schema.
 
 Rules:
 1. Describe only visually observable evidence. Do not invent purchase history, serial-number matches, exact product model, manufacturing year, legal status, or official MCM records.
-2. Assess whether the images are usable before analyzing the bag:
-   - Treat the supplied images as a zero-based ordered list. Each imageQuality issue must identify the affected imageIndex.
-   - Set imageQuality.status to ACCEPTABLE only when the same product is sufficiently visible for a cautious analysis. Then return an empty issues array.
-   - Set imageQuality.status to RECAPTURE_REQUIRED when any supplied image set is too blurry, dark, bright, reflective, cropped, lacks useful detail, or appears to contain different products.
-   - Each imageQuality issue contains imageIndex, code, and a short Korean guidanceKo. code may be only BLUR, TOO_DARK, TOO_BRIGHT, GLARE, PRODUCT_CROPPED, INSUFFICIENT_DETAIL, or MIXED_PRODUCTS.
-   - For RECAPTURE_REQUIRED, keep all other classifications conservative with low confidence. The application will discard those classifications and ask for new photos.
-3. Never declare an item authentic or counterfeit. Set authenticitySignal to NOT_EVALUATED unless the images are too ambiguous or suspicious for the demo flow, in which case use REVIEW_REQUIRED. REVIEW_REQUIRED means manual review only and must never be presented as a counterfeit decision.
-4. Classify sourceCategory using the allowed enum. Use UNKNOWN_BAG when uncertain.
-5. Classify materialType using the allowed enum. Use UNKNOWN when uncertain.
-6. conditionGrade meaning:
-   - A: minimal wear; most visible material appears reusable.
-   - B: moderate localized wear; large reusable panels remain.
-   - C: significant wear; only selected panels are reusable.
-   - D: widespread damage; mostly small remnants may be reusable.
-7. overallDamageSeverity must be an integer from 0 to 100.
-8. Report at most eight distinct visible damages. Avoid duplicates across views.
-9. longStripAvailable means a visibly long, continuous, low-damage strip suitable for a strap-like component. Use false when uncertain.
-10. confidence must reflect image quality and ambiguity. Do not use a high confidence merely because a logo is visible.
-11. summaryKo must be Korean, neutral, concise, and no longer than 300 characters.
-12. Do not calculate reusable material rate, reusable area, price, product recommendations, or carbon savings. Those are calculated by the application rule engine.`;
+2. Assess whether all seven images are usable before analyzing the bag:
+   - Treat the images as a zero-based ordered list. Every imageQuality issue must identify its affected imageIndex from 0 through 6.
+   - ACCEPTABLE requires an empty issues array.
+   - RECAPTURE_REQUIRED requires at least one issue with short Korean guidanceKo.
+   - For RECAPTURE_REQUIRED, keep other classifications conservative. The application discards them and asks for new photos.
+3. authenticityPrecheck is only an order-eligibility estimate, never an authentic/counterfeit decision.
+   - Use ORDER_ELIGIBLE when the supplied photo evidence is sufficient for the demo order flow.
+   - Use INELIGIBLE when it is not sufficient to accept an order.
+   - estimatePercent is an integer from 0 to 100 and notice must explicitly say this is not an official authenticity determination.
+4. Use UNKNOWN_BAG or UNKNOWN material when uncertain.
+5. conditionGrade meaning: A minimal wear, B moderate localized wear, C significant wear with selected reusable panels, D widespread damage.
+6. overallDamageSeverity is an integer from 0 to 100. Report at most eight distinct visible damages and avoid duplicates across views.
+7. longStripAvailable means a visibly long, continuous, low-damage strip suitable for a strap-like component; use false when uncertain.
+8. confidence must reflect image quality and ambiguity. A visible logo alone does not justify high confidence.
+9. summaryKo must be neutral Korean no longer than 300 characters.
+10. Do not calculate reusable material rate, reusable area, price, recommendations, or carbon savings. The application rule engine calculates those values.`;
 
-export interface AnalyzeInput {
-  imageUrls: string[];
-}
-
-export interface AnalyzeResult {
-  result: BagVisionResult;
-  model: string;
-  providerRequestId: string | null;
-  modeUsed: 'LIVE';
-}
-
-/**
- * OpenAI Vision Provider for bag analysis
- */
-export class OpenAiVisionProvider {
-  private client: OpenAI;
-  private model: string;
+/** OpenAI Structured Outputs provider for the LIVE v2 analysis mode. */
+export class OpenAiVisionProvider implements VisionProvider {
+  private readonly client: OpenAI;
+  private readonly model: string;
 
   constructor() {
     const apiKey = process.env.OPENAI_API_KEY;
@@ -60,59 +46,44 @@ export class OpenAiVisionProvider {
     }
 
     this.client = new OpenAI({ apiKey });
-    this.model = process.env.OPENAI_VISION_MODEL ?? 'gpt-4o';
+    this.model = process.env.OPENAI_VISION_MODEL ?? 'gpt-5.6';
   }
 
-  async analyze(input: AnalyzeInput): Promise<AnalyzeResult> {
-    const { imageUrls } = input;
+  async analyze(input: VisionAnalyzeInput): Promise<VisionAnalyzeResult> {
+    if (input.imageUrls.length !== 7) {
+      throw new Error('LIVE analysis requires exactly seven image URLs');
+    }
 
-    const completion = await this.client.chat.completions.create({
+    const completion = await this.client.chat.completions.parse({
       model: this.model,
       messages: [
-        {
-          role: 'system',
-          content: BAG_ANALYSIS_SYSTEM_PROMPT,
-        },
+        { role: 'system', content: BAG_ANALYSIS_SYSTEM_PROMPT },
         {
           role: 'user',
           content: [
             {
               type: 'text',
-              text: '첨부 이미지를 하나의 동일 제품으로 보고 분석하세요.',
+              text: '일곱 이미지를 지정된 순서의 동일 제품으로 보고 분석하세요.',
             },
-            ...imageUrls.map((url) => ({
+            ...input.imageUrls.map((url) => ({
               type: 'image_url' as const,
-              image_url: {
-                url,
-                detail: 'auto' as const,
-              },
+              image_url: { url, detail: 'auto' as const },
             })),
           ],
         },
       ],
-      response_format: zodResponseFormat(BagVisionSchema, 'mcm_reborn_bag_analysis'),
-    }) as { id: string; choices: Array<{ message?: { parsed?: unknown } }> };
+      response_format: zodResponseFormat(
+        BagVisionSchema,
+        'mcm_reborn_bag_analysis_v2',
+      ),
+    });
 
-    const parsed = completion.choices[0]?.message?.parsed as BagVisionResult | undefined;
-
+    const parsed = completion.choices[0]?.message.parsed;
     if (!parsed) {
       throw new Error('OPENAI_STRUCTURED_OUTPUT_EMPTY');
     }
 
-    // Validate image quality contract
-    assertImageQualityContract(parsed, imageUrls.length);
-
-    // If image quality is insufficient, throw error with asset mapping
-    if (parsed.imageQuality.status === 'RECAPTURE_REQUIRED') {
-      // Note: imageIndex to assetId mapping should be done at the API layer
-      throw new ImageQualityInsufficientError(
-        parsed.imageQuality.issues.map((issue) => ({
-          assetId: '', // Will be filled by API layer
-          code: issue.code,
-          guidanceKo: issue.guidanceKo,
-        }))
-      );
-    }
+    assertImageQualityContract(parsed, input.imageUrls.length);
 
     return {
       result: parsed,

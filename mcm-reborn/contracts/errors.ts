@@ -81,6 +81,33 @@ export class ConflictError extends AppError {
   }
 }
 
+export class ServiceUnavailableError extends AppError {
+  constructor(
+    message = 'Required service is temporarily unavailable',
+    details: Record<string, unknown> = { retryable: true }
+  ) {
+    super('SERVICE_UNAVAILABLE', 503, message, details);
+    this.name = 'ServiceUnavailableError';
+  }
+}
+
+export class RateLimitError extends AppError {
+  constructor(message = 'Too many requests') {
+    super('RATE_LIMITED', 429, message, { retryable: true });
+    this.name = 'RateLimitError';
+  }
+}
+
+export class UpstreamError extends AppError {
+  constructor(
+    message = 'An upstream service returned an invalid response',
+    details: Record<string, unknown> = { retryable: true }
+  ) {
+    super('UPSTREAM_FAILURE', 502, message, details);
+    this.name = 'UpstreamError';
+  }
+}
+
 export class ImageQualityInsufficientError extends AppError {
   constructor(public imageQualityIssues: Array<{
     assetId: string;
@@ -100,27 +127,5 @@ export class ImageQualityInsufficientError extends AppError {
       }
     );
     this.name = 'ImageQualityInsufficientError';
-  }
-}
-
-export class AuthenticityReviewRequiredError extends AppError {
-  constructor(
-    analysisId: string,
-    manualReviewCaseId: string
-  ) {
-    super(
-      'AUTHENTICITY_REVIEW_REQUIRED',
-      422,
-      '정품 여부 판정 없이 운영자 수동 검토가 필요합니다. 검토가 끝날 때까지 신청을 생성할 수 없습니다.',
-      {
-        analysisId,
-        authenticitySignal: 'REVIEW_REQUIRED',
-        applicationCreationBlocked: true,
-        manualReviewCaseId,
-        manualReviewStatus: 'PENDING',
-        nextAction: 'AWAIT_MANUAL_REVIEW',
-      }
-    );
-    this.name = 'AuthenticityReviewRequiredError';
   }
 }

@@ -86,8 +86,12 @@
       "estimatedDuration": "3~4주",
       "dimensions": { "widthMm": 110, "heightMm": 145, "depthMm": 12 },
       "listImage": { "url": "/assets/mvp-beta/recommendation-passport-wallet.png", "alt": "RE:BORN 여권지갑", "width": 250, "height": 271, "aspectRatio": "250:271" },
+      "model3dReady": false,
       "model3d": { "format": "GLB", "url": "/assets/models/passport-wallet.glb", "posterUrl": "/assets/products/passport-wallet/poster.webp", "environmentImageUrl": "/assets/3d/studio.hdr", "cameraOrbit": "0deg 75deg 105%", "cameraTarget": "0m 0m 0m", "fieldOfView": "30deg", "autoRotate": true, "availableVariants": [{ "key": "COGNAC_GOLD", "label": "코냑·골드" }] },
-      "optionGroups": [{ "key": "initials", "label": "이니셜", "required": false, "type": "TEXT", "maxLength": 3 }],
+      "optionGroups": [
+        { "key": "edgeColor", "label": "엣지 색상", "required": true, "type": "SELECT", "options": [{ "value": "COGNAC", "label": "코냑", "modelVariant": "COGNAC_GOLD" }] },
+        { "key": "initials", "label": "이니셜", "required": false, "type": "TEXT", "maxLength": 3 }
+      ],
       "active": true
     },
     {
@@ -102,7 +106,8 @@
       "estimatedDuration": "2~3주",
       "dimensions": { "widthMm": 105, "heightMm": 75, "depthMm": 8 },
       "listImage": { "url": "/assets/mvp-beta/recommendation-card-holder.png", "alt": "RE:BORN 카드지갑", "width": 250, "height": 271, "aspectRatio": "250:271" },
-      "model3d": { "format": "GLB", "url": "/assets/models/card-wallet.glb", "posterUrl": "/assets/products/card-wallet/poster.webp", "environmentImageUrl": "/assets/3d/studio.hdr", "cameraOrbit": "20deg 75deg 110%", "cameraTarget": "0m 0m 0m", "fieldOfView": "28deg", "autoRotate": true, "availableVariants": [{ "key": "COGNAC_GOLD", "label": "코냑·골드" }] },
+      "model3dReady": false,
+      "model3d": { "format": "GLB", "url": "/assets/models/card-wallet.glb", "posterUrl": "/assets/products/card-wallet/poster.webp", "environmentImageUrl": "/assets/3d/studio.hdr", "cameraOrbit": "20deg 75deg 110%", "cameraTarget": "0m 0m 0m", "fieldOfView": "28deg", "autoRotate": true,"availableVariants": [{ "key": "COGNAC_GOLD", "label": "코냑·골드" }] },
       "optionGroups": [],
       "active": true
     },
@@ -118,6 +123,7 @@
       "estimatedDuration": "약 2주",
       "dimensions": { "widthMm": 70, "heightMm": 110, "depthMm": 6 },
       "listImage": { "url": "/assets/mvp-beta/recommendation-luggage-name-tag-v2.webp", "alt": "RE:BORN 캐리어 네임택", "width": 600, "height": 600, "aspectRatio": "1:1" },
+      "model3dReady": false,
       "model3d": { "format": "GLB", "url": "/assets/models/name-tag.glb", "posterUrl": "/assets/products/name-tag/poster.webp", "environmentImageUrl": "/assets/3d/studio.hdr", "cameraOrbit": "0deg 75deg 110%", "cameraTarget": "0m 0m 0m", "fieldOfView": "28deg", "autoRotate": true, "availableVariants": [{ "key": "GOLD", "label": "골드" }] },
       "optionGroups": [],
       "active": true
@@ -134,6 +140,7 @@
       "estimatedDuration": "1~2주",
       "dimensions": { "widthMm": 45, "heightMm": 90, "depthMm": 5 },
       "listImage": { "url": "/assets/mvp-beta/recommendation-keyring-v2.webp", "alt": "RE:BORN 키링", "width": 600, "height": 600, "aspectRatio": "1:1" },
+      "model3dReady": false,
       "model3d": { "format": "GLB", "url": "/assets/models/keyring.glb", "posterUrl": "/assets/products/keyring/poster.webp", "environmentImageUrl": "/assets/3d/studio.hdr", "cameraOrbit": "0deg 75deg 115%", "cameraTarget": "0m 0m 0m", "fieldOfView": "25deg", "autoRotate": true, "availableVariants": [{ "key": "GOLD_RING", "label": "골드 링" }] },
       "optionGroups": [],
       "active": true

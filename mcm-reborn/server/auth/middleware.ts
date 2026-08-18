@@ -1,9 +1,16 @@
-import { NextRequest } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase/server';
-import { UnauthorizedError, ForbiddenError } from '@/contracts/errors';
+import {
+  createPublicSupabaseClient,
+  createUserSupabaseClient,
+} from '@/lib/supabase/server';
+import {
+  ForbiddenError,
+  ServiceUnavailableError,
+  UnauthorizedError,
+} from '@/contracts/errors';
 import { UserRole } from '@/contracts/application';
 
 export interface AuthenticatedUser {
+  accessToken: string;
   id: string;
   role: UserRole;
   email: string;
@@ -13,39 +20,62 @@ export interface AuthenticatedUser {
 /**
  * Extract and verify JWT from Authorization header
  */
-export async function authenticate(request: NextRequest): Promise<AuthenticatedUser> {
-  const authHeader = request.headers.get('authorization');
-
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    throw new UnauthorizedError('Missing or invalid authorization header');
-  }
-
-  const token = authHeader.substring(7);
-
-  // Verify JWT with Supabase
-  const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
+export async function authenticate(request: Request): Promise<AuthenticatedUser> {
+  const token = readBearerToken(request);
+  const publicClient = createPublicSupabaseClient();
+  const { data: { user }, error } = await publicClient.auth.getUser(token);
 
   if (error || !user) {
+    if (typeof error?.status === 'number' && error.status >= 500) {
+      throw new ServiceUnavailableError('Supabase Auth is unavailable');
+    }
     throw new UnauthorizedError('Invalid or expired token');
   }
 
-  // Get user profile with role
-  const { data: profile, error: profileError } = await supabaseAdmin
+  // Read the profile with the caller JWT so the profiles RLS policy remains
+  // the authorization boundary. A service-role client is not needed here.
+  const userClient = createUserSupabaseClient(token);
+  const { data: profile, error: profileError } = await userClient
     .from('profiles')
     .select('role, display_name')
     .eq('id', user.id)
-    .single();
+    .maybeSingle();
 
-  if (profileError || !profile) {
+  if (profileError) {
+    throw new ServiceUnavailableError('Supabase profile storage is unavailable');
+  }
+  if (!profile) {
     throw new UnauthorizedError('User profile not found');
+  }
+  if (profile.role !== 'CUSTOMER' && profile.role !== 'OPERATOR') {
+    throw new UnauthorizedError('User profile role is invalid');
+  }
+  if (
+    typeof profile.display_name !== 'string' ||
+    profile.display_name.trim().length === 0 ||
+    typeof user.email !== 'string' ||
+    user.email.length === 0
+  ) {
+    throw new UnauthorizedError('User profile is incomplete');
   }
 
   return {
+    accessToken: token,
     id: user.id,
-    role: profile.role as UserRole,
-    email: user.email ?? '',
+    role: profile.role,
+    email: user.email,
     displayName: profile.display_name,
   };
+}
+
+export function readBearerToken(request: Request): string {
+  const authorization = request.headers.get('authorization')?.trim();
+  const match = authorization?.match(/^Bearer\s+([^\s]+)$/i);
+  if (!match) {
+    throw new UnauthorizedError('Missing or invalid authorization header');
+  }
+
+  return match[1];
 }
 
 /**

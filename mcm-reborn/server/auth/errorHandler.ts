@@ -1,5 +1,10 @@
 import { NextResponse } from 'next/server';
-import { AppError, createErrorResponse } from '@/contracts/errors';
+import {
+  AppError,
+  ServiceUnavailableError,
+  createErrorResponse,
+} from '@/contracts/errors';
+import { SupabaseConfigurationError } from '@/lib/supabase/server';
 import { randomUUID } from 'crypto';
 
 /**
@@ -8,12 +13,37 @@ import { randomUUID } from 'crypto';
 export function handleApiError(error: unknown): NextResponse {
   const requestId = randomUUID();
 
-  console.error('[API Error]', { requestId, error });
+  const normalizedError = error instanceof SupabaseConfigurationError
+    ? new ServiceUnavailableError(
+      'Supabase integration is not configured',
+      { retryable: false },
+    )
+    : error;
 
-  if (error instanceof AppError) {
+  // Do not log request bodies, tokens or upstream error objects. Those can
+  // include customer data or authorization headers.
+  console.error('[API Error]', {
+    requestId,
+    code: normalizedError instanceof AppError
+      ? normalizedError.code
+      : 'INTERNAL_ERROR',
+    name: normalizedError instanceof Error
+      ? normalizedError.name
+      : 'UnknownError',
+  });
+
+  if (normalizedError instanceof AppError) {
     return NextResponse.json(
-      createErrorResponse(error.code, error.message, requestId, error.details),
-      { status: error.statusCode }
+      createErrorResponse(
+        normalizedError.code,
+        normalizedError.message,
+        requestId,
+        normalizedError.details,
+      ),
+      {
+        headers: { 'Cache-Control': 'no-store' },
+        status: normalizedError.statusCode,
+      }
     );
   }
 
@@ -24,6 +54,9 @@ export function handleApiError(error: unknown): NextResponse {
       'An unexpected error occurred',
       requestId
     ),
-    { status: 500 }
+    {
+      headers: { 'Cache-Control': 'no-store' },
+      status: 500,
+    }
   );
 }

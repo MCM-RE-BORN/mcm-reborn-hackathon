@@ -4,17 +4,17 @@ import { z } from 'zod';
  * Product codes and categories from OpenAPI
  */
 export const ProductCodeSchema = z.enum([
-  'REBORN_POUCH',
+  'REBORN_PASSPORT_WALLET',
   'REBORN_CARD_WALLET',
+  'REBORN_NAME_TAG',
   'REBORN_KEYRING',
-  'REBORN_BAG_STRAP',
 ]);
 
 export const ProductCategorySchema = z.enum([
-  'CLUTCH_POUCH',
+  'PASSPORT_WALLET',
   'CARD_WALLET',
+  'NAME_TAG',
   'KEYRING',
-  'BAG_STRAP',
 ]);
 
 export const RecommendationReasonCodeSchema = z.enum([
@@ -46,7 +46,7 @@ export interface ImageAsset {
   alt: string;
   width: number;
   height: number;
-  aspectRatio: '4:5';
+  aspectRatio: string;
 }
 
 /**
@@ -105,9 +105,10 @@ export interface ProductCard {
   name: string;
   category: ProductCategory;
   mockPrice: Money;
+  estimatedDuration: string;
   requiredAreaCm2: number;
   listImage: ImageAsset;
-  has3d: true;
+  has3d: boolean;
   recommendation: RecommendationView;
 }
 
@@ -121,6 +122,6 @@ export interface ProductDetail extends ProductCard {
     heightMm: number;
     depthMm: number;
   };
-  model3d: Product3D;
+  model3d: Product3D | null;
   optionGroups: OptionGroup[];
 }

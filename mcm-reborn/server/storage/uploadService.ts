@@ -1,16 +1,30 @@
-import { supabaseAdmin } from '@/lib/supabase/server';
-import { randomUUID } from 'crypto';
-import { ValidationError } from '@/contracts/errors';
+import { randomUUID } from 'node:crypto';
 
-const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
-const MAX_FILE_SIZE = 6 * 1024 * 1024; // 6MB
+import {
+  ServiceUnavailableError,
+  ValidationError,
+} from '@/contracts/errors';
+import {
+  createAdminSupabaseClient,
+  createUserSupabaseClient,
+} from '@/lib/supabase/server';
+
 const BUCKET_NAME = 'source-products';
+const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png'] as const;
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
+const SIGNED_UPLOAD_URL_TTL_MS = 2 * 60 * 60 * 1000;
 
-export interface UploadFileRequest {
+export type V2UploadPurpose =
+  | 'SOURCE_FRONT'
+  | 'SOURCE_SIDE'
+  | 'INTERIOR'
+  | 'ENGRAVING';
+
+export interface V2UploadFileRequest {
+  contentType: (typeof ALLOWED_MIME_TYPES)[number];
   fileName: string;
-  contentType: string;
+  purpose: V2UploadPurpose;
   sizeBytes: number;
-  purpose: 'SOURCE_PRODUCT' | 'DAMAGE_CLOSEUP' | 'INTERIOR' | 'SERIAL';
 }
 
 export interface UploadAsset {
@@ -23,96 +37,105 @@ export interface UploadAsset {
 }
 
 /**
- * Create presigned upload URLs for customer images
+ * Create v2 upload URLs after CUSTOMER authentication.
+ *
+ * Metadata is reserved before a signed URL is issued. The Storage INSERT
+ * policy requires the matching PENDING media_assets row, preventing a customer
+ * JWT from bypassing this endpoint to create arbitrary orphan objects.
  */
-export async function createPresignedUploadUrls(
+export async function createV2PresignedUploadUrls(
   userId: string,
-  files: UploadFileRequest[]
+  accessToken: string,
+  files: V2UploadFileRequest[],
 ): Promise<UploadAsset[]> {
-  // Validate file count
   if (files.length < 1 || files.length > 4) {
     throw new ValidationError('File count must be between 1 and 4');
   }
 
-  const assets: UploadAsset[] = [];
-
-  for (const file of files) {
-    // Validate content type
+  const descriptors = files.map((file) => {
     if (!ALLOWED_MIME_TYPES.includes(file.contentType)) {
-      throw new ValidationError(`Unsupported content type: ${file.contentType}`, {
+      throw new ValidationError('Unsupported content type', {
         allowedTypes: ALLOWED_MIME_TYPES,
       });
     }
-
-    // Validate file size
-    if (file.sizeBytes > MAX_FILE_SIZE) {
-      throw new ValidationError(`File size exceeds maximum of 6MB`, {
+    if (file.sizeBytes < 1 || file.sizeBytes > MAX_FILE_SIZE) {
+      throw new ValidationError('File size must be between 1 byte and 10MB', {
         fileName: file.fileName,
-        sizeBytes: file.sizeBytes,
         maxSizeBytes: MAX_FILE_SIZE,
       });
     }
 
-    // Generate asset ID and path
     const assetId = randomUUID();
-    const ext = file.contentType.split('/')[1];
-    const storagePath = `${userId}/${assetId}.${ext}`;
-
-    // Create presigned upload URL (expires in 15 minutes)
-    const { data, error } = await supabaseAdmin.storage
-      .from(BUCKET_NAME)
-      .createSignedUploadUrl(storagePath);
-
-    if (error || !data) {
-      throw new Error(`Failed to create upload URL: ${error?.message}`);
-    }
-
-    // Record asset in database
-    const { error: insertError } = await supabaseAdmin.from('media_assets').insert({
-      id: assetId,
-      owner_id: userId,
-      bucket: BUCKET_NAME,
-      path: storagePath,
-      mime_type: file.contentType,
-      size_bytes: file.sizeBytes,
-      purpose: file.purpose,
-    });
-
-    if (insertError) {
-      throw new Error(`Failed to record asset: ${insertError.message}`);
-    }
-
-    const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
-
-    assets.push({
+    const extension = file.contentType === 'image/jpeg' ? 'jpg' : 'png';
+    return {
       assetId,
-      method: 'PUT',
-      uploadUrl: data.signedUrl,
-      headers: {
-        'Content-Type': file.contentType,
-      },
-      storagePath,
-      expiresAt,
-    });
+      contentType: file.contentType,
+      purpose: file.purpose,
+      sizeBytes: file.sizeBytes,
+      storagePath: `${userId}/${assetId}.${extension}`,
+    };
+  });
+
+  const adminClient = createAdminSupabaseClient();
+  const assetIds = descriptors.map((descriptor) => descriptor.assetId);
+  const { data: reservedRows, error: insertError } = await adminClient
+    .from('media_assets')
+    .insert(
+      descriptors.map((descriptor) => ({
+        id: descriptor.assetId,
+        owner_id: userId,
+        bucket: BUCKET_NAME,
+        path: descriptor.storagePath,
+        mime_type: descriptor.contentType,
+        size_bytes: descriptor.sizeBytes,
+        purpose: descriptor.purpose,
+        upload_status: 'PENDING',
+      })),
+    )
+    .select('id');
+
+  if (insertError || (reservedRows?.length ?? 0) !== descriptors.length) {
+    throw new ServiceUnavailableError(
+      'Supabase could not reserve upload metadata',
+    );
   }
 
-  return assets;
-}
+  try {
+    const userClient = createUserSupabaseClient(accessToken);
+    return await Promise.all(
+      descriptors.map(async (descriptor) => {
+        const { data, error } = await userClient.storage
+          .from(BUCKET_NAME)
+          .createSignedUploadUrl(descriptor.storagePath, { upsert: false });
 
-/**
- * Get signed URL for reading a private image (for OpenAI analysis)
- */
-export async function getSignedReadUrl(
-  storagePath: string,
-  expiresIn: number = 3600
-): Promise<string> {
-  const { data, error } = await supabaseAdmin.storage
-    .from(BUCKET_NAME)
-    .createSignedUrl(storagePath, expiresIn);
+        if (error || !data?.signedUrl) {
+          throw new ServiceUnavailableError(
+            'Supabase Storage could not create an upload URL',
+          );
+        }
 
-  if (error || !data) {
-    throw new Error(`Failed to create signed URL: ${error?.message}`);
+        return {
+          assetId: descriptor.assetId,
+          method: 'PUT' as const,
+          uploadUrl: data.signedUrl,
+          headers: { 'Content-Type': descriptor.contentType },
+          storagePath: descriptor.storagePath,
+          expiresAt: new Date(
+            Date.now() + SIGNED_UPLOAD_URL_TTL_MS,
+          ).toISOString(),
+        };
+      }),
+    );
+  } catch (error) {
+    const { error: cleanupError } = await adminClient
+      .from('media_assets')
+      .delete()
+      .eq('owner_id', userId)
+      .eq('upload_status', 'PENDING')
+      .in('id', assetIds);
+    if (cleanupError) {
+      console.error('[Uploads] Failed to clean up upload reservations');
+    }
+    throw error;
   }
-
-  return data.signedUrl;
 }

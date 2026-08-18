@@ -187,6 +187,11 @@ export async function executeIdempotentOperatorCommand<TBody>({
     const user = await authenticateUser(config, accessToken);
     await authorizeOperator(config, accessToken, user.id);
     const idempotencyKey = readIdempotencyKey(request);
+    const storageKey = namespaceIdempotencyKey(
+      user.id,
+      operation,
+      idempotencyKey,
+    );
     assertUuid(applicationId, "applicationId");
 
     const rawBody = await readJsonBody(request);
@@ -195,7 +200,7 @@ export async function executeIdempotentOperatorCommand<TBody>({
 
     const reservation = await reserveIdempotencyKey(config, {
       applicationId,
-      idempotencyKey,
+      idempotencyKey: storageKey,
       operation,
       requestHash,
       userId: user.id,
@@ -234,12 +239,18 @@ export async function executeIdempotentOperatorCommand<TBody>({
       };
     }
 
-    await cacheIdempotentResponse(
-      config,
-      idempotencyKey,
-      requestHash,
-      result,
-    );
+    try {
+      await cacheIdempotentResponse(
+        config,
+        storageKey,
+        requestHash,
+        result,
+      );
+    } catch {
+      // The domain command may already have committed. Preserve its response
+      // instead of encouraging a duplicate mutation; the reservation TTL is
+      // reclaimed by reserveIdempotencyKey after expiry.
+    }
 
     return jsonResult(result.status, result.body);
   } catch (error) {
@@ -644,6 +655,16 @@ function hashRequest<TBody>(
     .digest("hex");
 }
 
+function namespaceIdempotencyKey(
+  userId: string,
+  operation: string,
+  externalKey: string,
+): string {
+  return `v2:${createHash("sha256")
+    .update(`${userId}:${operation}:${externalKey}`)
+    .digest("hex")}`;
+}
+
 function stableStringify(value: unknown): string {
   if (Array.isArray(value)) {
     return `[${value.map(stableStringify).join(",")}]`;
@@ -672,6 +693,7 @@ async function reserveIdempotencyKey(
     requestHash: string;
     userId: string;
   },
+  allowExpiredReclaim = true,
 ): Promise<ReservationResult> {
   const response = await supabaseFetch(
     config,
@@ -715,6 +737,22 @@ async function reserveIdempotencyKey(
     );
   }
 
+  const expiresAt = Date.parse(existing.expires_at);
+  if (!Number.isFinite(expiresAt)) {
+    throw upstreamInvalidResponse();
+  }
+  if (expiresAt <= Date.now() && allowExpiredReclaim) {
+    const reclaimed = await deleteExpiredIdempotencyRow(
+      config,
+      input.idempotencyKey,
+      existing.expires_at,
+    );
+    if (reclaimed) {
+      return reserveIdempotencyKey(config, input, false);
+    }
+    return { kind: "in-progress" };
+  }
+
   if (
     existing.user_id !== input.userId ||
     existing.operation !== input.operation ||
@@ -740,6 +778,35 @@ async function reserveIdempotencyKey(
   }
 
   return { kind: "in-progress" };
+}
+
+async function deleteExpiredIdempotencyRow(
+  config: SupabaseConfig,
+  idempotencyKey: string,
+  expiresAt: string,
+): Promise<boolean> {
+  const query = new URLSearchParams({
+    expires_at: postgrestEquals(expiresAt),
+    key: postgrestEquals(idempotencyKey),
+    select: "key",
+  });
+  const response = await supabaseFetch(
+    config,
+    `/rest/v1/idempotency_keys?${query.toString()}`,
+    config.serviceRoleKey,
+    {
+      headers: { Prefer: "return=representation" },
+      method: "DELETE",
+    },
+  );
+  const payload = await readUpstreamJson(response);
+  if (!response.ok) {
+    throw mapSupabaseFailure(response.status, payload);
+  }
+  if (!Array.isArray(payload)) {
+    throw upstreamInvalidResponse();
+  }
+  return payload.length === 1;
 }
 
 async function readIdempotencyRow(

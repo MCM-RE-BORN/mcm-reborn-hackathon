@@ -52,15 +52,22 @@ export const ImageQualityIssueCodeSchema = z.enum([
   'MIXED_PRODUCTS',
 ]);
 
-export const AuthenticitySignalSchema = z.enum(['NOT_EVALUATED', 'REVIEW_REQUIRED']);
+export const AuthenticityPrecheckStatusSchema = z.enum([
+  'ORDER_ELIGIBLE',
+  'INELIGIBLE',
+]);
 
-export const AnalysisModeUsedSchema = z.enum(['LIVE', 'FIXTURE', 'FIXTURE_FALLBACK']);
+export const AnalysisModeUsedSchema = z.enum([
+  'DEMO_FIXTURE',
+  'SEEDED_ESTIMATE',
+  'LIVE',
+]);
 
 /**
  * OpenAI Structured Output schema
  */
 export const ImageQualityIssueSchema = z.object({
-  imageIndex: z.number().int().min(0).max(3),
+  imageIndex: z.number().int().min(0).max(6),
   code: ImageQualityIssueCodeSchema,
   guidanceKo: z.string().min(1).max(120),
 });
@@ -87,14 +94,23 @@ export const BagVisionSchema = z.object({
     .max(8),
   confidence: z.number().min(0).max(1),
   summaryKo: z.string().max(300),
-  authenticitySignal: AuthenticitySignalSchema,
+  authenticityPrecheck: z.object({
+    status: AuthenticityPrecheckStatusSchema,
+    estimatePercent: z.number().int().min(0).max(100),
+    notice: z.string().min(1).max(300),
+  }),
 });
 
 export type BagVisionResult = z.infer<typeof BagVisionSchema>;
 export type SourceCategory = z.infer<typeof SourceCategorySchema>;
 export type MaterialType = z.infer<typeof MaterialTypeSchema>;
 export type ConditionGrade = z.infer<typeof ConditionGradeSchema>;
-export type AuthenticitySignal = z.infer<typeof AuthenticitySignalSchema>;
+export type ImageQualityIssueCode = z.infer<
+  typeof ImageQualityIssueCodeSchema
+>;
+export type AuthenticityPrecheckStatus = z.infer<
+  typeof AuthenticityPrecheckStatusSchema
+>;
 export type AnalysisModeUsed = z.infer<typeof AnalysisModeUsedSchema>;
 
 /**
