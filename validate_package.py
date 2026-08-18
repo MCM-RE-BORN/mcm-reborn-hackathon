@@ -160,8 +160,12 @@ def validate_openapi(openapi: dict[str, Any]) -> tuple[int, int]:
 
     create_analysis = schemas['CreateAnalysisRequest']
     image_ids = create_analysis['properties']['imageAssetIds']
-    if (image_ids.get('minItems'), image_ids.get('maxItems')) != (3, 4):
-        fail('CreateAnalysisRequest must require three to four source photos')
+    if (image_ids.get('minItems'), image_ids.get('maxItems')) != (4, 4):
+        fail('CreateAnalysisRequest must require exactly four source photos')
+    if image_ids.get('description') != (
+        '좌측면, 우측면, 하단, 후면 촬영 자산 ID를 이 순서로 전달합니다. 네 슬롯은 모두 필수입니다.'
+    ):
+        fail('CreateAnalysisRequest must define the four required capture slots in order')
     required_input = {
         'imageAssetIds',
         'locale',
@@ -507,8 +511,10 @@ def validate_mock(mock: dict[str, Any], version: str) -> tuple[int, int, int]:
         fail('Mock upload purposes differ from OpenAPI')
     if upload.get('presignFileCount') != {'min': 1, 'max': 4}:
         fail('Mock presign count must be 1..4')
-    if upload.get('analysisFileCount') != {'min': 3, 'max': 4}:
-        fail('Mock analysis count must be 3..4')
+    if upload.get('analysisFileCount') != {'min': 4, 'max': 4}:
+        fail('Mock analysis count must be exactly four')
+    if upload.get('analysisSlots') != ['LEFT_SIDE', 'RIGHT_SIDE', 'BOTTOM', 'REAR']:
+        fail('Mock analysis slots must preserve the required capture order')
 
     products = [item for item in mock.get('products', []) if item.get('active')]
     if {item.get('code') for item in products} != PRODUCT_CODES:
@@ -805,7 +811,7 @@ def validate_sql(sql: str) -> None:
             '10 MiB source limit': 'size_bytes <= 10485760',
             'JPG/PNG source MIME': "mime_type in ('image/jpeg', 'image/png')",
             'product input purchase year': 'purchase_year integer not null',
-            'three-to-four photo DB guard': 'analysis requires 3 to 4 uploaded owner photos',
+            'exactly-four photo DB guard': 'analysis requires exactly 4 uploaded owner photos',
             'estimate confidence': 'estimate_confidence_percent integer check',
             'estimated reusable rate': 'estimated_reusable_material_rate integer check',
             'recommendation reusable rate': 'estimated_reusable_material_rate integer not null',
@@ -860,10 +866,40 @@ def validate_sql(sql: str) -> None:
         'demoTermsAccepted',
         'esgEstimateNoticeAccepted',
         'jsonb_object_length',
+        'analysis requires 3 to 4 uploaded owner photos',
+        'uploaded_photo_count not between 3 and 4',
     ]
     present = [fragment for fragment in forbidden if fragment in sql]
     if present:
         fail(f'SQL still contains removed v1 contract fragments: {present}')
+
+
+def validate_capture_four_view_migrations(up_migration: str, rollback: str) -> None:
+    require_fragments(
+        up_migration,
+        '202608180002 capture four-view up migration',
+        {
+            'transaction start': 'begin;',
+            'transaction commit': 'commit;',
+            'analysis photo trigger function': 'create or replace function public.enforce_analysis_photo_contract()',
+            'exactly-four guard': 'uploaded_photo_count <> 4',
+            'exactly-four error': 'analysis requires exactly 4 uploaded owner photos',
+            'no fabricated backfill': 'must receive the missing photo',
+        },
+    )
+    require_fragments(
+        rollback,
+        '202608180002 capture four-view rollback',
+        {
+            'transaction start': 'begin;',
+            'transaction commit': 'commit;',
+            'analysis photo trigger function': 'create or replace function public.enforce_analysis_photo_contract()',
+            'restore previous guard': 'uploaded_photo_count not between 3 and 4',
+            'restore previous error': 'analysis requires 3 to 4 uploaded owner photos',
+        },
+    )
+    if re.search(r'\bcascade\b', rollback, flags=re.IGNORECASE):
+        fail('Capture four-view rollback must not use broad CASCADE drops')
 
 
 def validate_lifecycle_migrations(up_migration: str, rollback: str) -> None:
@@ -934,7 +970,8 @@ def validate_prompt_and_examples(
             'eligible status': 'ORDER_ELIGIBLE',
             'ineligible status': 'INELIGIBLE',
             'official-decision disclaimer': 'not an official authenticity determination or guarantee',
-            'three-to-four image rule': 'three or four supplied images',
+            'four-image rule': 'four supplied images',
+            'four-view order': 'left side, right side, bottom, and rear views',
         },
     )
     require_fragments(
@@ -945,7 +982,7 @@ def validate_prompt_and_examples(
             'canonical scenario key': PRIMARY_SCENARIO_KEY,
             'v2 modes': "mode: 'LIVE'",
             'estimate confidence': 'confidencePercent:',
-            'three-image minimum': 'imageUrls.length < 3',
+            'four-image requirement': 'imageUrls.length !== 4',
             'recapture error': 'ImageQualityInsufficientError',
         },
     )
@@ -1028,6 +1065,8 @@ def validate_guide(guide: str) -> None:
         'DEMO-RB-20260817-0001',
         'supabase/migrations/202608180001_lifecycle_integrity.sql',
         'supabase/rollbacks/202608180001_lifecycle_integrity.sql',
+        'supabase/migrations/202608180002_capture_four_views.sql',
+        'supabase/rollbacks/202608180002_capture_four_views.sql',
     ):
         if fragment not in current_guidance:
             fail(f'API guide is missing canonical v2 value: {fragment}')
@@ -1065,6 +1104,12 @@ def main() -> None:
     lifecycle_rollback = (
         ROOT / 'supabase' / 'rollbacks' / '202608180001_lifecycle_integrity.sql'
     ).read_text(encoding='utf-8')
+    capture_migration = (
+        ROOT / 'supabase' / 'migrations' / '202608180002_capture_four_views.sql'
+    ).read_text(encoding='utf-8')
+    capture_rollback = (
+        ROOT / 'supabase' / 'rollbacks' / '202608180002_capture_four_views.sql'
+    ).read_text(encoding='utf-8')
     guide = (ROOT / 'MCM_REBORN_API_GUIDE.md').read_text(encoding='utf-8')
     prompt = (ROOT / 'prompts' / 'bag-analysis.system.txt').read_text(encoding='utf-8')
     provider = (ROOT / 'examples' / 'openai-analysis.ts').read_text(encoding='utf-8')
@@ -1080,6 +1125,7 @@ def main() -> None:
     )
     validate_sql(sql)
     validate_lifecycle_migrations(lifecycle_migration, lifecycle_rollback)
+    validate_capture_four_view_migrations(capture_migration, capture_rollback)
     validate_prompt_and_examples(prompt, provider, recommendation, mock_status)
     validate_guide(guide)
     validate_readme_and_env(readme, env_example)
@@ -1092,7 +1138,7 @@ def main() -> None:
         f'{product_count} products,',
         f'{recapture_count} recapture fixture,',
         f'{shipment_count} canonical shipment,',
-        'versioned lifecycle migration and rollback,',
+        'versioned lifecycle and capture migrations with rollbacks,',
         'one canonical order RB-20260817-0001.',
     )
 

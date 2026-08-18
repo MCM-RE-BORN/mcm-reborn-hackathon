@@ -33,7 +33,7 @@ export function OrderCompleteScreen({ state }: OrderCompleteScreenProps) {
         <div className={styles.stateInset}>
           <h1 className={styles.visuallyHidden}>주문 접수 완료</h1>
           <DemoStatePanel
-            emptyDescription="접수된 주문을 찾지 못했습니다. 진행 조회에서 주문 상태를 다시 확인해 주세요."
+            emptyDescription="접수된 주문을 찾지 못했습니다. 신청 내역에서 주문 상태를 다시 확인해 주세요."
             retryHref="/orders/demo/complete"
             state={state}
             subject="주문 접수 정보"

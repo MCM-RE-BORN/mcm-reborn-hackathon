@@ -33,7 +33,7 @@ function IneligibleAnalysis({
         <p>
           {isQualityIssue
             ? "제품 전체와 손상 부위가 선명하게 보이지 않아요. 밝은 곳에서 흔들림 없이 다시 촬영해 주세요."
-            : "현재 사진에서는 제품 식별 정보가 충분히 보이지 않아 주문 적합성을 안내하기 어렵습니다. 이 결과는 정품·가품의 공식 판정이 아니며, 각인과 내부 라벨을 선명하게 다시 등록할 수 있어요."}
+            : "현재 사진에서는 제품 식별 정보가 충분히 보이지 않아 주문 적합성을 안내하기 어렵습니다. 이 결과는 정품·가품의 공식 판정이 아니며, 좌·우 측면과 후면을 밝은 곳에서 다시 촬영하고 제품 시리얼 번호가 있다면 입력해 주세요."}
         </p>
       </section>
 
@@ -48,7 +48,7 @@ function IneligibleAnalysis({
               ]
             : [
                 { label: "확인 결과", value: "사진 사전 확인 불충분" },
-                { label: "보완할 사진", value: "각인 · 내부 라벨" },
+                { label: "보완할 정보", value: "좌·우 측면 · 후면 · 시리얼 번호" },
                 { label: "다음 행동", value: "사진과 식별 정보 재등록" },
               ]
         }
@@ -180,7 +180,7 @@ export function AnalysisResultScreen({
       }
       header={
         <PageHeader
-          backHref="/submissions/demo"
+          backHref="/products/new"
           title="AI 예상 재활용률"
         />
       }

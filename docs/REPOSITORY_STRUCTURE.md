@@ -44,7 +44,7 @@
 
 영속 저장을 도입할 때 고객 원본 사진은 `public/`에 넣지 않고 Supabase private bucket에 저장해야 한다. 비밀키, 실제 고객 데이터와 운영 로그도 저장소에 추가하지 않는다.
 
-신규 DB의 전체 bootstrap 기준은 `supabase-schema.sql`이다. 기존 DB에는 루트 `supabase/migrations/`의 버전 migration을 순서대로 적용하고, 구조 롤백은 대응하는 `supabase/rollbacks/` 파일과 데이터 안전 조건을 따른다. lifecycle 무결성 보완의 첫 쌍은 `202608180001_lifecycle_integrity.sql`이며 bootstrap·up migration·rollback을 같은 계약 변경 단위로 검증한다.
+신규 DB의 전체 bootstrap 기준은 `supabase-schema.sql`이다. 기존 DB에는 루트 `supabase/migrations/`의 버전 migration을 순서대로 적용하고, 구조 롤백은 대응하는 `supabase/rollbacks/` 파일과 데이터 안전 조건을 따른다. lifecycle 무결성은 `202608180001_lifecycle_integrity.sql`, 정확히 4장 촬영 계약은 `202608180002_capture_four_views.sql`과 각각의 rollback으로 관리하며 bootstrap·migration·rollback을 같은 계약 변경 단위로 검증한다.
 
 ## 지침 적용 순서
 

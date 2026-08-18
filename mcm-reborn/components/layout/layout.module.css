@@ -146,7 +146,7 @@
   width: 100%;
   max-width: var(--layout-nav-max);
   min-height: 3.8125rem;
-  grid-template-columns: repeat(4, minmax(var(--space-0), 1fr));
+  grid-template-columns: repeat(3, minmax(var(--space-0), 1fr));
   align-items: center;
   border: 0.00625rem solid var(--color-canvas);
   border-radius: var(--radius-pill);
@@ -181,15 +181,16 @@
   display: block;
   width: var(--icon-size-lg);
   height: var(--icon-size-lg);
-  opacity: var(--opacity-muted-icon);
-}
-
-.bottomNavLinkActive .bottomNavIcon {
-  opacity: 100%;
 }
 
 .bottomNavIcon img {
   object-fit: contain;
+  filter: brightness(0);
+  opacity: var(--opacity-muted-icon);
+}
+
+.bottomNavLinkActive .bottomNavIcon img {
+  opacity: 100%;
 }
 
 .stickyActionBar {

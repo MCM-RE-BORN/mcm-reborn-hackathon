@@ -64,7 +64,7 @@ export function SubmissionStatusScreen({
                   보완 사진 다시 등록하기
                 </ButtonLink>
               }
-              description="정면과 손상 부위가 더 선명한 사진이 필요합니다. 사진을 보완해 다시 제출하면 사전 분석을 이어갈 수 있어요."
+              description="좌측면, 우측면, 하단, 후면 중 흐릿한 사진을 더 선명하게 다시 등록해 주세요. 사진을 보완해 제출하면 사전 분석을 이어갈 수 있어요."
               title="사진 보완 요청이 도착했어요"
               tone="permission"
             />

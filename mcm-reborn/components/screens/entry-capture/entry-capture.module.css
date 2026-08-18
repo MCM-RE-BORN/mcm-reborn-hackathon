@@ -550,13 +550,17 @@
 }
 
 .homeContent {
-  min-height: calc(100dvh - var(--layout-bottom-nav-height));
+  min-height: var(--space-0);
+  max-height: calc(
+    100dvh - var(--layout-bottom-nav-height) - var(--safe-area-bottom)
+  );
 }
 
 .homeHero {
   position: relative;
   height: clamp(28rem, 62.5dvh, 34.125rem);
-  flex: none;
+  min-height: var(--space-0);
+  flex: 0 1 auto;
   overflow: hidden;
   background: var(--color-canvas);
   isolation: isolate;
@@ -575,9 +579,38 @@
   mask-size: 100% 100%;
 }
 
+.homeHeroMedia {
+  position: absolute;
+  z-index: 1;
+  inset: var(--space-0) -1.125rem;
+  display: block;
+  width: calc(100% + 2.25rem);
+  height: 100%;
+  overflow: hidden;
+  background: #000000;
+  pointer-events: none;
+  -webkit-mask-image: url("/assets/mvp-beta/home-hero-mask.svg");
+  mask-image: url("/assets/mvp-beta/home-hero-mask.svg");
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-size: 100% 100%;
+  mask-size: 100% 100%;
+}
+
+.homeHeroVideo {
+  position: absolute;
+  top: var(--space-0);
+  left: var(--space-0);
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 402 / 874;
+}
+
 .homeIntro {
   position: relative;
   z-index: 1;
+  flex: none;
   padding: 2.1875rem var(--layout-gutter) var(--space-13);
   background: var(--color-canvas);
 }
@@ -606,15 +639,9 @@
 }
 
 .homePrimaryAction {
-  justify-content: space-between;
+  width: calc(100% + 0.5625rem);
   margin-top: var(--space-13);
-  padding-inline: var(--space-8);
-  font-size: var(--font-size-body);
-}
-
-.homePrimaryAction img {
-  filter: brightness(0) invert(1);
-  transform: rotate(90deg);
+  margin-inline: calc(var(--space-2) * -1) calc(var(--space-3) * -1);
 }
 
 .homeState {
@@ -1031,7 +1058,20 @@
   }
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .homeHeroMedia {
+    display: none;
+  }
+}
+
 @media (min-width: 48rem) {
+  .homeContent {
+    max-height: calc(
+      100dvh - (var(--space-13) * 2) - var(--layout-bottom-nav-height) -
+        var(--safe-area-bottom)
+    );
+  }
+
   .cameraContent,
   .cameraState {
     min-height: calc(100dvh - (var(--space-13) * 2));

@@ -2,15 +2,10 @@ import Image from "next/image";
 import Link from "next/link";
 import styles from "./layout.module.css";
 
-export type BottomNavItem =
-  | "home"
-  | "registration"
-  | "progress"
-  | "certificate";
+export type BottomNavItem = "orders" | "home" | "mypage";
 
 type BottomNavProps = {
   active: BottomNavItem;
-  certificateState?: "issued" | "locked";
 };
 
 const NAV_ITEMS: Array<{
@@ -20,45 +15,31 @@ const NAV_ITEMS: Array<{
   label: string;
 }> = [
   {
+    href: "/orders",
+    icon: "/assets/mvp-beta/figma-nav-applications.svg",
+    id: "orders",
+    label: "신청 내역",
+  },
+  {
     href: "/home",
-    icon: "/assets/mvp-beta/nav-home.svg",
+    icon: "/assets/mvp-beta/figma-nav-home.svg",
     id: "home",
     label: "홈",
   },
   {
-    href: "/products/new",
-    icon: "/assets/mvp-beta/nav-orders.svg",
-    id: "registration",
-    label: "제품등록",
-  },
-  {
-    href: "/orders/demo?stage=pickup",
-    icon: "/assets/mvp-beta/icon-complete-check.svg",
-    id: "progress",
-    label: "진행조회",
-  },
-  {
-    href: "/certificates/demo?state=locked",
-    icon: "/assets/mvp-beta/icon-barcode.svg",
-    id: "certificate",
-    label: "보증서",
+    href: "/mypage",
+    icon: "/assets/mvp-beta/figma-nav-mypage.svg",
+    id: "mypage",
+    label: "마이페이지",
   },
 ];
 
-export function BottomNav({
-  active,
-  certificateState = "locked",
-}: BottomNavProps) {
+export function BottomNav({ active }: BottomNavProps) {
   return (
     <nav aria-label="주요 메뉴" className={styles.bottomNav}>
       <div className={styles.bottomNavInner}>
         {NAV_ITEMS.map((item) => {
           const isActive = item.id === active;
-          const href =
-            item.id === "certificate"
-              ? `/certificates/demo?state=${certificateState}`
-              : item.href;
-
           return (
             <Link
               aria-current={isActive ? "page" : undefined}
@@ -68,7 +49,7 @@ export function BottomNav({
               ]
                 .filter(Boolean)
                 .join(" ")}
-              href={href}
+              href={item.href}
               key={item.id}
             >
               <span className={styles.bottomNavIcon}>

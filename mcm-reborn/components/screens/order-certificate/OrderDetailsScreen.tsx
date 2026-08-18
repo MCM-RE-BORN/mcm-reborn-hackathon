@@ -2,9 +2,9 @@
 
 import Image from "next/image";
 import { AppShell } from "@/components/layout/AppShell";
-import { BottomNav } from "@/components/layout/BottomNav";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Section } from "@/components/layout/Section";
+import { ActionButtonLink } from "@/components/ui/ActionButtonLink";
 import { ButtonLink } from "@/components/ui/Button";
 import { KeyValueList } from "@/components/ui/KeyValueList";
 import { ProgressStepper } from "@/components/ui/ProgressStepper";
@@ -36,11 +36,10 @@ type OrderDetailsScreenProps = {
 type ActiveOrderStage = Exclude<OrderStage, "canceled">;
 
 const PROGRESS_STEPS = [
-  "수거",
-  "실물 검수",
-  "조건 확정",
-  "제작",
-  "품질 확인",
+  "접수",
+  "검수",
+  "제작중",
+  "품질확인",
   "배송",
   "완료",
 ];
@@ -75,14 +74,14 @@ const STAGE_DETAILS: Record<
     tone: "permission",
   },
   "change-required": {
-    currentIndex: 2,
+    currentIndex: 1,
     description:
       "실물에서 추가 마모가 확인되어 재사용률, 제작 금액과 기간이 조정되었습니다.",
     title: "변경된 제작 조건을 확인해 주세요",
     tone: "permission",
   },
   production: {
-    currentIndex: 3,
+    currentIndex: 2,
     description:
       "승인한 최종 조건에 따라 아틀리에에서 여권지갑을 제작하고 있어요.",
     nextHref: "/orders/demo?stage=quality",
@@ -91,7 +90,7 @@ const STAGE_DETAILS: Record<
     tone: "success",
   },
   quality: {
-    currentIndex: 4,
+    currentIndex: 3,
     description:
       "완성된 제품의 마감, 내구성과 최종 재사용 소재 비율을 확인하고 있어요.",
     nextHref: "/orders/demo?stage=shipping",
@@ -100,7 +99,7 @@ const STAGE_DETAILS: Record<
     tone: "success",
   },
   shipping: {
-    currentIndex: 5,
+    currentIndex: 4,
     description:
       "품질 확인을 마친 여권지갑이 안전하게 포장되어 배송 중이에요.",
     nextHref: "/orders/demo?stage=completed",
@@ -109,7 +108,7 @@ const STAGE_DETAILS: Record<
     tone: "success",
   },
   completed: {
-    currentIndex: 6,
+    currentIndex: 5,
     description:
       "제작과 품질 확인, 배송이 모두 완료되어 디지털 ESG Passport가 발급되었습니다.",
     nextHref: "/certificates/demo?state=issued",
@@ -142,101 +141,24 @@ export function OrderDetailsScreen({
 
   return (
     <AppShell
-      footer={
-        <BottomNav
-          active="progress"
-          certificateState={stage === "completed" ? "issued" : "locked"}
-        />
+      header={
+        <PageHeader backHref={`/orders?stage=${stage}`} title="신청 내역" />
       }
-      header={<PageHeader backHref="/home" title="진행 조회" />}
     >
       {state !== "normal" ? (
         <div className={styles.stateInset}>
           <DemoStatePanel
-            emptyDescription="아직 접수된 업사이클링 주문이 없습니다."
+            emptyDescription="아직 접수된 업사이클링 신청이 없습니다."
             retryHref="/orders/demo?stage=pickup"
             state={state}
-            subject="주문 진행 정보"
+            subject="신청 상세"
           />
         </div>
       ) : (
         <>
-          <article
-            aria-labelledby="order-product-name"
-            className={styles.orderSummary}
-          >
-            <div className={styles.orderProductRow}>
-              <div className={styles.productThumbnail}>
-                <Image
-                  alt={`${selectedDesign.name} 제품 이미지`}
-                  fill
-                  sizes="40px"
-                  src={selectedDesign.image}
-                />
-              </div>
-              <div className={styles.orderProductCopy}>
-                <h2 id="order-product-name">{selectedDesign.name}</h2>
-                <p>주문일 {order.orderedAt}</p>
-                <span>주문번호: {order.number}</span>
-                <span>수량: 1개</span>
-              </div>
-              <strong>{formatKrw(displayedPrice)}</strong>
-            </div>
-          </article>
-
-          <SectionBand />
-          <details className={styles.customerDetails}>
-            <summary>주문자 정보</summary>
-            <KeyValueList
-              items={[
-                { label: "이름", value: orderDraft.name },
-                { label: "휴대폰", value: orderDraft.phone },
-                {
-                  label: "수거지",
-                  value: `${orderDraft.address} ${orderDraft.addressDetail}`,
-                },
-              ]}
-            />
-          </details>
-          <SectionBand />
-
-          {stage === "canceled" ? (
-            <Section title="주문 취소">
-              <StatusPanel
-                action={
-                  <ButtonLink fullWidth href="/home">
-                    홈으로 이동
-                  </ButtonLink>
-                }
-                description={
-                  productionUnavailable
-                    ? "전문가 실물 검수 결과 안전한 제작이 어려워 주문이 취소되었습니다. 결제 승인 취소와 전액 환불이 접수되었습니다. 시연 환경에서는 실제 청구나 환불이 발생하지 않습니다."
-                    : "변경된 제작 조건을 승인하지 않아 주문이 취소되었습니다. 결제 승인 취소와 전액 환불이 접수되었습니다. 시연 환경에서는 실제 청구나 환불이 발생하지 않습니다."
-                }
-                title="주문이 취소되었습니다"
-                tone="empty"
-              />
-              <KeyValueList
-                items={[
-                  { label: "주문번호", value: order.number },
-                  {
-                    label: "취소 사유",
-                    value: productionUnavailable
-                      ? "실물 검수 결과 제작 불가"
-                      : "실물 검수 후 변경 조건 미승인",
-                  },
-                  { label: "결제 상태", value: "승인 취소 · 전액 환불 접수" },
-                ]}
-              />
-            </Section>
-          ) : (
+          {stage !== "canceled" ? (
             <>
-              <Section title="진행 상태">
-                <ProgressStepper
-                  currentIndex={STAGE_DETAILS[stage].currentIndex}
-                  items={PROGRESS_STEPS}
-                />
-                <div className={styles.divider} />
+              <Section title="현재 진행 안내">
                 <StatusPanel
                   action={
                     STAGE_DETAILS[stage].nextHref &&
@@ -264,6 +186,143 @@ export function OrderDetailsScreen({
                       value: usesFinalTerms
                         ? expertInspection.revisedDuration
                         : selectedDesign.initialEstimatedDuration,
+                    },
+                  ]}
+                />
+              </Section>
+              <SectionBand />
+            </>
+          ) : null}
+
+          <article
+            aria-labelledby="order-product-name"
+            className={styles.orderSummary}
+          >
+            <div className={styles.orderProductRow}>
+              <div className={styles.productThumbnail}>
+                <Image
+                  alt={`${selectedDesign.name} 제품 이미지`}
+                  fill
+                  sizes="40px"
+                  src="/assets/mvp-beta/figma-order-product.png"
+                />
+              </div>
+              <div className={styles.orderProductCopy}>
+                <h2 id="order-product-name">{selectedDesign.name}</h2>
+                <p>신청일 {order.orderedAt}</p>
+                <span>수량: 1개</span>
+              </div>
+              <strong>{formatKrw(displayedPrice)}</strong>
+            </div>
+
+            {stage !== "canceled" ? (
+              <>
+                <div className={styles.orderActionGrid}>
+                  <button disabled type="button">
+                    문의하기
+                  </button>
+                  <a href="#delivery-information">배송현황</a>
+                </div>
+                <ActionButtonLink
+                  className={styles.orderCertificateAction}
+                  fullWidth
+                  href={`/certificates/demo?state=${
+                    stage === "completed" ? "issued" : "locked"
+                  }`}
+                >
+                  나의 RE:BORN 인증서 보기
+                </ActionButtonLink>
+              </>
+            ) : null}
+          </article>
+
+          {stage === "canceled" ? (
+            <>
+              <SectionBand />
+              <Section title="신청 취소">
+                <StatusPanel
+                  action={
+                    <ButtonLink fullWidth href="/home">
+                      홈으로 이동
+                    </ButtonLink>
+                  }
+                  description={
+                    productionUnavailable
+                      ? "전문가 실물 검수 결과 안전한 제작이 어려워 신청이 취소되었습니다. 결제 승인 취소와 전액 환불이 접수되었습니다. 시연 환경에서는 실제 청구나 환불이 발생하지 않습니다."
+                      : "변경된 제작 조건을 승인하지 않아 신청이 취소되었습니다. 결제 승인 취소와 전액 환불이 접수되었습니다. 시연 환경에서는 실제 청구나 환불이 발생하지 않습니다."
+                  }
+                  title="신청이 취소되었습니다"
+                  tone="empty"
+                />
+                <KeyValueList
+                  items={[
+                    { label: "신청번호", value: order.number },
+                    {
+                      label: "취소 사유",
+                      value: productionUnavailable
+                        ? "실물 검수 결과 제작 불가"
+                        : "실물 검수 후 변경 조건 미승인",
+                    },
+                    {
+                      label: "결제 상태",
+                      value: "승인 취소 · 전액 환불 접수",
+                    },
+                  ]}
+                />
+              </Section>
+            </>
+          ) : (
+            <>
+              <SectionBand />
+              <Section
+                className={styles.figmaOrderSection}
+                title="배송 정보"
+              >
+                <div
+                  className={styles.deliveryStepper}
+                  id="delivery-information"
+                >
+                  <ProgressStepper
+                    currentIndex={STAGE_DETAILS[stage].currentIndex}
+                    items={PROGRESS_STEPS}
+                  />
+                </div>
+                <div className={styles.divider} />
+                <KeyValueList
+                  className={styles.figmaOrderInfoList}
+                  items={[
+                    { label: "수령인", value: orderDraft.name },
+                    { label: "휴대폰", value: orderDraft.phone },
+                    {
+                      label: "주소지",
+                      value: `${orderDraft.address} ${orderDraft.addressDetail}`,
+                    },
+                  ]}
+                />
+              </Section>
+
+              <SectionBand />
+              <Section
+                className={styles.figmaOrderSection}
+                title="결제 정보"
+              >
+                <div className={styles.divider} />
+                <KeyValueList
+                  className={`${styles.figmaOrderInfoList} ${styles.figmaPaymentList}`}
+                  items={[
+                    {
+                      label: "상품 금액",
+                      value: formatKrw(displayedPrice),
+                    },
+                    {
+                      label: "총 배송비",
+                      value: formatKrw(order.pickupFeeKrw),
+                    },
+                    { label: "결제 수단", value: order.paymentMethodLabel },
+                    {
+                      emphasis: true,
+                      label: "최종 결제 금액",
+                      value: formatKrw(displayedPrice + order.pickupFeeKrw),
                     },
                   ]}
                 />
@@ -317,7 +376,7 @@ export function OrderDetailsScreen({
                       </article>
                     </div>
                     <p className={styles.decisionNotice}>
-                      승인하면 변경된 조건으로 제작이 시작됩니다. 거절하면 주문이
+                      승인하면 변경된 조건으로 제작이 시작됩니다. 거절하면 신청이
                       취소됩니다.
                     </p>
                     <div className={styles.decisionActions}>
@@ -362,42 +421,6 @@ export function OrderDetailsScreen({
                   </Section>
                 </>
               ) : null}
-
-              <SectionBand />
-              <Section title="결제 정보">
-                <KeyValueList
-                  items={[
-                    {
-                      label: "최초 주문 금액",
-                      value: formatKrw(selectedDesign.initialPriceKrw),
-                    },
-                    { label: "수거 비용", value: "무료" },
-                    { label: "결제 수단", value: order.paymentMethodLabel },
-                    ...(usesFinalTerms
-                      ? [
-                          {
-                            label: "검수 후 조정 금액",
-                            value: `+${formatKrw(
-                              expertInspection.revisedPriceKrw -
-                                selectedDesign.initialPriceKrw,
-                            )}`,
-                          },
-                          {
-                            emphasis: true,
-                            label: "최종 제작 금액",
-                            value: formatKrw(expertInspection.revisedPriceKrw),
-                          },
-                        ]
-                      : [
-                          {
-                            emphasis: true,
-                            label: "현재 결제 금액",
-                            value: formatKrw(selectedDesign.initialPriceKrw),
-                          },
-                        ]),
-                  ]}
-                />
-              </Section>
             </>
           )}
         </>

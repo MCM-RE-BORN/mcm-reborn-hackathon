@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { RecommendationScreen } from "@/components/screens/analysis-design/RecommendationScreen";
+import { readRecommendationCategory } from "@/components/screens/analysis-design/recommendation-catalog";
 import { readDemoState } from "@/components/screens/analysis-design/types";
 
 export const metadata: Metadata = {
@@ -13,7 +14,12 @@ type DesignsPageProps = {
 export default async function DesignsPage({
   searchParams,
 }: DesignsPageProps) {
-  const { state } = await searchParams;
+  const { category, state } = await searchParams;
 
-  return <RecommendationScreen state={readDemoState(state)} />;
+  return (
+    <RecommendationScreen
+      category={readRecommendationCategory(category)}
+      state={readDemoState(state)}
+    />
+  );
 }

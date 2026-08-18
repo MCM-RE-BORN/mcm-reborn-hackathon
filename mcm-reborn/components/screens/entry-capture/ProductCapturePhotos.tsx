@@ -75,7 +75,8 @@ export function ProductCapturePhotos({
         제품 사진 {completedCount}/{CAPTURE_SLOTS.length}
       </h2>
       <p className={styles.visuallyHidden}>
-        정면, 측면, 내부, 각인을 차례로 확인해주세요.
+        좌측면, 우측면, 하단, 후면을 차례로 등록해주세요. 네 사진이 모두
+        필요합니다.
       </p>
 
       <div className={styles.captureGrid}>
@@ -113,15 +114,6 @@ export function ProductCapturePhotos({
                   loading="eager"
                   sizes="(max-width: 360px) calc(100vw - 40px), (max-width: 402px) calc(100vw - 52px), 350px"
                   src={DEMO_SCENARIO.sourceProduct.images[slot.id]}
-                />
-              ) : slot.id === "engraving" ? (
-                <Image
-                  alt=""
-                  aria-hidden="true"
-                  className={styles.captureBarcode}
-                  height={31}
-                  src="/assets/mvp-beta/icon-barcode.svg"
-                  width={50}
                 />
               ) : (
                 <span aria-hidden="true" className={styles.captureAddMark}>
@@ -172,7 +164,7 @@ export function ProductCapturePhotos({
         </p>
       </div>
       <p className={styles.captureRule}>
-        JPG, PNG · 최소 3장, 최대 4장 · 파일당 최대 10MB
+        좌측면, 우측면, 하단, 후면 필수 · JPG, PNG 4장 · 파일당 최대 10MB
       </p>
     </section>
   );

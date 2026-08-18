@@ -6,6 +6,8 @@
 
 MCM RE:BORN은 사용자가 보유한 MCM 가방을 모바일로 촬영하고, 사진 기반 AI 예상 분석·디자인 추천·목업·주문·수거 후 실물 검수·제작 진행·ESG 보증서를 하나의 웹 흐름으로 시연하는 데모 MVP다.
 
+2026-08-18 최신 UI 기준에서 공통 하단 내비게이션은 `신청 내역`·`홈`·`마이페이지` 3개다. 홈은 실제 hero 영상과 `상품 진단하기` CTA를 제공하며, `/orders` 신청 목록에서 상품을 선택하면 Figma `261:63` 기준 `/orders/demo` 상세로 이동한다. 추천은 Figma `228:782`의 제품군 탭을 사용하고 트래블 여권지갑만 목업 상세로 진입한다.
+
 2026-08-17 현재 제품 기준은 [`MVP_DEMO_CANONICAL.md`](./MVP_DEMO_CANONICAL.md)다. 이 MVP는 실제 AI·결제·물류를 완성하는 것보다 최종 기획 흐름을 자연스럽고 재현 가능하게 시연하는 데 우선순위를 둔다. AI가 안정적으로 판단하기 어려운 값은 중앙 Fixture 또는 재현 가능한 예상치로 제공할 수 있다.
 
 이전의 “기존 계약을 우선하고 실물 검수·조건 재승인을 Phase 2로 둔다”는 설명은 **2026-08-17 기준 superseded/historical**이다. 현재 데모는 AI 사전 판단으로 Mock 주문을 만든 뒤, 수거된 실물을 공식 장인이 마지막으로 점검하고 변경 조건을 고객이 승인하는 흐름을 포함한다.
@@ -34,7 +36,7 @@ MCM RE:BORN은 사용자가 보유한 MCM 가방을 모바일로 촬영하고, �
 - Supabase Auth·RLS는 실제 연동 시 지켜야 할 계약 경계다. lifecycle command Route Handler는 Bearer 인증과 운영자 RLS/RPC를 사용하지만, 현재 고객 로그인·주문·검수·보증서 화면은 영속 인증이나 DB 저장이 없는 데모 UI다.
 - 저장소 루트에는 OpenAPI·Mock·DB·구현 예시가 있고, 실제 웹 앱 루트는 `mcm-reborn/`이다.
 - 앱 구현 상태는 코드와 검증 결과로 판단한다. 과거 문서의 “Next.js 기본 scaffold만 존재” 설명은 historical이다.
-- 현재 웹 라우트에서 `/`와 `/intro`는 서비스 소개를, `/home`은 홈을 렌더한다. `mcm-reborn/app/api/v2/admin/applications/[applicationId]/lifecycle-commands`만 실행 Route Handler이며 나머지 OpenAPI 경로는 아직 계약·Fixture·bootstrap 산출물이다.
+- 현재 웹 라우트에서 `/`와 `/intro`는 서비스 소개를, `/home`은 홈을 렌더한다. 공통 하단 내비게이션의 `/orders`는 신청 목록이고 `/orders/demo`는 선택한 신청 상세다. `mcm-reborn/app/api/v2/admin/applications/[applicationId]/lifecycle-commands`만 실행 Route Handler이며 나머지 OpenAPI 경로는 아직 계약·Fixture·bootstrap 산출물이다.
 
 ## 기술 경계
 

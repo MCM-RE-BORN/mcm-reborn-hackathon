@@ -1,4 +1,13 @@
-import { redirect } from "next/navigation";
+import type { Metadata } from "next";
+import {
+  OrdersListScreen,
+  resolveDemoState,
+  resolveOrderStage,
+} from "@/components/screens/order-certificate";
+
+export const metadata: Metadata = {
+  title: "신청 내역",
+};
 
 type OrdersAliasPageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -12,14 +21,26 @@ export default async function OrdersAliasPage({
   searchParams,
 }: OrdersAliasPageProps) {
   const { panel, stage, state } = await searchParams;
-  const params = new URLSearchParams();
   const panelValue = firstValue(panel);
   const stageValue = firstValue(stage);
   const stateValue = firstValue(state);
+  const requestedStage =
+    stateValue === "canceled"
+      ? "canceled"
+      : stateValue === "change-request" || panelValue === "change-request"
+        ? "change-required"
+        : stageValue;
+  const resolvedState = resolveDemoState(
+    stateValue === "canceled" || stateValue === "change-request"
+      ? undefined
+      : state,
+    ["normal", "loading", "empty", "error", "permission"],
+  );
 
-  if (panelValue) params.set("panel", panelValue);
-  if (stageValue) params.set("stage", stageValue);
-  if (stateValue) params.set("state", stateValue);
-
-  redirect(`/orders/demo${params.size ? `?${params.toString()}` : ""}`);
+  return (
+    <OrdersListScreen
+      stage={resolveOrderStage(requestedStage)}
+      state={resolvedState}
+    />
+  );
 }

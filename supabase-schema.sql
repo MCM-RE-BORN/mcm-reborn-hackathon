@@ -385,8 +385,8 @@ begin
       and ma.owner_id = new.customer_id
       and ma.upload_status = 'UPLOADED';
 
-    if uploaded_photo_count not between 3 and 4 then
-      raise exception 'analysis requires 3 to 4 uploaded owner photos';
+    if uploaded_photo_count <> 4 then
+      raise exception 'analysis requires exactly 4 uploaded owner photos';
     end if;
   end if;
   return new;

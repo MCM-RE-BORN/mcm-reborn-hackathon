@@ -33,7 +33,7 @@ function CaptureStatePanel({ state }: { state: PageState }) {
             카메라 화면 열기
           </ButtonLink>
         }
-        description="분석 요청에는 JPG 또는 PNG 사진이 3장 이상 필요해요."
+        description="분석 요청에는 좌측면, 우측면, 하단, 후면 JPG 또는 PNG 사진이 모두 필요해요."
         title="등록된 제품 사진이 없어요"
         tone="empty"
       />
@@ -50,7 +50,7 @@ function CaptureStatePanel({ state }: { state: PageState }) {
         }
         description={
           state === "limited"
-            ? "사진은 3–4장, 파일당 최대 10MB의 JPG, PNG만 등록할 수 있어요."
+            ? "좌측면, 우측면, 하단, 후면 사진을 각각 1장씩 등록해주세요. 파일당 최대 10MB의 JPG, PNG만 등록할 수 있어요."
             : "사진을 읽지 못했어요. 파일 형식과 용량을 확인한 뒤 다시 시도해주세요."
         }
         title={state === "limited" ? "등록 가능한 범위를 넘었어요" : "사진을 등록하지 못했어요"}
@@ -95,7 +95,7 @@ export function ProductCaptureScreen({
       header={
         <PageHeader
           backHref="/home"
-          description="최소 3장과 각인 사진을 선명하게 등록해주세요."
+          description="좌측면, 우측면, 하단, 후면 사진을 모두 선명하게 등록해주세요."
           title="제품 사진 등록"
         />
       }

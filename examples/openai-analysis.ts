@@ -137,7 +137,7 @@ export async function analyzeBagImages(
   if (!process.env.OPENAI_API_KEY) {
     throw new Error('OPENAI_API_KEY_MISSING');
   }
-  if (imageUrls.length < 3 || imageUrls.length > 4) {
+  if (imageUrls.length !== 4) {
     throw new Error('IMAGE_COUNT_OUT_OF_RANGE');
   }
 
