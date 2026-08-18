@@ -1,0 +1,261 @@
+.viewport {
+  min-height: 100dvh;
+  background: var(--color-surface);
+}
+
+.shell {
+  position: relative;
+  display: flex;
+  width: 100%;
+  max-width: var(--layout-shell-max);
+  min-height: 100dvh;
+  margin-inline: auto;
+  flex-direction: column;
+  background: var(--color-canvas);
+  color: var(--color-ink);
+}
+
+.shellImmersive {
+  background: var(--color-ink);
+  color: var(--color-canvas);
+}
+
+.skipLink {
+  position: fixed;
+  z-index: var(--z-overlay);
+  top: var(--space-5);
+  left: var(--space-5);
+  padding: var(--space-7) var(--space-9);
+  border-radius: var(--radius-control);
+  background: var(--color-ink);
+  color: var(--color-canvas);
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-semibold);
+  transform: translateY(calc((100% + var(--space-9)) * -1));
+  transition: transform var(--duration-fast) var(--ease-standard);
+}
+
+.skipLink:focus {
+  transform: translateY(var(--space-0));
+}
+
+.content {
+  display: flex;
+  width: 100%;
+  flex: 1;
+  flex-direction: column;
+}
+
+.contentGuttered {
+  padding-inline: var(--layout-gutter);
+}
+
+.contentFull {
+  padding-inline: var(--space-0);
+}
+
+.pageHeader {
+  position: relative;
+  z-index: var(--z-sticky);
+  display: grid;
+  min-height: calc(var(--layout-header-height) + var(--safe-area-top));
+  align-content: end;
+  gap: var(--space-5);
+  padding: calc(var(--safe-area-top) + var(--space-9)) var(--layout-gutter)
+    var(--space-9);
+  background: var(--color-canvas);
+}
+
+/*
+ * Used when the header has no title/description (e.g. login, signup).
+ * `.pageHeader` reserves a fixed min-height and bottom-aligns its content so
+ * multi-line titles stay flush with the row below it. With no title/
+ * description there is only one grid row, so that reserved height collapsed
+ * into dead space above the back button instead of below it. Dropping the
+ * fixed height and top-aligning here makes the header hug the back-button
+ * row, so the top padding (above the row) and bottom padding (below it)
+ * match.
+ */
+.pageHeaderCompact {
+  min-height: auto;
+  align-content: start;
+}
+
+.pageHeaderTopRow {
+  display: flex;
+  min-height: var(--touch-target-min);
+  align-items: center;
+  justify-content: space-between;
+}
+
+.backLink,
+.headerSpacer {
+  display: inline-flex;
+  width: var(--touch-target-min);
+  min-width: var(--touch-target-min);
+  height: var(--touch-target-min);
+  align-items: center;
+}
+
+.backLink {
+  justify-content: flex-start;
+}
+
+.headerRightSlot {
+  display: flex;
+  min-height: var(--touch-target-min);
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.pageHeaderCopy {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.pageHeaderCopy h1 {
+  color: var(--color-ink);
+  font-size: var(--font-size-title);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
+  letter-spacing: var(--letter-spacing-tight);
+}
+
+.pageHeaderCopy p {
+  color: var(--color-ink-soft);
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-light);
+  line-height: var(--line-height-tight);
+}
+
+.bottomNav {
+  position: sticky;
+  z-index: var(--z-sticky);
+  bottom: var(--space-0);
+  display: flex;
+  width: 100%;
+  min-height: calc(var(--layout-bottom-nav-height) + var(--safe-area-bottom));
+  align-items: flex-start;
+  justify-content: center;
+  padding: var(--space-0) var(--space-12) var(--safe-area-bottom);
+  background: var(--color-canvas);
+}
+
+.bottomNavInner {
+  display: grid;
+  width: 100%;
+  max-width: var(--layout-nav-max);
+  min-height: 3.8125rem;
+  grid-template-columns: repeat(3, minmax(var(--space-0), 1fr));
+  align-items: center;
+  border: 0.00625rem solid var(--color-canvas);
+  border-radius: var(--radius-pill);
+  background: var(--color-nav);
+  box-shadow: 0 var(--border-thin) var(--space-2) rgb(0 0 0 / 12%);
+  -webkit-backdrop-filter: blur(var(--space-5));
+  backdrop-filter: blur(var(--space-5));
+}
+
+.bottomNavLink {
+  display: grid;
+  min-width: var(--touch-target-min);
+  min-height: 3.375rem;
+  margin: var(--space-1);
+  place-items: center;
+  align-content: center;
+  gap: var(--space-1);
+  color: var(--color-muted);
+  font-size: var(--font-size-label);
+  font-weight: var(--font-weight-regular);
+  line-height: var(--line-height-tight);
+  border-radius: var(--radius-pill);
+}
+
+.bottomNavLinkActive {
+  background: rgb(110 110 110 / 20%);
+  color: var(--color-ink);
+}
+
+.bottomNavIcon {
+  position: relative;
+  display: block;
+  width: var(--icon-size-lg);
+  height: var(--icon-size-lg);
+}
+
+.bottomNavIcon img {
+  object-fit: contain;
+  filter: brightness(0);
+  opacity: var(--opacity-muted-icon);
+}
+
+.bottomNavLinkActive .bottomNavIcon img {
+  opacity: 100%;
+}
+
+.stickyActionBar {
+  position: sticky;
+  z-index: var(--z-sticky);
+  bottom: var(--space-0);
+  display: flex;
+  width: 100%;
+  min-height: calc(var(--layout-sticky-action-height) + var(--safe-area-bottom));
+  align-items: flex-start;
+  justify-content: center;
+  padding: var(--space-13) var(--layout-gutter) var(--safe-area-bottom);
+  background: var(--color-canvas);
+}
+
+.stickyActionInner {
+  width: 100%;
+  max-width: var(--layout-content-max);
+}
+
+.section {
+  display: grid;
+  gap: var(--space-9);
+  width: 100%;
+  padding-block: var(--space-14);
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-9);
+}
+
+.sectionCopy {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.sectionCopy h2 {
+  color: var(--color-ink);
+  font-size: var(--font-size-control);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
+}
+
+.sectionCopy p {
+  color: var(--color-muted);
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-light);
+  line-height: var(--line-height-reading);
+}
+
+.sectionAction {
+  min-height: var(--touch-target-min);
+}
+
+@media (min-width: 48rem) {
+  .viewport {
+    padding-block: var(--space-13);
+  }
+
+  .shell {
+    min-height: calc(100dvh - (var(--space-13) * 2));
+    overflow: clip;
+    border-radius: var(--radius-device);
+  }
+}

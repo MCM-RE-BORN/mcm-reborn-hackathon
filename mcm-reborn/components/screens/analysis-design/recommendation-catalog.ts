@@ -1,0 +1,118 @@
+export const RECOMMENDATION_CATEGORIES = [
+  { id: "travel", label: "트래블" },
+  { id: "wallet", label: "지갑" },
+  { id: "pouch", label: "파우치" },
+  { id: "keyring", label: "키링" },
+] as const;
+
+export type RecommendationCategory =
+  (typeof RECOMMENDATION_CATEGORIES)[number]["id"];
+
+type RecommendationProduct = {
+  detailHref?: string;
+  id: string;
+  image: string;
+  name: string;
+};
+
+// Figma visual candidates are grouped for browsing. Only a card with
+// `detailHref` is an orderable canonical demo product.
+export const RECOMMENDATION_PRODUCTS: Record<
+  RecommendationCategory,
+  readonly RecommendationProduct[]
+> = {
+  travel: [
+    {
+      detailHref: "/submissions/demo/designs/passport-wallet",
+      id: "passport-wallet",
+      image: "/assets/mvp-beta/figma-travel-passport-wallet.png",
+      name: "Ottomar 비세토스 여권 지갑",
+    },
+    {
+      id: "luggage-tag",
+      image: "/assets/mvp-beta/figma-travel-luggage-tag.png",
+      name: "Ottomar 비세토스 러기지 택",
+    },
+    {
+      id: "travel-case-medium",
+      image: "/assets/mvp-beta/figma-travel-case-medium.png",
+      name: "M Ottomar 비세토스 트래블 케이스",
+    },
+    {
+      id: "travel-case-small",
+      image: "/assets/mvp-beta/figma-travel-case-small.png",
+      name: "S Ottomar 비세토스 트래블 케이스",
+    },
+    {
+      id: "toiletry-bag",
+      image: "/assets/mvp-beta/figma-travel-toiletry-bag.png",
+      name: "S Ottomar 비세토스 토일레트리 백",
+    },
+    {
+      id: "travel-mini-pouch",
+      image: "/assets/mvp-beta/figma-travel-mini-pouch.png",
+      name: "미니 Ottomar 비세토스 트래블 파우치",
+    },
+    {
+      id: "hat-box",
+      image: "/assets/mvp-beta/figma-travel-hat-box.png",
+      name: "미니 비세토스 모자 박스",
+    },
+    {
+      id: "bottle-holder",
+      image: "/assets/mvp-beta/figma-travel-bottle-holder.png",
+      name: "Ottomar 인조 퍼와 비세토스 Mars Dog 보틀 홀더",
+    },
+  ],
+  wallet: [
+    {
+      id: "card-holder",
+      image: "/assets/mvp-beta/recommendation-card-holder.png",
+      name: "비세토스 카드 홀더",
+    },
+    {
+      id: "bifold-wallet",
+      image: "/assets/mvp-beta/recommendation-bifold-wallet.png",
+      name: "비세토스 바이폴드 지갑",
+    },
+    {
+      id: "chain-wallet",
+      image: "/assets/mvp-beta/recommendation-chain-wallet.png",
+      name: "비세토스 체인 지갑",
+    },
+    {
+      id: "zip-wallet",
+      image: "/assets/mvp-beta/recommendation-zip-wallet.png",
+      name: "비세토스 지퍼 지갑",
+    },
+  ],
+  pouch: [
+    {
+      id: "card-pouch",
+      image: "/assets/mvp-beta/recommendation-card-pouch.png",
+      name: "비세토스 카드 파우치",
+    },
+    {
+      id: "crossbody-wallet",
+      image: "/assets/mvp-beta/recommendation-crossbody-wallet.png",
+      name: "비세토스 크로스바디 파우치",
+    },
+  ],
+  keyring: [
+    {
+      id: "keyring",
+      image: "/assets/mvp-beta/recommendation-keyring-v2.webp",
+      name: "비세토스 키링",
+    },
+  ],
+};
+
+export function readRecommendationCategory(
+  value: string | string[] | undefined,
+): RecommendationCategory {
+  const normalized = Array.isArray(value) ? value[0] : value;
+
+  return RECOMMENDATION_CATEGORIES.some((item) => item.id === normalized)
+    ? (normalized as RecommendationCategory)
+    : "travel";
+}

@@ -1,6 +1,6 @@
 # MCM RE:BORN Web
 
-이 디렉터리는 MCM RE:BORN 2주 해커톤 MVP의 Next.js 16 애플리케이션 스캐폴드다. 현재는 `create-next-app` 기본 화면과 설정을 포함한 구현 시작점이며, 제품 기능이 완료된 상태는 아니다. API 의미와 MVP 범위는 저장소 루트의 계약 및 제품 문서를 기준으로 구현한다.
+이 디렉터리는 MCM RE:BORN 2주 해커톤 MVP의 Next.js 16 애플리케이션이다. 현재 고객 데모 화면·브라우저 카메라·중앙 Fixture 여정과 운영자 lifecycle command Route Handler를 포함하지만, 전체 API와 영속 고객 여정이 완료된 상태는 아니다. API 의미와 MVP 범위는 저장소 루트의 계약 및 제품 문서를 기준으로 구현한다.
 
 ## 작업 전 확인
 
@@ -28,6 +28,8 @@ Copy-Item .env.example mcm-reborn/.env.local
 ```
 
 `mcm-reborn/.env.local`에 로컬 OpenAI·Supabase 값을 설정한다. `OPENAI_API_KEY`와 `SUPABASE_SERVICE_ROLE_KEY`에는 `NEXT_PUBLIC_` 접두사를 붙이지 않으며 파일을 커밋하지 않는다.
+
+운영자 lifecycle command Route Handler는 `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SERVICE_ROLE_KEY`가 모두 필요하다. 서비스 역할 키는 멱등성 예약·캐시에만 사용하고, lifecycle RPC와 배송 조회는 요청의 Bearer 토큰으로 운영자 권한과 RLS를 적용한다. 환경변수가 비어 있으면 이 Route Handler는 명시적인 `503 SERVICE_UNAVAILABLE`을 반환한다.
 
 개발 서버를 시작한다.
 

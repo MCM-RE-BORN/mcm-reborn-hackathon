@@ -3,6 +3,9 @@ import OpenAI from 'openai';
 import { zodTextFormat } from 'openai/helpers/zod';
 import { z } from 'zod';
 
+export const PRIMARY_DEMO_SCENARIO_KEY =
+  'MCM_BACKPACK_CHANGE_APPROVED_20260817' as const;
+
 const ImageQualityIssueCodeSchema = z.enum([
   'BLUR',
   'TOO_DARK',
@@ -14,7 +17,7 @@ const ImageQualityIssueCodeSchema = z.enum([
 ]);
 
 const ImageQualityIssueSchema = z.object({
-  imageIndex: z.number().int().min(0).max(3),
+  imageIndex: z.number().int().min(0).max(6),
   code: ImageQualityIssueCodeSchema,
   guidanceKo: z.string().min(1).max(120),
 });
@@ -70,7 +73,11 @@ const BagVisionSchema = z.object({
   ).max(8),
   confidence: z.number().min(0).max(1),
   summaryKo: z.string().max(300),
-  authenticitySignal: z.enum(['NOT_EVALUATED', 'REVIEW_REQUIRED']),
+  authenticityPrecheck: z.object({
+    status: z.enum(['ORDER_ELIGIBLE', 'INELIGIBLE']),
+    estimatePercent: z.number().int().min(0).max(100),
+    notice: z.string().min(1),
+  }),
 });
 
 export type BagVisionResult = z.infer<typeof BagVisionSchema>;
@@ -119,13 +126,18 @@ export async function analyzeBagImages(
   imageUrls: readonly string[],
 ): Promise<{
   result: BagVisionResult;
+  estimateMeta: {
+    mode: 'LIVE';
+    confidencePercent: number;
+    notice: string;
+  };
   model: string;
   providerRequestId: string;
 }> {
   if (!process.env.OPENAI_API_KEY) {
     throw new Error('OPENAI_API_KEY_MISSING');
   }
-  if (imageUrls.length < 1 || imageUrls.length > 4) {
+  if (imageUrls.length !== 7) {
     throw new Error('IMAGE_COUNT_OUT_OF_RANGE');
   }
 
@@ -146,7 +158,7 @@ export async function analyzeBagImages(
         content: [
           {
             type: 'input_text',
-            text: '첨부 이미지를 동일한 하나의 가방으로 보고 분석하세요.',
+            text: '첨부 이미지를 정면, 후면, 상단, 하단, 좌측면, 우측면, 일련번호 순서의 동일한 하나의 가방으로 보고 분석하세요.',
           },
           ...imageUrls.map((imageUrl) => ({
             type: 'input_image' as const,
@@ -175,6 +187,12 @@ export async function analyzeBagImages(
 
   return {
     result: response.output_parsed,
+    estimateMeta: {
+      mode: 'LIVE',
+      confidencePercent: Math.round(response.output_parsed.confidence * 100),
+      notice:
+        '사진 기반 AI 예상치이며 주문 후 전문가 실물 검수에서 변경될 수 있습니다.',
+    },
     model,
     providerRequestId: response.id,
   };

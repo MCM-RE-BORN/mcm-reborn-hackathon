@@ -1,0 +1,646 @@
+.statePage {
+  display: grid;
+  flex: 1;
+  align-content: center;
+  padding-block: var(--space-22);
+}
+
+.submissionContent {
+  display: grid;
+  gap: var(--space-13);
+  padding-block: var(--space-5) var(--space-17);
+}
+
+.submissionLead {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.submissionLead h2 {
+  max-width: calc(var(--layout-content-max) - var(--space-23));
+  font-size: var(--font-size-display);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-relaxed);
+  letter-spacing: var(--letter-spacing-tight);
+}
+
+.submissionLead p {
+  color: var(--color-muted);
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-light);
+  line-height: var(--line-height-reading);
+}
+
+.eyebrow,
+.cardLabel {
+  color: var(--color-muted);
+  font-size: var(--font-size-label);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-tight);
+}
+
+.statusCardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-9);
+}
+
+.statusCardHeader > div {
+  display: grid;
+  min-width: var(--space-0);
+  gap: var(--space-2);
+}
+
+.statusCardHeader strong {
+  overflow-wrap: anywhere;
+  font-size: var(--font-size-control);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
+}
+
+.statusBadge {
+  display: inline-flex;
+  min-height: var(--control-height-xs);
+  align-items: center;
+  flex: none;
+  padding-inline: var(--space-7);
+  border: var(--border-hairline) solid var(--color-divider);
+  border-radius: var(--radius-pill);
+  background: var(--color-canvas);
+  font-size: var(--font-size-label);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
+}
+
+.sourceSummary {
+  display: grid;
+  grid-template-columns: var(--space-24) minmax(var(--space-0), 1fr);
+  align-items: center;
+  gap: var(--space-9);
+  padding: var(--space-7);
+  border: var(--border-hairline) solid var(--color-divider);
+  border-radius: var(--radius-control);
+  background: var(--color-canvas);
+}
+
+.sourceThumbnail {
+  position: relative;
+  width: var(--space-24);
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+}
+
+.sourceThumbnail img {
+  object-fit: cover;
+}
+
+.sourceSummaryCopy {
+  display: grid;
+  min-width: var(--space-0);
+  gap: var(--space-2);
+}
+
+.sourceSummaryCopy span,
+.sourceSummaryCopy p {
+  color: var(--color-muted);
+  font-size: var(--font-size-caption);
+  line-height: var(--line-height-reading);
+}
+
+.sourceSummaryCopy h2 {
+  overflow-wrap: anywhere;
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
+}
+
+.contractNotice,
+.engravingNotice {
+  display: grid;
+  gap: var(--space-4);
+  padding: var(--space-9);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+}
+
+.contractNotice strong,
+.engravingNotice strong {
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
+}
+
+.contractNotice p,
+.engravingNotice p {
+  color: var(--color-muted);
+  font-size: var(--font-size-label);
+  font-weight: var(--font-weight-light);
+  line-height: var(--line-height-reading);
+}
+
+.textAction,
+.centeredLink {
+  justify-self: center;
+}
+
+.analysisContent {
+  display: grid;
+  justify-items: stretch;
+  gap: var(--space-13);
+  padding-block: var(--space-24) var(--space-17);
+}
+
+.gaugeFigure {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-13);
+}
+
+.gauge {
+  position: relative;
+  width: min(100%, calc((var(--space-25) * 3) - var(--space-6)));
+  aspect-ratio: 1;
+}
+
+.gauge > img:first-child {
+  object-fit: contain;
+}
+
+.gaugeProgress {
+  position: absolute;
+  top: var(--space-1);
+  left: var(--space-1);
+  width: calc(100% - var(--space-2));
+  height: calc(100% - var(--space-2));
+}
+
+.gaugeLimitedProgress {
+  position: absolute;
+  top: var(--space-0);
+  left: calc(50% - var(--space-24));
+  width: calc(var(--space-23) + var(--space-7));
+  height: var(--space-28);
+}
+
+.gaugeValue {
+  position: absolute;
+  inset: var(--space-0);
+  display: grid;
+  place-items: center;
+  font-size: var(--font-size-metric);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-tight);
+  letter-spacing: var(--letter-spacing-tight);
+}
+
+.gaugeGrade {
+  font-size: var(--font-size-display);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-relaxed);
+}
+
+.analysisDetails {
+  margin-top: var(--space-22);
+  padding-top: var(--space-13);
+  border-top: var(--border-thin) solid var(--color-divider);
+}
+
+.limitedCopy {
+  display: grid;
+  gap: var(--space-9);
+  margin-top: var(--space-7);
+  padding-top: var(--space-13);
+  border-top: var(--border-thin) solid var(--color-divider);
+}
+
+.limitedCopy h2 {
+  font-size: var(--font-size-title);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-reading);
+  letter-spacing: var(--letter-spacing-tight);
+}
+
+.limitedCopy p {
+  color: var(--color-ink-soft);
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-light);
+  line-height: var(--line-height-relaxed);
+}
+
+.recommendationHeader {
+  position: relative;
+  background: var(--color-canvas);
+}
+
+.recommendationHeader::after {
+  position: absolute;
+  right: var(--space-0);
+  bottom: var(--space-0);
+  left: var(--space-0);
+  height: var(--border-thin);
+  background: var(--color-divider);
+  content: "";
+  opacity: var(--opacity-placeholder);
+}
+
+.productTabs {
+  display: flex;
+  min-height: var(--space-23);
+  align-items: flex-end;
+  gap: var(--space-11);
+  padding-inline: var(--layout-gutter-wide);
+}
+
+.productTab {
+  position: relative;
+  display: inline-flex;
+  min-width: var(--touch-target-min);
+  min-height: var(--touch-target-min);
+  align-items: center;
+  justify-content: center;
+  color: var(--color-ink-soft);
+  font-size: var(--font-size-control);
+  font-weight: var(--font-weight-regular);
+  line-height: var(--line-height-tight);
+}
+
+.productTabActive {
+  color: var(--color-ink);
+  font-weight: var(--font-weight-medium);
+}
+
+.productTabActive::after {
+  position: absolute;
+  right: var(--space-0);
+  bottom: var(--space-0);
+  left: var(--space-0);
+  height: var(--border-focus);
+  background: var(--color-ink);
+  content: "";
+}
+
+.recommendationViewport {
+  min-height: var(--space-0);
+  flex: 1;
+  overflow: visible;
+}
+
+.recommendationGradeNotice {
+  padding: var(--space-9) var(--layout-gutter-wide) var(--space-0);
+  color: var(--color-muted);
+  font-size: var(--font-size-label);
+  font-weight: var(--font-weight-light);
+  line-height: var(--line-height-tight);
+}
+
+.recommendationTrack {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(var(--space-0), 1fr));
+  gap: var(--space-17) var(--space-9);
+  padding: var(--space-13) var(--layout-gutter-wide) var(--space-21);
+}
+
+.recommendationTrackAnimated {
+  animation: recommendationListLoop
+    var(--duration-recommendation-loop) linear infinite;
+  will-change: transform;
+}
+
+.productCard {
+  display: grid;
+  min-width: var(--space-0);
+  gap: var(--space-5);
+  border: var(--space-0);
+  background: var(--color-transparent);
+}
+
+.productCardSelectable:focus-visible .productImage,
+.productCardSelectable:hover .productImage {
+  outline: var(--border-focus) solid var(--color-ink);
+  outline-offset: var(--space-2);
+}
+
+.productImage {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 168 / 182;
+  overflow: hidden;
+  background: var(--color-surface);
+}
+
+.productImage img {
+  object-fit: contain;
+}
+
+.recommendationBadge {
+  position: absolute;
+  top: var(--space-4);
+  left: var(--space-4);
+  z-index: 1;
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-pill);
+  background: var(--color-ink);
+  color: var(--color-canvas);
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-semibold);
+}
+
+.productName {
+  min-width: var(--space-0);
+  color: var(--color-ink);
+  font-size: var(--font-size-label);
+  font-weight: var(--font-weight-regular);
+  line-height: var(--line-height-tight);
+  overflow-wrap: anywhere;
+}
+
+.recommendationMetrics {
+  display: grid;
+  gap: var(--space-2);
+  color: var(--color-ink-soft);
+  font-size: var(--font-size-caption);
+  line-height: var(--line-height-tight);
+}
+
+.recommendationMetrics strong {
+  color: var(--color-ink);
+  font-size: var(--font-size-label);
+}
+
+.recommendationConstraint {
+  color: var(--color-muted);
+  font-size: var(--font-size-caption);
+  line-height: var(--line-height-reading);
+}
+
+.recommendationNotice {
+  margin: var(--space-0) var(--layout-gutter-wide) var(--space-21);
+  padding: var(--space-7);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  color: var(--color-ink-soft);
+  font-size: var(--font-size-label);
+  line-height: var(--line-height-reading);
+}
+
+.mockupContent {
+  display: grid;
+  gap: var(--space-13);
+  padding-block: var(--space-6) var(--space-17);
+}
+
+.mockupHeader {
+  display: flex;
+  min-height: calc(var(--space-25) + var(--safe-area-top));
+  align-items: flex-start;
+  padding: calc(var(--safe-area-top) + var(--space-5)) var(--layout-gutter)
+    var(--space-5);
+  background: var(--color-canvas);
+}
+
+.mockupBackLink {
+  display: inline-flex;
+  width: var(--touch-target-min);
+  min-width: var(--touch-target-min);
+  height: var(--touch-target-min);
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.mockupHero {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 341 / 395;
+  overflow: hidden;
+  background: var(--color-surface);
+  cursor: grab;
+  touch-action: pan-y;
+}
+
+.mockupHero img {
+  object-fit: contain;
+  transition: transform var(--duration-fast) var(--ease-standard);
+}
+
+.mockupViewLabel {
+  position: absolute;
+  right: var(--space-5);
+  bottom: var(--space-5);
+  padding: var(--space-2) var(--space-5);
+  border-radius: var(--radius-pill);
+  background: var(--color-ink);
+  color: var(--color-canvas);
+  font-size: var(--font-size-caption);
+}
+
+.mockupControls {
+  display: flex;
+  min-height: var(--touch-target-min);
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+  margin-top: var(--space-5);
+}
+
+.mockupControls button,
+.mockupThumbnails button {
+  border: var(--border-hairline) solid var(--color-divider);
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  cursor: pointer;
+}
+
+.mockupControls button {
+  display: grid;
+  width: var(--touch-target-min);
+  height: var(--touch-target-min);
+  place-items: center;
+  border-radius: var(--radius-pill);
+  font-size: var(--font-size-title);
+}
+
+.mockupControls button:disabled {
+  cursor: not-allowed;
+  opacity: var(--opacity-disabled);
+}
+
+.mockupControls span {
+  min-width: var(--space-15);
+  color: var(--color-ink-soft);
+  font-size: var(--font-size-label);
+  text-align: center;
+}
+
+.mockupThumbnails {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(var(--space-0), 1fr));
+  gap: var(--space-5);
+  margin-top: var(--space-5);
+}
+
+.mockupThumbnails button {
+  position: relative;
+  display: grid;
+  min-height: var(--space-24);
+  place-items: end center;
+  overflow: hidden;
+  border-radius: var(--radius-control);
+}
+
+.mockupThumbnails button[aria-pressed="true"] {
+  border-color: var(--color-ink);
+  box-shadow: inset var(--space-0) var(--space-0) var(--space-0)
+    var(--border-hairline) var(--color-ink);
+}
+
+.mockupThumbnails img {
+  object-fit: contain;
+}
+
+.mockupThumbnails span {
+  z-index: 1;
+  width: 100%;
+  padding: var(--space-2);
+  background: color-mix(in srgb, var(--color-canvas) 88%, transparent);
+  font-size: var(--font-size-caption);
+}
+
+.mockupInteractionHint {
+  margin-top: var(--space-4);
+  color: var(--color-muted);
+  font-size: var(--font-size-label);
+  line-height: var(--line-height-reading);
+  text-align: center;
+}
+
+.productDetailHeader {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.productDetailHeader h1 {
+  font-size: var(--font-size-title);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
+  letter-spacing: var(--letter-spacing-tight);
+}
+
+.engravingLink {
+  width: fit-content;
+  min-height: var(--touch-target-min);
+  color: var(--color-link);
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-light);
+  line-height: var(--line-height-tight);
+  text-decoration: underline;
+  text-underline-offset: var(--space-2);
+}
+
+.productDescription {
+  color: var(--color-ink-soft);
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-light);
+  line-height: var(--line-height-relaxed);
+}
+
+.mockupGallery {
+  display: grid;
+  gap: var(--space-7);
+}
+
+.galleryItem {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  overflow: hidden;
+  background: var(--color-surface);
+}
+
+.galleryItem img {
+  object-fit: contain;
+}
+
+.engravingNotice {
+  border-top: var(--border-thin) solid var(--color-divider);
+  background: var(--color-canvas);
+}
+
+@keyframes recommendationListLoop {
+  0% {
+    transform: translateY(var(--space-0));
+  }
+
+  35.595% {
+    transform: translateY(var(--space-0));
+    animation-timing-function: var(--ease-recommendation);
+  }
+
+  95.21%,
+  100% {
+    transform: translateY(var(--motion-recommendation-shift));
+  }
+}
+
+@keyframes recommendationDividerLoop {
+  0% {
+    opacity: var(--opacity-placeholder);
+  }
+
+  35.595% {
+    opacity: var(--opacity-placeholder);
+    animation-timing-function: var(--ease-recommendation);
+  }
+
+  95.21%,
+  100% {
+    opacity: 100%;
+  }
+}
+
+@media (max-width: 22.5rem) {
+  .analysisContent {
+    padding-top: var(--space-20);
+  }
+
+  .analysisDetails {
+    margin-top: var(--space-17);
+  }
+
+  .recommendationViewport {
+    overflow-y: auto;
+  }
+
+  .recommendationTrack {
+    grid-template-columns: minmax(var(--space-0), 1fr);
+  }
+
+  .recommendationTrackAnimated {
+    animation: none;
+    transform: none;
+    will-change: auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .recommendationHeader::after,
+  .recommendationTrackAnimated {
+    animation: none;
+  }
+
+  .recommendationHeader::after {
+    opacity: 100%;
+  }
+
+  .recommendationViewport {
+    overflow-y: auto;
+  }
+
+  .recommendationTrackAnimated {
+    transform: none;
+    will-change: auto;
+  }
+}
