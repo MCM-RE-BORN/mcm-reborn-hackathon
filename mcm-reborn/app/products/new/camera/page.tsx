@@ -12,7 +12,10 @@ export const metadata: Metadata = {
 export default async function ProductCameraPage({
   searchParams,
 }: EntryPageProps) {
-  const { state } = await readEntrySearchParams(searchParams);
+  const { capturedSlots, slot, state } =
+    await readEntrySearchParams(searchParams);
 
-  return <CameraScreen state={state} />;
+  return (
+    <CameraScreen completedSlots={capturedSlots} slot={slot} state={state} />
+  );
 }

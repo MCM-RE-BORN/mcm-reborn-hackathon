@@ -1,14 +1,14 @@
 import Image from "next/image";
 import Link from "next/link";
 import { AppShell } from "@/components/layout/AppShell";
-import { BottomNav } from "@/components/layout/BottomNav";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Section } from "@/components/layout/Section";
 import { KeyValueList } from "@/components/ui/KeyValueList";
 import { SectionBand } from "@/components/ui/SectionBand";
 import fieldStyles from "@/components/ui/ui.module.css";
-import { DEMO_ORDER } from "./demo-data";
+import { DEMO_SCENARIO } from "@/data/demo-scenario";
 import type { DemoState } from "./demo-state";
+import { DemoLogoutButton } from "./DemoLogoutButton";
 import { DemoStatePanel } from "./DemoStatePanel";
 import styles from "./order-certificate.module.css";
 
@@ -36,15 +36,16 @@ function AccordionChevron() {
 }
 
 export function MyPageScreen({ state }: MyPageScreenProps) {
+  const { order } = DEMO_SCENARIO;
+
   return (
     <AppShell
-      footer={<BottomNav active="profile" />}
-      header={<PageHeader backHref="/" title="마이페이지" />}
+      header={<PageHeader backHref="/home" title="마이페이지" />}
     >
       {state !== "normal" ? (
         <div className={styles.stateInset}>
           <DemoStatePanel
-            emptyDescription="표시할 데모 프로필 정보가 없습니다."
+            emptyDescription="표시할 프로필 정보가 없습니다."
             retryHref="/mypage"
             state={state}
             subject="프로필 정보"
@@ -60,11 +61,11 @@ export function MyPageScreen({ state }: MyPageScreenProps) {
             <KeyValueList
               className={styles.profileList}
               items={[
-                { label: "이름", value: DEMO_ORDER.customer.name },
-                { label: "휴대폰", value: DEMO_ORDER.customer.phone },
+                { label: "이름", value: order.customer.name },
+                { label: "휴대폰", value: order.customer.phone },
                 {
                   label: "주소지",
-                  value: `${DEMO_ORDER.customer.address} ${DEMO_ORDER.customer.addressDetail}`,
+                  value: `${order.customer.address} ${order.customer.addressDetail}`,
                 },
                 {
                   label: "비밀번호",
@@ -73,7 +74,7 @@ export function MyPageScreen({ state }: MyPageScreenProps) {
               ]}
             />
             <div className={styles.profilePasswordAction}>
-              {/* TODO(post-beta): connect password change to the approved auth contract. */}
+              {/* TODO(integration): connect password change to the approved auth contract. */}
               <button
                 className={`${styles.textLink} ${styles.profilePasswordLink}`}
                 disabled
@@ -107,7 +108,7 @@ export function MyPageScreen({ state }: MyPageScreenProps) {
                 />
               </svg>
               <span>선호하는 MCM 매장</span>
-              {/* TODO(post-beta): persist the preferred MCM store selection. */}
+              {/* TODO(integration): persist the preferred MCM store selection. */}
               <button className={styles.textLink} disabled type="button">
                 매장 설정
               </button>
@@ -116,8 +117,11 @@ export function MyPageScreen({ state }: MyPageScreenProps) {
 
           <SectionBand />
 
-          {/* TODO(post-beta): confirm this destination once the beta certificate lookup flow is finalized. */}
-          <Link className={styles.certificateLinkCard} href="/certificates/demo">
+          {/* TODO(integration): connect this entry to the authenticated certificate lookup. */}
+          <Link
+            className={styles.certificateLinkCard}
+            href="/certificates/demo?state=locked"
+          >
             나의 RE:BORN 인증서 보기
             <Image
               alt=""
@@ -130,13 +134,13 @@ export function MyPageScreen({ state }: MyPageScreenProps) {
           </Link>
 
           <nav aria-label="계정 도움말" className={styles.footerLinks}>
-            {/* TODO(post-beta): link to the approved customer-support destination. */}
+            {/* TODO(integration): link to the approved customer-support destination. */}
             <button className={styles.textLink} disabled type="button">
               고객센터
             </button>
             <span aria-hidden="true" />
-            {/* TODO(post-beta): revoke the authenticated session through the approved auth contract. */}
-            <Link href="/login">로그아웃</Link>
+            {/* TODO(integration): also revoke the authenticated server session when auth is connected. */}
+            <DemoLogoutButton />
           </nav>
         </div>
       )}

@@ -73,6 +73,50 @@
   line-height: var(--line-height-tight);
 }
 
+.sourceSummary {
+  display: grid;
+  grid-template-columns: var(--space-24) minmax(var(--space-0), 1fr);
+  align-items: center;
+  gap: var(--space-9);
+  padding: var(--space-7);
+  border: var(--border-hairline) solid var(--color-divider);
+  border-radius: var(--radius-control);
+  background: var(--color-canvas);
+}
+
+.sourceThumbnail {
+  position: relative;
+  width: var(--space-24);
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+}
+
+.sourceThumbnail img {
+  object-fit: cover;
+}
+
+.sourceSummaryCopy {
+  display: grid;
+  min-width: var(--space-0);
+  gap: var(--space-2);
+}
+
+.sourceSummaryCopy span,
+.sourceSummaryCopy p {
+  color: var(--color-muted);
+  font-size: var(--font-size-caption);
+  line-height: var(--line-height-reading);
+}
+
+.sourceSummaryCopy h2 {
+  overflow-wrap: anywhere;
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
+}
+
 .contractNotice,
 .engravingNotice {
   display: grid;
@@ -263,6 +307,16 @@
   display: grid;
   min-width: var(--space-0);
   gap: var(--space-4);
+  padding: var(--space-4);
+  border: var(--border-hairline) solid var(--color-divider);
+  border-radius: var(--radius-control);
+  background: var(--color-canvas);
+}
+
+.productCardSelected {
+  border-color: var(--color-ink);
+  box-shadow: inset var(--space-0) var(--space-0) var(--space-0)
+    var(--border-hairline) var(--color-ink);
 }
 
 .productImage {
@@ -278,6 +332,19 @@
   object-fit: contain;
 }
 
+.recommendationBadge {
+  position: absolute;
+  top: var(--space-4);
+  left: var(--space-4);
+  z-index: 1;
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-pill);
+  background: var(--color-ink);
+  color: var(--color-canvas);
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-semibold);
+}
+
 .productName {
   min-width: var(--space-0);
   color: var(--color-ink-soft);
@@ -285,6 +352,36 @@
   font-weight: var(--font-weight-regular);
   line-height: var(--line-height-tight);
   overflow-wrap: anywhere;
+}
+
+.recommendationMetrics {
+  display: grid;
+  gap: var(--space-2);
+  color: var(--color-ink-soft);
+  font-size: var(--font-size-caption);
+  line-height: var(--line-height-tight);
+}
+
+.recommendationMetrics strong {
+  color: var(--color-ink);
+  font-size: var(--font-size-label);
+}
+
+.recommendationConstraint {
+  color: var(--color-muted);
+  font-size: var(--font-size-caption);
+  line-height: var(--line-height-reading);
+}
+
+.recommendationNotice {
+  margin: var(--space-0) var(--layout-gutter-wide)
+    calc(var(--layout-sticky-action-height) + var(--space-17));
+  padding: var(--space-7);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  color: var(--color-ink-soft);
+  font-size: var(--font-size-label);
+  line-height: var(--line-height-reading);
 }
 
 .mockupContent {
@@ -317,10 +414,104 @@
   aspect-ratio: 341 / 395;
   overflow: hidden;
   background: var(--color-surface);
+  cursor: grab;
+  touch-action: pan-y;
 }
 
 .mockupHero img {
   object-fit: contain;
+  transition: transform var(--duration-fast) var(--ease-standard);
+}
+
+.mockupViewLabel {
+  position: absolute;
+  right: var(--space-5);
+  bottom: var(--space-5);
+  padding: var(--space-2) var(--space-5);
+  border-radius: var(--radius-pill);
+  background: var(--color-ink);
+  color: var(--color-canvas);
+  font-size: var(--font-size-caption);
+}
+
+.mockupControls {
+  display: flex;
+  min-height: var(--touch-target-min);
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+  margin-top: var(--space-5);
+}
+
+.mockupControls button,
+.mockupThumbnails button {
+  border: var(--border-hairline) solid var(--color-divider);
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  cursor: pointer;
+}
+
+.mockupControls button {
+  display: grid;
+  width: var(--touch-target-min);
+  height: var(--touch-target-min);
+  place-items: center;
+  border-radius: var(--radius-pill);
+  font-size: var(--font-size-title);
+}
+
+.mockupControls button:disabled {
+  cursor: not-allowed;
+  opacity: var(--opacity-disabled);
+}
+
+.mockupControls span {
+  min-width: var(--space-15);
+  color: var(--color-ink-soft);
+  font-size: var(--font-size-label);
+  text-align: center;
+}
+
+.mockupThumbnails {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(var(--space-0), 1fr));
+  gap: var(--space-5);
+  margin-top: var(--space-5);
+}
+
+.mockupThumbnails button {
+  position: relative;
+  display: grid;
+  min-height: var(--space-24);
+  place-items: end center;
+  overflow: hidden;
+  border-radius: var(--radius-control);
+}
+
+.mockupThumbnails button[aria-pressed="true"] {
+  border-color: var(--color-ink);
+  box-shadow: inset var(--space-0) var(--space-0) var(--space-0)
+    var(--border-hairline) var(--color-ink);
+}
+
+.mockupThumbnails img {
+  object-fit: contain;
+}
+
+.mockupThumbnails span {
+  z-index: 1;
+  width: 100%;
+  padding: var(--space-2);
+  background: color-mix(in srgb, var(--color-canvas) 88%, transparent);
+  font-size: var(--font-size-caption);
+}
+
+.mockupInteractionHint {
+  margin-top: var(--space-4);
+  color: var(--color-muted);
+  font-size: var(--font-size-label);
+  line-height: var(--line-height-reading);
+  text-align: center;
 }
 
 .productDetailHeader {

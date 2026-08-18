@@ -12,7 +12,9 @@ export const metadata: Metadata = {
 export default async function ProductNewPage({
   searchParams,
 }: EntryPageProps) {
-  const { captured, state } = await readEntrySearchParams(searchParams);
+  const { capturedSlots, state } = await readEntrySearchParams(searchParams);
 
-  return <ProductCaptureScreen captured={captured} state={state} />;
+  return (
+    <ProductCaptureScreen capturedSlots={capturedSlots} state={state} />
+  );
 }

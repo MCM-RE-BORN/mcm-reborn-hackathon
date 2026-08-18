@@ -18,7 +18,7 @@ export default async function IneligiblePage({
 
   return (
     <AnalysisResultScreen
-      ineligibleReason={requestedReason === "quality" ? "quality" : "review"}
+      ineligibleReason={requestedReason === "quality" ? "quality" : "precheck"}
       state={readDemoState(state)}
     />
   );

@@ -7,7 +7,10 @@ import { Card } from "@/components/ui/Card";
 import { KeyValueList } from "@/components/ui/KeyValueList";
 import { ProgressStepper } from "@/components/ui/ProgressStepper";
 import { StatusPanel } from "@/components/ui/StatusPanel";
+import { DEMO_SCENARIO } from "@/data/demo-scenario";
 import { DemoStatePanel } from "./DemoStatePanel";
+import { SubmissionLoadingState } from "./SubmissionLoadingState";
+import { SubmissionProductSummary } from "./SubmissionProductSummary";
 import styles from "./analysis-design.module.css";
 import type { DemoState } from "./types";
 
@@ -19,13 +22,20 @@ export function SubmissionStatusScreen({
   state,
 }: SubmissionStatusScreenProps) {
   if (state !== "normal") {
+    if (state === "loading") {
+      return (
+        <AppShell
+          header={<PageHeader backHref="/products/new" title="접수 현황" />}
+        >
+          <div className={styles.statePage}>
+            <SubmissionLoadingState />
+          </div>
+        </AppShell>
+      );
+    }
+
     const action =
-      state === "loading"
-        ? {
-            href: "/submissions/demo",
-            label: "완료된 분석 데모 보기",
-          }
-        : state === "limited"
+      state === "limited"
         ? {
             href: "/products/new",
             label: "사진 보완하기",
@@ -54,7 +64,7 @@ export function SubmissionStatusScreen({
                   보완 사진 다시 등록하기
                 </ButtonLink>
               }
-              description="정면과 손상 부위가 더 선명한 사진이 필요합니다. 사진을 보완해 다시 제출하면 접수·분석 흐름으로 복귀합니다. 이 요청은 소재 C등급이나 수동 검토 상태와 다릅니다."
+              description="정면과 손상 부위가 더 선명한 사진이 필요합니다. 사진을 보완해 다시 제출하면 사전 분석을 이어갈 수 있어요."
               title="사진 보완 요청이 도착했어요"
               tone="permission"
             />
@@ -87,7 +97,7 @@ export function SubmissionStatusScreen({
     >
       <div className={styles.submissionContent}>
         <section className={styles.submissionLead}>
-          <span className={styles.eyebrow}>ANALYSIS COMPLETE</span>
+          <span className={styles.eyebrow}>AI PRE-CHECK COMPLETE</span>
           <h2>AI 사전 분석이 완료되었어요</h2>
           <p>
             접수한 사진과 제품 정보로 원단 상태를 확인했습니다. 결과를
@@ -100,47 +110,44 @@ export function SubmissionStatusScreen({
           items={["접수", "분석", "결과"]}
         />
 
+        <SubmissionProductSummary />
+
         <Card padding="regular" tone="surface">
           <div className={styles.statusCardHeader}>
             <div>
               <span className={styles.cardLabel}>접수 번호</span>
-              <strong>SUB-DEMO-001</strong>
+              <strong>{DEMO_SCENARIO.submission.id}</strong>
             </div>
             <span className={styles.statusBadge}>분석 완료</span>
           </div>
         </Card>
 
         <Section
-          description="제출 사진을 기준으로 생성된 데모 분석 요약입니다."
+          description="제출 사진과 제품 정보를 기준으로 생성한 사전 분석 요약입니다."
           title="접수 정보"
         >
           <KeyValueList
             dividers
             items={[
               { label: "접수 상태", value: "분석 완료" },
-              { label: "사진 품질", value: "ACCEPTABLE" },
-              { label: "정품 신호", value: "NOT_EVALUATED" },
+              { label: "사진 품질", value: "분석에 적합" },
+              {
+                label: "사진 사전 적합성",
+                value: `주문 진행 가능 · 예상 ${DEMO_SCENARIO.analysis.authenticityPrecheckPercent}%`,
+              },
               { label: "다음 단계", value: "결과 확인" },
             ]}
           />
         </Section>
 
         <aside className={styles.contractNotice}>
-          <strong>정품 판정 안내</strong>
+          <strong>사진 사전 확인 안내</strong>
           <p>
-            AI 분석은 정품·가품을 확정하지 않습니다. 현재 접수는 별도 판정
-            신호가 없는 상태이며 신청 단계로 진행할 수 있습니다.
+            이 결과는 사진을 바탕으로 한 주문 적합성 예상이며 공식 정품
+            판정이 아닙니다. 결제와 주문 후 제품을 수거하면 MCM 공식 장인이
+            실물을 최종 확인합니다.
           </p>
         </aside>
-
-        <ButtonLink
-          className={styles.textAction}
-          href="/submissions/demo/ineligible"
-          size="small"
-          variant="ghost"
-        >
-          제작 불가 결과 예시 보기
-        </ButtonLink>
       </div>
     </AppShell>
   );

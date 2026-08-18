@@ -1,4 +1,6 @@
 import type { Metadata, Viewport } from "next";
+import { CaptureSessionProvider } from "@/components/screens/entry-capture/CaptureSessionProvider";
+import { OrderDraftProvider } from "@/components/screens/order-certificate/OrderDraftProvider";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -6,7 +8,7 @@ export const metadata: Metadata = {
     default: "MCM RE:BORN",
     template: "%s | MCM RE:BORN",
   },
-  description: "MCM 제품의 다음 쓰임을 만드는 업사이클링 베타 서비스",
+  description: "MCM 제품의 다음 쓰임을 만드는 공식 업사이클링 서비스",
 };
 
 export const viewport: Viewport = {
@@ -43,7 +45,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           rel="stylesheet"
         />
       </head>
-      <body>{children}</body>
+      <body>
+        <CaptureSessionProvider>
+          <OrderDraftProvider>{children}</OrderDraftProvider>
+        </CaptureSessionProvider>
+      </body>
     </html>
   );
 }

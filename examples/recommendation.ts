@@ -15,8 +15,13 @@ export type ConditionGrade = 'A' | 'B' | 'C' | 'D';
 
 export type ProductTemplate = {
   id: string;
-  code: 'REBORN_POUCH' | 'REBORN_CARD_WALLET' | 'REBORN_KEYRING' | 'REBORN_BAG_STRAP';
+  code:
+    | 'REBORN_PASSPORT_WALLET'
+    | 'REBORN_CARD_WALLET'
+    | 'REBORN_NAME_TAG'
+    | 'REBORN_KEYRING';
   requiredAreaCm2: number;
+  estimatedReusableMaterialRate: number;
   requiresLongStrip?: boolean;
 };
 
@@ -56,6 +61,7 @@ export function calculateMaterial(input: {
   sourceCategory: SourceCategory;
   conditionGrade: ConditionGrade;
   overallDamageSeverity: number;
+  confidencePercent: number;
 }) {
   if (
     !Number.isInteger(input.overallDamageSeverity) ||
@@ -64,25 +70,38 @@ export function calculateMaterial(input: {
   ) {
     throw new Error('DAMAGE_SEVERITY_OUT_OF_RANGE');
   }
+  if (
+    !Number.isInteger(input.confidencePercent) ||
+    input.confidencePercent < 0 ||
+    input.confidencePercent > 100
+  ) {
+    throw new Error('CONFIDENCE_PERCENT_OUT_OF_RANGE');
+  }
 
   const damagePenalty = Math.min(input.overallDamageSeverity * 0.15, 15);
-  const reusableMaterialRate = clamp(
+  const estimatedReusableMaterialRate = clamp(
     Math.round(BASE_REUSABLE_RATE[input.conditionGrade] - damagePenalty),
     15,
     90,
   );
   const estimatedReusableAreaCm2 = Math.round(
-    BASE_AREA_CM2[input.sourceCategory] * reusableMaterialRate / 100,
+    BASE_AREA_CM2[input.sourceCategory] * estimatedReusableMaterialRate / 100,
   );
   const estimatedCarbonSavingKgCo2e = Number(
     (estimatedReusableAreaCm2 * 0.0012).toFixed(2),
   );
 
   return {
-    reusableMaterialRate,
+    estimateMeta: {
+      mode: 'SEEDED_ESTIMATE' as const,
+      confidencePercent: input.confidencePercent,
+      notice:
+        '사진 입력을 시드로 계산한 예상치이며 주문 후 전문가 실물 검수에서 변경될 수 있습니다.',
+    },
+    estimatedReusableMaterialRate,
     estimatedReusableAreaCm2,
     estimatedCarbonSavingKgCo2e,
-    methodologyVersion: 'DEMO_LCA_V1' as const,
+    methodologyVersion: 'DEMO_LCA_V2' as const,
   };
 }
 
@@ -120,6 +139,7 @@ export function recommendProducts(input: {
         productCode: product.code,
         eligible,
         score,
+        estimatedReusableMaterialRate: product.estimatedReusableMaterialRate,
         reasonCodes,
       };
     })

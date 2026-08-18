@@ -1,10 +1,17 @@
+"use client";
+
 import Image from "next/image";
 import { AppShell } from "@/components/layout/AppShell";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { ButtonLink } from "@/components/ui/Button";
-import { DEMO_PENDING_APPLICATION } from "./demo-data";
+import { DEMO_SCENARIO } from "@/data/demo-scenario";
 import type { DemoState } from "./demo-state";
 import { DemoStatePanel } from "./DemoStatePanel";
+import {
+  formatPickupDateLabel,
+  formatPickupTimeLabel,
+  useOrderDraft,
+} from "./OrderDraftProvider";
 import styles from "./order-certificate.module.css";
 
 type OrderCompleteScreenProps = {
@@ -15,16 +22,21 @@ type OrderCompleteScreenProps = {
 };
 
 export function OrderCompleteScreen({ state }: OrderCompleteScreenProps) {
+  const { orderDraft } = useOrderDraft();
+  const { order } = DEMO_SCENARIO;
+
   return (
-    <AppShell header={<PageHeader backHref="/checkout" />}>
+    <AppShell
+      header={state === "normal" ? undefined : <PageHeader backHref="/checkout" />}
+    >
       {state !== "normal" ? (
         <div className={styles.stateInset}>
-          <h1 className={styles.visuallyHidden}>신청 완료</h1>
+          <h1 className={styles.visuallyHidden}>주문 접수 완료</h1>
           <DemoStatePanel
-            emptyDescription="완료된 신청을 찾지 못했습니다. 신청 내역에서 상태를 다시 확인해 주세요."
+            emptyDescription="접수된 주문을 찾지 못했습니다. 진행 조회에서 주문 상태를 다시 확인해 주세요."
             retryHref="/orders/demo/complete"
             state={state}
-            subject="신청 완료 정보"
+            subject="주문 접수 정보"
           />
         </div>
       ) : (
@@ -39,20 +51,20 @@ export function OrderCompleteScreen({ state }: OrderCompleteScreenProps) {
             width={126}
           />
           <div className={styles.completeCopy}>
-            <h1>데모 결제가 완료되어 신청이 접수되었습니다</h1>
+            <h1>주문이 접수되었습니다</h1>
             <p>
-              신청번호 <u>{DEMO_PENDING_APPLICATION.applicationNumber}</u>
+              주문번호 <u>{order.number}</u>
             </p>
             <p>
-              현재 상태: {DEMO_PENDING_APPLICATION.applicationStatus} · 승인 대기
+              {formatPickupDateLabel(orderDraft.pickupDate)}{" "}
+              {formatPickupTimeLabel(orderDraft.pickupTime)} 수거 예정
             </p>
           </div>
-          <ButtonLink fullWidth href="/orders/demo">
-            진행 완료 데모 신청 보기
+          <ButtonLink fullWidth href="/orders/demo?stage=pickup">
+            주문 진행 확인하기
           </ButtonLink>
           <p className={styles.demoCaption}>
-            실제 결제·수거 요청은 발생하지 않습니다. 다음 화면은 Passport까지
-            확인할 수 있는 별도의 완료 상태 데모 신청입니다.
+            수거 후 전문가의 실물 검수를 거쳐 최종 제작 조건이 확정됩니다.
           </p>
         </section>
       )}

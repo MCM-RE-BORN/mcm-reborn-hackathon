@@ -1,3 +1,7 @@
+"use client";
+
+import { useRouter } from "next/navigation";
+import type { FormEvent } from "react";
 import { AppShell } from "@/components/layout/AppShell";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Section } from "@/components/layout/Section";
@@ -6,9 +10,10 @@ import { Button } from "@/components/ui/Button";
 import { KeyValueList } from "@/components/ui/KeyValueList";
 import { SectionBand } from "@/components/ui/SectionBand";
 import { TextField } from "@/components/ui/TextField";
-import { DEMO_ORDER } from "./demo-data";
+import { DEMO_SCENARIO, formatKrw } from "@/data/demo-scenario";
 import type { DemoState } from "./demo-state";
 import { DemoStatePanel } from "./DemoStatePanel";
+import { useOrderDraft } from "./OrderDraftProvider";
 import styles from "./order-certificate.module.css";
 
 type OrderNewScreenProps = {
@@ -19,18 +24,35 @@ type OrderNewScreenProps = {
 };
 
 export function OrderNewScreen({ state }: OrderNewScreenProps) {
+  const router = useRouter();
+  const { orderDraft, setOrderDraft } = useOrderDraft();
   const isNormal = state === "normal";
+  const { selectedDesign } = DEMO_SCENARIO;
+
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    const readValue = (name: string) =>
+      String(formData.get(name) ?? "").trim();
+
+    setOrderDraft({
+      address: readValue("address"),
+      addressDetail: readValue("addressDetail"),
+      name: readValue("customerName"),
+      phone: readValue("customerPhone"),
+      pickupDate: readValue("pickupDate"),
+      pickupTime: readValue("pickupTime"),
+      postalCode: readValue("postalCode"),
+    });
+    router.push("/checkout");
+  };
 
   return (
     <AppShell
       footer={
         isNormal ? (
           <StickyActionBar>
-            <Button
-              form="order-application-form"
-              fullWidth
-              type="submit"
-            >
+            <Button form="order-application-form" fullWidth type="submit">
               주문 확인 및 결제
             </Button>
           </StickyActionBar>
@@ -49,125 +71,146 @@ export function OrderNewScreen({ state }: OrderNewScreenProps) {
             emptyDescription="선택한 업사이클링 제품이 없습니다. 제품 추천에서 제작안을 먼저 선택해 주세요."
             retryHref="/orders/new"
             state={state}
-            subject="신청 정보"
+            subject="주문 정보"
           />
         </div>
       ) : (
         <>
-          <section aria-labelledby="selected-product" className={styles.summaryBlock}>
+          <section
+            aria-labelledby="selected-product"
+            className={styles.summaryBlock}
+          >
             <h2 className={styles.visuallyHidden} id="selected-product">
               선택 상품
             </h2>
             <KeyValueList
               items={[
-                { label: "선택 상품", value: DEMO_ORDER.product.name },
+                { label: "선택 상품", value: selectedDesign.name },
                 {
                   label: "예상 제작 기간",
-                  value: DEMO_ORDER.product.estimatedDuration,
+                  value: selectedDesign.initialEstimatedDuration,
                 },
-                { label: "제작 비용", value: DEMO_ORDER.product.price },
+                {
+                  label: "제작 비용",
+                  value: formatKrw(selectedDesign.initialPriceKrw),
+                },
               ]}
             />
           </section>
           <SectionBand />
           <section aria-label="수거 방법" className={styles.pickupMethod}>
             <KeyValueList
-              items={[{ label: "수거 방법", value: "택배 수거" }]}
+              items={[
+                { label: "수거 방법", value: "방문 택배 수거 · 무료" },
+              ]}
             />
           </section>
           <SectionBand />
-          {/* TODO(post-beta): persist the approved application and create the pickup request through the contract API. */}
-          <form action="/checkout" id="order-application-form" method="get">
+          <form
+            id="order-application-form"
+            method="post"
+            onSubmit={handleSubmit}
+          >
             <Section title="주문자 정보">
               <div className={styles.fieldStack}>
                 <TextField
                   autoComplete="name"
-                  defaultValue={DEMO_ORDER.customer.name}
+                  className={styles.customerNameInput}
+                  defaultValue={orderDraft.name}
                   id="customer-name"
                   label="이름"
+                  name="customerName"
                   required
                 />
                 <TextField
                   autoComplete="tel"
-                  defaultValue={DEMO_ORDER.customer.phone}
+                  defaultValue={orderDraft.phone}
                   id="customer-phone"
                   inputMode="tel"
                   label="휴대폰 번호"
+                  name="customerPhone"
                   required
                   type="tel"
                 />
-                <div className={styles.addressRow}>
-                  <TextField
-                    autoComplete="postal-code"
-                    defaultValue={DEMO_ORDER.customer.postalCode}
-                    id="customer-postal-code"
-                    inputMode="numeric"
-                    label="우편번호"
-                    required
-                  />
-                  {/* TODO(post-beta): 주소 검색 서비스 연동 */}
-                  <Button
-                    aria-describedby="address-post-beta"
-                    disabled
-                    size="medium"
-                    variant="outline"
-                  >
-                    주소 찾기
-                  </Button>
-                </div>
+                <TextField
+                  autoComplete="postal-code"
+                  defaultValue={orderDraft.postalCode}
+                  id="customer-postal-code"
+                  inputMode="numeric"
+                  label="우편번호"
+                  name="postalCode"
+                  required
+                />
                 <TextField
                   autoComplete="street-address"
-                  defaultValue={DEMO_ORDER.customer.address}
+                  defaultValue={orderDraft.address}
                   id="customer-address"
                   label="주소"
+                  name="address"
                   required
                 />
                 <TextField
                   autoComplete="address-line2"
-                  defaultValue={DEMO_ORDER.customer.addressDetail}
+                  defaultValue={orderDraft.addressDetail}
                   id="customer-address-detail"
                   label="상세 주소"
+                  name="addressDetail"
                   required
                 />
-                <p className={styles.postBetaNote} id="address-post-beta">
-                  베타에서는 주소 검색 없이 데모 주소를 직접 확인합니다.
-                </p>
               </div>
             </Section>
             <SectionBand />
             <Section
-              description="현재 베타 데모에서는 택배 수거만 표시합니다."
+              description="원하시는 방문 수거 일정을 확인해 주세요. 수거 비용은 무료입니다."
               title="수거 정보"
             >
               <div className={styles.scheduleGrid}>
                 <TextField
-                  disabled
-                  hint="수거 일정 선택은 정식 연동 후 제공됩니다."
+                  defaultValue={orderDraft.pickupDate}
                   id="pickup-date"
-                  label="수거 희망일 (베타 미지원)"
-                  placeholder="추후 제공"
+                  label="수거 희망일"
+                  name="pickupDate"
+                  required
+                  type="date"
                 />
                 <TextField
-                  disabled
-                  hint="시간대 선택은 정식 연동 후 제공됩니다."
+                  defaultValue={orderDraft.pickupTime}
                   id="pickup-time"
-                  label="수거 시간대 (베타 미지원)"
-                  placeholder="추후 제공"
+                  label="수거 시간대"
+                  name="pickupTime"
+                  required
                 />
               </div>
               <fieldset className={styles.consentGroup}>
                 <legend>필수 확인</legend>
                 <label className={styles.checkRow}>
-                  <input required type="checkbox" />
-                  <span>데모 이용 약관을 확인했습니다. (demoTermsAccepted)</span>
+                  <input
+                    name="serviceAndPrivacyTermsAccepted"
+                    required
+                    type="checkbox"
+                  />
+                  <span>서비스 이용 약관과 개인정보 처리 내용을 확인했습니다.</span>
                 </label>
                 <label className={styles.checkRow}>
-                  <input required type="checkbox" />
-                  <span>AI 분석이 예상치임을 확인했습니다. (aiEstimateNoticeAccepted)</span>
+                  <input
+                    name="aiEstimateNoticeAccepted"
+                    required
+                    type="checkbox"
+                  />
+                  <span>
+                    AI 분석 결과는 예상치이며 실물 검수 후 조정될 수 있음을
+                    확인했습니다.
+                  </span>
                 </label>
                 <label className={styles.checkRow}>
-                  <input required type="checkbox" />
-                  <span>ESG 수치가 데모 추정치임을 확인했습니다. (esgEstimateNoticeAccepted)</span>
+                  <input
+                    name="inspectionChangeNoticeAccepted"
+                    required
+                    type="checkbox"
+                  />
+                  <span>
+                    변경된 제작 조건은 확인과 승인 후 적용됨을 확인했습니다.
+                  </span>
                 </label>
               </fieldset>
             </Section>

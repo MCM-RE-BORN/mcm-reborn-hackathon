@@ -44,6 +44,8 @@ REQUIRED_FILES = (
     "mcm-reborn/CLAUDE.md",
     "mcm-reborn/README.md",
     "mcm-reborn/package.json",
+    "mcm-reborn/server/operator-api.ts",
+    "mcm-reborn/app/api/v2/admin/applications/[applicationId]/lifecycle-commands/route.ts",
 )
 
 SKILLS = (
@@ -252,14 +254,77 @@ def validate_next_app(errors: list[str]) -> None:
 
 def validate_contract_version(errors: list[str]) -> None:
     openapi = parse_yaml(read("openapi.yaml"), "openapi.yaml", errors)
+    specification_version = openapi.get("openapi") if isinstance(openapi, dict) else None
     info = openapi.get("info") if isinstance(openapi, dict) else None
-    version = info.get("version") if isinstance(info, dict) else None
-    if not isinstance(version, str):
+    contract_version = info.get("version") if isinstance(info, dict) else None
+    if specification_version != "3.1.0":
+        errors.append("openapi.yaml: openapi must be 3.1.0")
+    if not isinstance(contract_version, str):
         errors.append("openapi.yaml: info.version must be a string")
         return
     for relative_path in ("docs/PROJECT_CONTEXT.md", "docs/API_CONTRACT.md"):
-        if version not in read(relative_path):
-            errors.append(f"{relative_path} must document OpenAPI {version}")
+        text = read(relative_path)
+        if f"API 계약 v{contract_version}" not in text:
+            errors.append(f"{relative_path} must document API contract v{contract_version}")
+        if isinstance(specification_version, str) and f"OpenAPI {specification_version}" not in text:
+            errors.append(
+                f"{relative_path} must document OpenAPI specification {specification_version}"
+            )
+
+    misleading_version = re.compile(r"\bOpenAPI\s+2\.0\.0\b")
+    for path in (ROOT / "docs").rglob("*.md"):
+        if misleading_version.search(path.read_text(encoding="utf-8")):
+            errors.append(
+                f"{path.relative_to(ROOT).as_posix()}: do not confuse API contract "
+                "v2.0.0 with the OpenAPI 3.1.0 specification"
+            )
+
+
+def validate_current_route_docs(errors: list[str]) -> None:
+    for relative_path in (
+        "docs/mvp-beta/plan-summary.md",
+        "docs/mvp-beta/screen-matrix.md",
+    ):
+        text = read(relative_path)
+        if not re.search(r"\|\s*서비스 소개\s*\|[^\n]*`/`[^\n]*`/intro`", text):
+            errors.append(f"{relative_path}: service intro routes must include / and /intro")
+        if not re.search(r"\|\s*홈\s*\|[^\n]*`/home`", text):
+            errors.append(f"{relative_path}: home route must be /home")
+
+    structure = read("docs/REPOSITORY_STRUCTURE.md")
+    for marker in (
+        "`/`·`/intro`는 서비스 소개",
+        "`/home`은 홈",
+        "`app/api/v2/admin/applications/[applicationId]/lifecycle-commands`만 Route Handler로 구현됨",
+        "`mcm-reborn/server/`",
+    ):
+        if marker not in structure:
+            errors.append(f"docs/REPOSITORY_STRUCTURE.md must contain {marker}")
+
+    lifecycle_route = read(
+        "mcm-reborn/app/api/v2/admin/applications/[applicationId]/lifecycle-commands/route.ts"
+    )
+    for marker in (
+        "export async function POST",
+        'operation: "advanceApplicationLifecycle"',
+        '"advance_application_lifecycle"',
+        "executeIdempotentOperatorCommand",
+        "readShipment",
+    ):
+        if marker not in lifecycle_route:
+            errors.append(f"lifecycle Route Handler must contain {marker}")
+
+    operator_api = read("mcm-reborn/server/operator-api.ts")
+    for marker in (
+        'request.headers.get("authorization")',
+        'request.headers.get("idempotency-key")',
+        "SUPABASE_SERVICE_ROLE_KEY",
+        '"/auth/v1/user"',
+        'role: "eq.OPERATOR"',
+        '"/rest/v1/idempotency_keys"',
+    ):
+        if marker not in operator_api:
+            errors.append(f"operator API helper must contain {marker}")
 
 
 def main() -> int:
@@ -305,6 +370,13 @@ def main() -> int:
         "docs/API_CONTRACT.md",
     )):
         validate_contract_version(errors)
+
+    if all((ROOT / path).is_file() for path in (
+        "docs/mvp-beta/plan-summary.md",
+        "docs/mvp-beta/screen-matrix.md",
+        "docs/REPOSITORY_STRUCTURE.md",
+    )):
+        validate_current_route_docs(errors)
 
     if (ROOT / "AGENTS.md").is_file():
         agents_text = read("AGENTS.md")

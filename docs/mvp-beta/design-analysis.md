@@ -1,5 +1,7 @@
 # Figma beta 디자인 분석
 
+> 이 문서는 `177:*` beta 섹션을 조사한 2026-08-11의 역사 기록이다. 2026-08-18 이후 현재 시각 기준은 같은 파일의 `최종 디자인` 페이지 `228:391`이며, 최신 frame 매핑과 충돌 처리 원칙은 [`screen-matrix.md`](./screen-matrix.md)를 따른다.
+
 ## 분석 범위와 방법
 
 - 파일: `h1LbFck3xMVurMyWNIv8NM`

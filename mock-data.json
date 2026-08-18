@@ -1,9 +1,59 @@
 {
   "meta": {
-    "version": "1.1.0",
-    "generatedFor": "MCM RE:BORN 2-week hackathon",
-    "notice": "All prices, material areas, carbon values, authentication signals, logistics and certificates are demo-only mock data.",
-    "authenticityPolicy": "Signals are limited to NOT_EVALUATED or REVIEW_REQUIRED and never declare an item authentic or fake."
+    "version": "2.0.0",
+    "contractChange": "BREAKING",
+    "generatedFor": "MCM RE:BORN service demo MVP",
+    "notice": "모든 AI 분석값, 가격, 기간, ESG 값은 시연용 예상치이며 주문 후 전문가 실물 검수에서 변경될 수 있습니다.",
+    "authenticityPolicy": "authenticityPrecheck는 사진 기반 주문 가능성 사전 신호일 뿐 공식 정품 판정이나 보증이 아닙니다."
+  },
+  "uploadContract": {
+    "contentTypes": ["image/jpeg", "image/png"],
+    "maxFileSizeBytes": 10485760,
+    "presignFileCount": { "min": 1, "max": 4 },
+    "analysisFileCount": { "min": 3, "max": 4 },
+    "purposes": ["SOURCE_FRONT", "SOURCE_SIDE", "INTERIOR", "ENGRAVING"]
+  },
+  "primaryScenario": {
+    "scenarioKey": "MCM_BACKPACK_CHANGE_APPROVED_20260817",
+    "submissionNumber": "SUB-RB-20260817-0001",
+    "orderId": "30000000-0000-4000-8000-000000000001",
+    "orderNumber": "RB-20260817-0001",
+    "analysisId": "20000000-0000-4000-8000-000000000001",
+    "productId": "10000000-0000-4000-8000-000000000001",
+    "source": {
+      "brand": "MCM",
+      "name": "MCM 비세토스 모노그램 백팩",
+      "category": "BACKPACK",
+      "images": [
+        { "purpose": "SOURCE_FRONT", "url": "/assets/mvp-beta/source-backpack-front.webp" },
+        { "purpose": "SOURCE_SIDE", "url": "/assets/mvp-beta/source-backpack-side.webp" },
+        { "purpose": "INTERIOR", "url": "/assets/mvp-beta/source-backpack-interior.webp" },
+        { "purpose": "ENGRAVING", "url": "/assets/mvp-beta/source-backpack-engraving.webp" }
+      ]
+    },
+    "initialEstimate": {
+      "estimatedReusableMaterialRate": 72,
+      "confidencePercent": 87,
+      "authenticityPrecheckPercent": 91,
+      "product": "RE:BORN 여권지갑",
+      "amountKrw": 180000,
+      "estimatedDuration": "3~4주"
+    },
+    "postPickupInspection": {
+      "outcome": "CHANGE_REQUIRED",
+      "reason": "사진에서 보이지 않던 내부 원단 손상이 확인되어 재단 범위를 조정했어요.",
+      "confirmedReusableMaterialRate": 68,
+      "amountKrw": 195000,
+      "estimatedDuration": "4~5주",
+      "changeDecision": "APPROVED"
+    },
+    "finalCertificate": {
+      "certificateNumber": "ESG-RB-20260817-0001",
+      "reusedMaterialRate": 68,
+      "reusedAreaCm2": 2860,
+      "estimatedCarbonSavingKgCo2e": 3.43,
+      "methodologyVersion": "DEMO_LCA_V2"
+    }
   },
   "demoUsers": [
     {
@@ -15,336 +65,128 @@
     {
       "id": "00000000-0000-4000-8000-000000000002",
       "role": "OPERATOR",
-      "displayName": "MCM RE:BORN 운영자",
+      "displayName": "MCM RE:BORN 전문가",
       "email": "operator@mcm-reborn.demo"
     }
   ],
   "products": [
     {
       "id": "10000000-0000-4000-8000-000000000001",
-      "code": "REBORN_POUCH",
-      "name": "RE:BORN 클러치 파우치",
-      "category": "CLUTCH_POUCH",
-      "description": "기존 가방의 패턴 원단을 넓게 살리는 클러치형 파우치입니다.",
-      "requiredAreaCm2": 1000,
-      "mockPrice": { "amount": 280000, "currency": "KRW" },
-      "dimensions": { "widthMm": 260, "heightMm": 180, "depthMm": 45 },
-      "listImage": {
-        "url": "/assets/products/reborn-pouch/list.webp",
-        "alt": "RE:BORN 클러치 파우치 전체 이미지",
-        "width": 1200,
-        "height": 1500,
-        "aspectRatio": "4:5"
-      },
-      "model3d": {
-        "format": "GLB",
-        "url": "/assets/models/reborn-pouch.glb",
-        "posterUrl": "/assets/products/reborn-pouch/poster.webp",
-        "environmentImageUrl": "/assets/3d/studio.hdr",
-        "cameraOrbit": "0deg 75deg 105%",
-        "cameraTarget": "0m 0m 0m",
-        "fieldOfView": "30deg",
-        "autoRotate": true,
-        "availableVariants": [
-          { "key": "BLACK_GOLD", "label": "블랙·골드" },
-          { "key": "BLACK_SILVER", "label": "블랙·실버" },
-          { "key": "COGNAC_GOLD", "label": "코냑·골드" }
-        ]
-      },
-      "optionGroups": [
-        {
-          "key": "hardwareColor",
-          "label": "금속 색상",
-          "required": true,
-          "type": "SELECT",
-          "options": [
-            { "value": "GOLD", "label": "골드", "modelVariant": "BLACK_GOLD" },
-            { "value": "SILVER", "label": "실버", "modelVariant": "BLACK_SILVER" }
-          ]
-        },
-        {
-          "key": "liningColor",
-          "label": "안감 색상",
-          "required": true,
-          "type": "SELECT",
-          "options": [
-            { "value": "BLACK", "label": "블랙", "modelVariant": null },
-            { "value": "COGNAC", "label": "코냑", "modelVariant": "COGNAC_GOLD" }
-          ]
-        },
-        {
-          "key": "initials",
-          "label": "이니셜",
-          "required": false,
-          "type": "TEXT",
-          "maxLength": 3
-        }
-      ],
+      "uiId": "passport-wallet",
+      "code": "REBORN_PASSPORT_WALLET",
+      "name": "RE:BORN 여권지갑",
+      "category": "PASSPORT_WALLET",
+      "description": "MCM 비세토스 패턴을 살린 여권지갑입니다.",
+      "requiredAreaCm2": 850,
+      "mockPrice": { "amount": 180000, "currency": "KRW" },
+      "estimatedDuration": "3~4주",
+      "dimensions": { "widthMm": 110, "heightMm": 145, "depthMm": 12 },
+      "listImage": { "url": "/assets/mvp-beta/recommendation-passport-wallet.png", "alt": "RE:BORN 여권지갑", "width": 250, "height": 271, "aspectRatio": "250:271" },
+      "model3d": { "format": "GLB", "url": "/assets/models/passport-wallet.glb", "posterUrl": "/assets/products/passport-wallet/poster.webp", "environmentImageUrl": "/assets/3d/studio.hdr", "cameraOrbit": "0deg 75deg 105%", "cameraTarget": "0m 0m 0m", "fieldOfView": "30deg", "autoRotate": true, "availableVariants": [{ "key": "COGNAC_GOLD", "label": "코냑·골드" }] },
+      "optionGroups": [{ "key": "initials", "label": "이니셜", "required": false, "type": "TEXT", "maxLength": 3 }],
       "active": true
     },
     {
       "id": "10000000-0000-4000-8000-000000000002",
+      "uiId": "card-wallet",
       "code": "REBORN_CARD_WALLET",
       "name": "RE:BORN 카드지갑",
       "category": "CARD_WALLET",
-      "description": "상태가 좋은 패턴 영역을 선별해 제작하는 소형 카드지갑입니다.",
+      "description": "상태가 좋은 패턴 영역을 선별한 카드 지갑입니다.",
       "requiredAreaCm2": 300,
-      "mockPrice": { "amount": 180000, "currency": "KRW" },
+      "mockPrice": { "amount": 150000, "currency": "KRW" },
+      "estimatedDuration": "2~3주",
       "dimensions": { "widthMm": 105, "heightMm": 75, "depthMm": 8 },
-      "listImage": {
-        "url": "/assets/products/reborn-card-wallet/list.webp",
-        "alt": "RE:BORN 카드지갑 전체 이미지",
-        "width": 1200,
-        "height": 1500,
-        "aspectRatio": "4:5"
-      },
-      "model3d": {
-        "format": "GLB",
-        "url": "/assets/models/reborn-card-wallet.glb",
-        "posterUrl": "/assets/products/reborn-card-wallet/poster.webp",
-        "environmentImageUrl": "/assets/3d/studio.hdr",
-        "cameraOrbit": "20deg 75deg 110%",
-        "cameraTarget": "0m 0m 0m",
-        "fieldOfView": "28deg",
-        "autoRotate": true,
-        "availableVariants": [
-          { "key": "BLACK_GOLD", "label": "블랙·골드" },
-          { "key": "COGNAC_GOLD", "label": "코냑·골드" }
-        ]
-      },
-      "optionGroups": [
-        {
-          "key": "edgeColor",
-          "label": "엣지 색상",
-          "required": true,
-          "type": "SELECT",
-          "options": [
-            { "value": "BLACK", "label": "블랙", "modelVariant": "BLACK_GOLD" },
-            { "value": "COGNAC", "label": "코냑", "modelVariant": "COGNAC_GOLD" }
-          ]
-        },
-        {
-          "key": "initials",
-          "label": "이니셜",
-          "required": false,
-          "type": "TEXT",
-          "maxLength": 3
-        }
-      ],
+      "listImage": { "url": "/assets/mvp-beta/recommendation-card-holder.png", "alt": "RE:BORN 카드지갑", "width": 250, "height": 271, "aspectRatio": "250:271" },
+      "model3d": { "format": "GLB", "url": "/assets/models/card-wallet.glb", "posterUrl": "/assets/products/card-wallet/poster.webp", "environmentImageUrl": "/assets/3d/studio.hdr", "cameraOrbit": "20deg 75deg 110%", "cameraTarget": "0m 0m 0m", "fieldOfView": "28deg", "autoRotate": true, "availableVariants": [{ "key": "COGNAC_GOLD", "label": "코냑·골드" }] },
+      "optionGroups": [],
       "active": true
     },
     {
       "id": "10000000-0000-4000-8000-000000000003",
+      "uiId": "luggage-name-tag",
+      "code": "REBORN_NAME_TAG",
+      "name": "RE:BORN 캐리어 네임택",
+      "category": "NAME_TAG",
+      "description": "잔여 패턴 소재를 활용한 러기지 네임 태그입니다.",
+      "requiredAreaCm2": 180,
+      "mockPrice": { "amount": 95000, "currency": "KRW" },
+      "estimatedDuration": "약 2주",
+      "dimensions": { "widthMm": 70, "heightMm": 110, "depthMm": 6 },
+      "listImage": { "url": "/assets/mvp-beta/recommendation-luggage-name-tag-v2.webp", "alt": "RE:BORN 캐리어 네임택", "width": 600, "height": 600, "aspectRatio": "1:1" },
+      "model3d": { "format": "GLB", "url": "/assets/models/name-tag.glb", "posterUrl": "/assets/products/name-tag/poster.webp", "environmentImageUrl": "/assets/3d/studio.hdr", "cameraOrbit": "0deg 75deg 110%", "cameraTarget": "0m 0m 0m", "fieldOfView": "28deg", "autoRotate": true, "availableVariants": [{ "key": "GOLD", "label": "골드" }] },
+      "optionGroups": [],
+      "active": true
+    },
+    {
+      "id": "10000000-0000-4000-8000-000000000004",
+      "uiId": "keyring",
       "code": "REBORN_KEYRING",
       "name": "RE:BORN 키링",
       "category": "KEYRING",
-      "description": "작은 잔여 원단까지 활용하는 가죽 키링입니다.",
+      "description": "작은 잔여 소재까지 활용한 키링입니다.",
       "requiredAreaCm2": 80,
-      "mockPrice": { "amount": 90000, "currency": "KRW" },
+      "mockPrice": { "amount": 75000, "currency": "KRW" },
+      "estimatedDuration": "1~2주",
       "dimensions": { "widthMm": 45, "heightMm": 90, "depthMm": 5 },
-      "listImage": {
-        "url": "/assets/products/reborn-keyring/list.webp",
-        "alt": "RE:BORN 키링 전체 이미지",
-        "width": 1200,
-        "height": 1500,
-        "aspectRatio": "4:5"
-      },
-      "model3d": {
-        "format": "GLB",
-        "url": "/assets/models/reborn-keyring.glb",
-        "posterUrl": "/assets/products/reborn-keyring/poster.webp",
-        "environmentImageUrl": "/assets/3d/studio.hdr",
-        "cameraOrbit": "0deg 75deg 115%",
-        "cameraTarget": "0m 0m 0m",
-        "fieldOfView": "25deg",
-        "autoRotate": true,
-        "availableVariants": [
-          { "key": "GOLD_RING", "label": "골드 링" },
-          { "key": "SILVER_RING", "label": "실버 링" }
-        ]
-      },
-      "optionGroups": [
-        {
-          "key": "ringColor",
-          "label": "링 색상",
-          "required": true,
-          "type": "SELECT",
-          "options": [
-            { "value": "GOLD", "label": "골드", "modelVariant": "GOLD_RING" },
-            { "value": "SILVER", "label": "실버", "modelVariant": "SILVER_RING" }
-          ]
-        }
-      ],
+      "listImage": { "url": "/assets/mvp-beta/recommendation-keyring-v2.webp", "alt": "RE:BORN 키링", "width": 600, "height": 600, "aspectRatio": "1:1" },
+      "model3d": { "format": "GLB", "url": "/assets/models/keyring.glb", "posterUrl": "/assets/products/keyring/poster.webp", "environmentImageUrl": "/assets/3d/studio.hdr", "cameraOrbit": "0deg 75deg 115%", "cameraTarget": "0m 0m 0m", "fieldOfView": "25deg", "autoRotate": true, "availableVariants": [{ "key": "GOLD_RING", "label": "골드 링" }] },
+      "optionGroups": [],
       "active": true
     }
   ],
   "analysisFixtures": [
     {
-      "scenarioKey": "TOTE_MODERATE_WEAR",
+      "scenarioKey": "MCM_BACKPACK_CHANGE_APPROVED_20260817",
+      "submissionNumber": "SUB-RB-20260817-0001",
       "id": "20000000-0000-4000-8000-000000000001",
       "status": "COMPLETED",
-      "modeUsed": "FIXTURE",
-      "sourceProduct": {
-        "category": "TOTE_SHOPPER",
-        "materialType": "COATED_CANVAS",
-        "confidence": 0.89
-      },
-      "condition": {
-        "grade": "B",
-        "overallDamageSeverity": 31,
-        "summary": "몸판은 대체로 양호하고 손잡이와 모서리에 마모가 있습니다."
-      },
+      "modeUsed": "DEMO_FIXTURE",
+      "inputProductInfo": { "category": "BACKPACK", "purchaseYear": 2019, "useDuration": "5년 이상", "desiredUse": "여권지갑", "conditionNote": "하단 모서리에 가벼운 마모가 있어요." },
+      "sourceProduct": { "category": "BACKPACK", "materialType": "COATED_CANVAS", "confidence": 0.87 },
+      "condition": { "grade": "A", "overallDamageSeverity": 18, "summary": "외부 패널은 양호하고 하단 모서리에 가벼운 사용감이 보여요." },
       "damages": [
-        { "type": "HANDLE_WEAR", "location": "TOP_HANDLE", "severity": 54, "confidence": 0.92 },
-        { "type": "EDGE_ABRASION", "location": "BOTTOM_CORNERS", "severity": 36, "confidence": 0.81 }
+        { "type": "EDGE_ABRASION", "location": "BOTTOM_CORNERS", "severity": 22, "confidence": 0.87 }
       ],
-      "imageQuality": {
-        "status": "ACCEPTABLE",
-        "issues": []
-      },
-      "authenticitySignal": "NOT_EVALUATED",
-      "reusableMaterialRate": 65,
-      "estimatedReusableAreaCm2": 2470,
+      "imageQuality": { "status": "ACCEPTABLE", "issues": [] },
+      "estimateMeta": { "mode": "DEMO_FIXTURE", "confidencePercent": 87, "notice": "사진과 데모 데이터를 기반으로 한 예상치이며 주문 후 전문가 실물 검수에서 변경될 수 있습니다." },
+      "authenticityPrecheck": { "status": "ORDER_ELIGIBLE", "estimatePercent": 91, "notice": "사진 기반 주문 가능성 사전 신호이며 공식 정품 판정 또는 보증이 아닙니다." },
+      "estimatedReusableMaterialRate": 72,
+      "estimatedReusableAreaCm2": 3024,
       "longStripAvailable": false,
       "recommendations": [
-        {
-          "productId": "10000000-0000-4000-8000-000000000001",
-          "productCode": "REBORN_POUCH",
-          "eligible": true,
-          "score": 96,
-          "reasonCodes": ["SUFFICIENT_AREA", "PATTERN_VISIBILITY"]
-        },
-        {
-          "productId": "10000000-0000-4000-8000-000000000002",
-          "productCode": "REBORN_CARD_WALLET",
-          "eligible": true,
-          "score": 91,
-          "reasonCodes": ["SUFFICIENT_AREA", "LOW_DAMAGE_REGION_AVAILABLE"]
-        },
-        {
-          "productId": "10000000-0000-4000-8000-000000000003",
-          "productCode": "REBORN_KEYRING",
-          "eligible": true,
-          "score": 82,
-          "reasonCodes": ["USES_SMALL_REMNANTS"]
-        }
+        { "productId": "10000000-0000-4000-8000-000000000001", "productCode": "REBORN_PASSPORT_WALLET", "eligible": true, "score": 96, "estimatedReusableMaterialRate": 72, "reasonCodes": ["SUFFICIENT_AREA", "PATTERN_VISIBILITY"] },
+        { "productId": "10000000-0000-4000-8000-000000000002", "productCode": "REBORN_CARD_WALLET", "eligible": true, "score": 91, "estimatedReusableMaterialRate": 64, "reasonCodes": ["LOW_DAMAGE_REGION_AVAILABLE"] },
+        { "productId": "10000000-0000-4000-8000-000000000003", "productCode": "REBORN_NAME_TAG", "eligible": true, "score": 88, "estimatedReusableMaterialRate": 38, "reasonCodes": ["USES_SMALL_REMNANTS"] },
+        { "productId": "10000000-0000-4000-8000-000000000004", "productCode": "REBORN_KEYRING", "eligible": true, "score": 84, "estimatedReusableMaterialRate": 24, "reasonCodes": ["USES_SMALL_REMNANTS"] }
       ],
-      "esgPreview": {
-        "methodologyVersion": "DEMO_LCA_V1",
-        "estimatedCarbonSavingKgCo2e": 2.96,
-        "disclaimer": "해커톤용 추정치이며 공인 ESG 수치가 아닙니다."
-      }
+      "esgPreview": { "methodologyVersion": "DEMO_LCA_V2", "estimatedCarbonSavingKgCo2e": 3.63, "disclaimer": "시연용 예상치이며 공인 ESG 수치가 아닙니다." },
+      "provider": { "name": "DEMO_DATA", "model": "MCM_BACKPACK_CHANGE_APPROVED_20260817", "requestId": null },
+      "warnings": [],
+      "createdAt": "2026-08-17T05:00:00Z",
+      "completedAt": "2026-08-17T05:00:08Z"
     },
     {
-      "scenarioKey": "BACKPACK_LIGHT_WEAR",
+      "scenarioKey": "INELIGIBLE_PRECHECK",
       "id": "20000000-0000-4000-8000-000000000002",
       "status": "COMPLETED",
-      "modeUsed": "FIXTURE",
-      "sourceProduct": {
-        "category": "BACKPACK",
-        "materialType": "MIXED",
-        "confidence": 0.86
-      },
-      "condition": {
-        "grade": "A",
-        "overallDamageSeverity": 18,
-        "summary": "외부 패널의 상태가 양호하고 하단 모서리에 가벼운 사용감이 있습니다."
-      },
-      "damages": [
-        { "type": "EDGE_ABRASION", "location": "LOWER_EDGE", "severity": 22, "confidence": 0.78 }
-      ],
-      "imageQuality": {
-        "status": "ACCEPTABLE",
-        "issues": []
-      },
-      "authenticitySignal": "NOT_EVALUATED",
-      "reusableMaterialRate": 82,
-      "estimatedReusableAreaCm2": 3444,
-      "longStripAvailable": true,
-      "recommendations": [
-        {
-          "productId": "10000000-0000-4000-8000-000000000001",
-          "productCode": "REBORN_POUCH",
-          "eligible": true,
-          "score": 100,
-          "reasonCodes": ["SUFFICIENT_AREA", "PATTERN_VISIBILITY"]
-        },
-        {
-          "productId": "10000000-0000-4000-8000-000000000002",
-          "productCode": "REBORN_CARD_WALLET",
-          "eligible": true,
-          "score": 95,
-          "reasonCodes": ["SUFFICIENT_AREA", "LOW_DAMAGE_REGION_AVAILABLE"]
-        },
-        {
-          "productId": "10000000-0000-4000-8000-000000000003",
-          "productCode": "REBORN_KEYRING",
-          "eligible": true,
-          "score": 90,
-          "reasonCodes": ["USES_SMALL_REMNANTS"]
-        }
-      ],
-      "esgPreview": {
-        "methodologyVersion": "DEMO_LCA_V1",
-        "estimatedCarbonSavingKgCo2e": 4.13,
-        "disclaimer": "해커톤용 추정치이며 공인 ESG 수치가 아닙니다."
-      }
-    },
-    {
-      "scenarioKey": "CROSSBODY_HEAVY_WEAR",
-      "id": "20000000-0000-4000-8000-000000000003",
-      "status": "COMPLETED",
-      "modeUsed": "FIXTURE",
-      "sourceProduct": {
-        "category": "SHOULDER_CROSSBODY",
-        "materialType": "LEATHER",
-        "confidence": 0.81
-      },
-      "condition": {
-        "grade": "D",
-        "overallDamageSeverity": 74,
-        "summary": "표면 박리와 변색이 넓게 관찰되어 작은 부품 위주의 활용이 적합합니다."
-      },
-      "damages": [
-        { "type": "PEELING", "location": "FRONT_PANEL", "severity": 77, "confidence": 0.88 },
-        { "type": "DISCOLORATION", "location": "SIDE_PANEL", "severity": 68, "confidence": 0.80 }
-      ],
-      "imageQuality": {
-        "status": "ACCEPTABLE",
-        "issues": []
-      },
-      "authenticitySignal": "REVIEW_REQUIRED",
-      "reusableMaterialRate": 15,
-      "estimatedReusableAreaCm2": 375,
+      "modeUsed": "DEMO_FIXTURE",
+      "inputProductInfo": { "category": "BACKPACK", "purchaseYear": 2018, "useDuration": "약 8년", "desiredUse": "추천 희망" },
+      "sourceProduct": { "category": "BACKPACK", "materialType": "UNKNOWN", "confidence": 0.41 },
+      "condition": { "grade": "D", "overallDamageSeverity": 78, "summary": "사진 정보만으로 주문 진행 조건을 충족하기 어렵습니다." },
+      "damages": [],
+      "imageQuality": { "status": "ACCEPTABLE", "issues": [] },
+      "estimateMeta": { "mode": "DEMO_FIXTURE", "confidencePercent": 41, "notice": "예외 흐름 시연을 위한 예상치입니다." },
+      "authenticityPrecheck": { "status": "INELIGIBLE", "estimatePercent": 34, "notice": "공식 정품 판정이 아니며 현재 사진으로는 주문을 진행할 수 없습니다." },
+      "estimatedReusableMaterialRate": 18,
+      "estimatedReusableAreaCm2": 540,
       "longStripAvailable": false,
-      "recommendations": [
-        {
-          "productId": "10000000-0000-4000-8000-000000000001",
-          "productCode": "REBORN_POUCH",
-          "eligible": false,
-          "score": 18,
-          "reasonCodes": ["INSUFFICIENT_AREA"]
-        },
-        {
-          "productId": "10000000-0000-4000-8000-000000000002",
-          "productCode": "REBORN_CARD_WALLET",
-          "eligible": true,
-          "score": 52,
-          "reasonCodes": ["LOW_DAMAGE_REGION_AVAILABLE"]
-        },
-        {
-          "productId": "10000000-0000-4000-8000-000000000003",
-          "productCode": "REBORN_KEYRING",
-          "eligible": true,
-          "score": 61,
-          "reasonCodes": ["USES_SMALL_REMNANTS"]
-        }
-      ],
-      "esgPreview": {
-        "methodologyVersion": "DEMO_LCA_V1",
-        "estimatedCarbonSavingKgCo2e": 0.45,
-        "disclaimer": "해커톤용 추정치이며 공인 ESG 수치가 아닙니다."
-      }
+      "recommendations": [],
+      "esgPreview": { "methodologyVersion": "DEMO_LCA_V2", "estimatedCarbonSavingKgCo2e": 0.65, "disclaimer": "시연용 예상치이며 공인 ESG 수치가 아닙니다." },
+      "provider": { "name": "DEMO_DATA", "model": "INELIGIBLE_PRECHECK", "requestId": null },
+      "warnings": [],
+      "createdAt": "2026-08-17T05:10:00Z",
+      "completedAt": "2026-08-17T05:10:05Z"
     }
   ],
   "analysisErrorFixtures": [
@@ -358,118 +200,102 @@
         "details": {
           "imageQuality": {
             "status": "RECAPTURE_REQUIRED",
-            "issues": [
-              {
-                "assetId": "90000000-0000-4000-8000-000000000004",
-                "code": "BLUR",
-                "guidanceKo": "카메라를 고정하고 제품에 초점을 맞춘 뒤 다시 촬영해 주세요."
-              },
-              {
-                "assetId": "90000000-0000-4000-8000-000000000004",
-                "code": "TOO_DARK",
-                "guidanceKo": "밝고 균일한 조명 아래에서 제품 전체가 보이도록 촬영해 주세요."
-              }
-            ]
+            "issues": [{ "assetId": "90000000-0000-4000-8000-000000000004", "code": "BLUR", "guidanceKo": "카메라를 고정하고 제품에 초점을 맞춘 뒤 다시 촬영해 주세요." }]
           },
           "retryable": true
         }
       }
     }
   ],
-  "manualReviewCases": [
-    {
-      "id": "25000000-0000-4000-8000-000000000001",
-      "analysisId": "20000000-0000-4000-8000-000000000003",
-      "status": "PENDING",
-      "reasonCode": "AUTHENTICITY_REVIEW_REQUIRED",
-      "applicationCreationBlocked": true,
-      "createdAt": "2026-08-04T05:45:00Z"
-    }
-  ],
   "applications": [
     {
       "id": "30000000-0000-4000-8000-000000000001",
-      "applicationNumber": "RB-20260804-0001",
+      "applicationNumber": "RB-20260817-0001",
       "customerId": "00000000-0000-4000-8000-000000000001",
       "analysisId": "20000000-0000-4000-8000-000000000001",
       "productId": "10000000-0000-4000-8000-000000000001",
-      "persistedStatus": "PENDING_APPROVAL",
-      "statusOverride": null,
-      "selectedOptions": {
-        "hardwareColor": "GOLD",
-        "liningColor": "BLACK",
-        "initials": "MCM"
-      },
-      "mockPriceKrw": 280000,
-      "createdAt": "2026-08-04T06:30:00Z",
-      "approvedAt": null,
-      "progressProfile": "FAST_DEMO"
-    },
-    {
-      "id": "30000000-0000-4000-8000-000000000002",
-      "applicationNumber": "RB-20260804-0002",
-      "customerId": "00000000-0000-4000-8000-000000000001",
-      "analysisId": "20000000-0000-4000-8000-000000000001",
-      "productId": "10000000-0000-4000-8000-000000000002",
-      "persistedStatus": "PENDING_APPROVAL",
-      "statusOverride": "ADDITIONAL_REVIEW_REQUIRED",
-      "selectedOptions": {
-        "edgeColor": "BLACK"
-      },
-      "mockPriceKrw": 180000,
-      "createdAt": "2026-08-04T05:50:00Z",
-      "approvedAt": null,
-      "progressProfile": "STATIC"
-    },
-    {
-      "id": "30000000-0000-4000-8000-000000000003",
-      "applicationNumber": "RB-20260804-0003",
-      "customerId": "00000000-0000-4000-8000-000000000001",
-      "analysisId": "20000000-0000-4000-8000-000000000001",
-      "productId": "10000000-0000-4000-8000-000000000001",
-      "persistedStatus": "PRODUCT_RECEIVED",
-      "statusOverride": "PRODUCTION_UNAVAILABLE",
-      "selectedOptions": {
-        "hardwareColor": "SILVER",
-        "liningColor": "COGNAC"
-      },
-      "mockPriceKrw": 280000,
-      "createdAt": "2026-08-03T06:30:00Z",
-      "approvedAt": "2026-08-03T07:00:00Z",
-      "progressProfile": "STATIC"
-    },
-    {
-      "id": "30000000-0000-4000-8000-000000000004",
-      "applicationNumber": "RB-20260804-0004",
-      "customerId": "00000000-0000-4000-8000-000000000001",
-      "analysisId": "20000000-0000-4000-8000-000000000002",
-      "productId": "10000000-0000-4000-8000-000000000003",
       "persistedStatus": "COMPLETED",
-      "statusOverride": "COMPLETED",
-      "selectedOptions": {
-        "ringColor": "GOLD"
-      },
-      "mockPriceKrw": 90000,
-      "createdAt": "2026-08-01T04:00:00Z",
-      "approvedAt": "2026-08-01T04:10:00Z",
-      "progressProfile": "STATIC"
+      "statusOverride": null,
+      "selectedOptions": { "edgeColor": "COGNAC", "initials": "MCM" },
+      "shippingAddress": { "recipientName": "김민지", "postalCode": "04524", "address1": "서울시 중구 퇴계로 24", "address2": "101동 1203호", "phone": "010-1234-5678" },
+      "pickupSchedule": { "requestedDate": "2026-08-19", "timeWindow": "14:00-16:00" },
+      "consents": { "serviceAndPrivacyTermsAccepted": true, "aiEstimateNoticeAccepted": true, "inspectionChangeNoticeAccepted": true },
+      "initialTerms": { "productId": "10000000-0000-4000-8000-000000000001", "amount": { "amount": 180000, "currency": "KRW" }, "estimatedDuration": "3~4주", "estimatedReusableMaterialRate": 72 },
+      "finalTerms": { "productId": "10000000-0000-4000-8000-000000000001", "amount": { "amount": 195000, "currency": "KRW" }, "estimatedDuration": "4~5주", "estimatedReusableMaterialRate": 68 },
+      "createdAt": "2026-08-17T05:20:00Z",
+      "inspectionCompletedAt": "2026-08-21T05:00:00Z",
+      "demoProgressProfile": "PRIMARY_SCENARIO"
+    }
+  ],
+  "mockPayments": [
+    { "id": "31000000-0000-4000-8000-000000000001", "applicationId": "30000000-0000-4000-8000-000000000001", "transactionId": "PAY-RB-20260817-0001", "status": "PAID", "amountKrw": 180000, "applicationStatusAfterPayment": "ORDER_PLACED", "paidAt": "2026-08-17T05:22:00Z" }
+  ],
+  "mockShipments": [
+    {
+      "applicationId": "30000000-0000-4000-8000-000000000001",
+      "carrierCode": "MCM_REBORN_DEMO",
+      "carrierName": "MCM RE:BORN Demo Logistics",
+      "trackingNumber": "DEMO-RB-20260817-0001",
+      "trackingUrl": null,
+      "status": "DELIVERED"
+    }
+  ],
+  "applicationStatusHistory": [
+    { "applicationId": "30000000-0000-4000-8000-000000000001", "status": "PENDING_PAYMENT", "occurredAt": "2026-08-17T05:20:00Z" },
+    { "applicationId": "30000000-0000-4000-8000-000000000001", "status": "ORDER_PLACED", "occurredAt": "2026-08-17T05:22:00Z" },
+    { "applicationId": "30000000-0000-4000-8000-000000000001", "status": "PICKUP_SCHEDULED", "occurredAt": "2026-08-17T06:00:00Z" },
+    { "applicationId": "30000000-0000-4000-8000-000000000001", "status": "PICKUP_IN_PROGRESS", "occurredAt": "2026-08-19T05:00:00Z" },
+    { "applicationId": "30000000-0000-4000-8000-000000000001", "status": "PRODUCT_RECEIVED", "occurredAt": "2026-08-21T03:00:00Z" },
+    { "applicationId": "30000000-0000-4000-8000-000000000001", "status": "EXPERT_INSPECTION", "occurredAt": "2026-08-21T04:00:00Z" },
+    { "applicationId": "30000000-0000-4000-8000-000000000001", "status": "CHANGE_APPROVAL_REQUIRED", "occurredAt": "2026-08-21T05:00:00Z" },
+    { "applicationId": "30000000-0000-4000-8000-000000000001", "status": "PRODUCTION_READY", "occurredAt": "2026-08-21T06:00:00Z" },
+    { "applicationId": "30000000-0000-4000-8000-000000000001", "status": "IN_PRODUCTION", "occurredAt": "2026-08-22T00:00:00Z" },
+    { "applicationId": "30000000-0000-4000-8000-000000000001", "status": "QUALITY_CHECK", "occurredAt": "2026-09-16T01:00:00Z" },
+    { "applicationId": "30000000-0000-4000-8000-000000000001", "status": "SHIPPED", "occurredAt": "2026-09-17T01:00:00Z" },
+    { "applicationId": "30000000-0000-4000-8000-000000000001", "status": "DELIVERED", "occurredAt": "2026-09-18T04:00:00Z" },
+    { "applicationId": "30000000-0000-4000-8000-000000000001", "status": "COMPLETED", "occurredAt": "2026-09-18T05:00:00Z" }
+  ],
+  "physicalInspections": [
+    {
+      "id": "35000000-0000-4000-8000-000000000001",
+      "applicationId": "30000000-0000-4000-8000-000000000001",
+      "outcome": "CHANGE_REQUIRED",
+      "confirmedReusableMaterialRate": 68,
+      "confirmedReusableAreaCm2": 2860,
+      "reason": "사진에서 보이지 않던 내부 원단 손상이 확인되어 재단 범위를 조정했어요.",
+      "proposedTerms": { "productId": "10000000-0000-4000-8000-000000000001", "amount": { "amount": 195000, "currency": "KRW" }, "estimatedDuration": "4~5주", "estimatedReusableMaterialRate": 68 },
+      "inspectedBy": "00000000-0000-4000-8000-000000000002",
+      "inspectedAt": "2026-08-21T05:00:00Z"
+    }
+  ],
+  "applicationChangeRequests": [
+    {
+      "id": "36000000-0000-4000-8000-000000000001",
+      "applicationId": "30000000-0000-4000-8000-000000000001",
+      "inspectionId": "35000000-0000-4000-8000-000000000001",
+      "status": "APPROVED",
+      "reason": "사진에서 보이지 않던 내부 원단 손상이 확인되어 재단 범위를 조정했어요.",
+      "previousTerms": { "productId": "10000000-0000-4000-8000-000000000001", "amount": { "amount": 180000, "currency": "KRW" }, "estimatedDuration": "3~4주", "estimatedReusableMaterialRate": 72 },
+      "proposedTerms": { "productId": "10000000-0000-4000-8000-000000000001", "amount": { "amount": 195000, "currency": "KRW" }, "estimatedDuration": "4~5주", "estimatedReusableMaterialRate": 68 },
+      "createdAt": "2026-08-21T05:00:00Z",
+      "respondedAt": "2026-08-21T06:00:00Z"
     }
   ],
   "certificates": [
     {
       "certificateId": "40000000-0000-4000-8000-000000000001",
-      "certificateNumber": "ESG-RB-20260804-0004",
-      "applicationId": "30000000-0000-4000-8000-000000000004",
-      "applicationNumber": "RB-20260804-0004",
+      "certificateNumber": "ESG-RB-20260817-0001",
+      "applicationId": "30000000-0000-4000-8000-000000000001",
+      "applicationNumber": "RB-20260817-0001",
       "sourceCategory": "BACKPACK",
-      "rebornProduct": "RE:BORN 키링",
-      "reusedMaterialRate": 82,
-      "reusedAreaCm2": 3444,
-      "estimatedCarbonSavingKgCo2e": 4.13,
-      "methodologyVersion": "DEMO_LCA_V1",
-      "issuedAt": "2026-08-01T05:20:00Z",
-      "verificationCode": "MRB-8F3Q-2M7K",
-      "disclaimer": "해커톤용 가상 보증서이며 법적·상업적 효력이 없습니다."
+      "rebornProduct": "RE:BORN 여권지갑",
+      "reusedMaterialRate": 68,
+      "reusedAreaCm2": 2860,
+      "estimatedCarbonSavingKgCo2e": 3.43,
+      "methodologyVersion": "DEMO_LCA_V2",
+      "issuedAt": "2026-09-18T05:20:00Z",
+      "verificationCode": "MRB-2026-0817-0001",
+      "disclaimer": "시연용 예상 기반 보증서이며 법적·상업적 효력이 없습니다."
     }
   ]
 }

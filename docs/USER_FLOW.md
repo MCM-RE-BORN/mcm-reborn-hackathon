@@ -1,57 +1,93 @@
 # MVP 사용자 흐름
 
-이 문서는 화면과 상태 흐름을 설명한다. 정확한 요청·응답과 상태 코드는 `openapi.yaml`을 따른다.
+> 2026-08-17 현재 흐름. 이전의 `REVIEW_REQUIRED` 주문 차단과 `PENDING_APPROVAL → APPROVED` 운영자 선승인 흐름은 **superseded/historical**이다. 제품 의미와 중앙 시나리오는 [`MVP_DEMO_CANONICAL.md`](./MVP_DEMO_CANONICAL.md), 정확한 요청·응답은 `openapi.yaml`을 따른다.
 
-## 고객 정상 흐름
+현행 웹 진입은 서비스 소개 `/` 또는 `/intro`에서 시작하고 홈은 `/home`이다. 아래 고객 식별자와 화면 상태는 현재 앱에서 Fixture로 시연되며 서버에 생성·저장되는 것은 아니다. OpenAPI 중 운영자 lifecycle command만 Route Handler로 구현되어 있고 실물 검수와 나머지 경로는 아직 계약 기준이다.
 
-1. 데모 고객으로 로그인하고 본인 프로필을 확인한다.
-2. 가방 사진 1~4개의 업로드 URL을 발급받아 private storage에 업로드한다.
-3. 분석을 요청한다. 사진 품질을 통과하면 상태 등급, 소재·손상, 재활용률·면적과 정품 검토 신호를 확인한다.
-4. `authenticitySignal = NOT_EVALUATED`인 분석으로 파우치, 카드 지갑, 키링 목록을 비교한다.
-5. 제품 상세에서 완성 이미지와 GLB·glTF 3D 모델을 확인한다.
-6. 배송 정보와 동의를 입력해 신청을 만든다. `REVIEW_REQUIRED` 분석에는 이 단계로 진입하지 않는다.
-7. 데모 카드로 Mock 결제하고 접수 대기 상태를 확인한다.
-8. 운영자 승인 뒤 타임라인과 Mock 배송 상태를 조회한다.
-9. 완료 상태에서 ESG 보증서를 열고 공개 검증 화면을 확인한다.
+## 고객 골든 흐름
 
-정상 신청 상태는 다음 순서다.
+1. 서비스 소개를 확인하고 데모 고객으로 로그인하거나 홈으로 이동한다.
+2. 제품 등록에서 MCM 비세토스 모노그램 백팩의 정면·측면·내부·각인 사진 중 3장 이상을 모바일 카메라 또는 파일 선택으로 등록한다.
+3. 제품 카테고리, 구매 연도 2019, 주요 사용 기간 5년 이상, 희망 제품 `RE:BORN 여권지갑`을 입력한다. 시리얼과 상태 메모는 선택이다.
+4. `AI 분석 접수하기`를 누르면 접수 `SUB-RB-20260817-0001`이 생성되고 `SUBMITTED → AI_ANALYZING`을 짧게 보여 준다.
+5. 중앙 Fixture 또는 재현 가능한 예상 분석으로 상태·손상·오염, 예상 재활용 가능률 72%, 정품 사전 적합도 예상 91%를 확인한다.
+6. 91%는 주문 적합 신호이며 정품 확정이 아니라는 안내와, 제작 조건이 주문 후 실물 검수에서 변경될 수 있다는 안내를 확인한다.
+7. 추천 후보를 비교하고 `RE:BORN 여권지갑` 목업을 회전·확대 또는 정적 다각도 프레임으로 확인한다.
+8. 수거 주소·희망 일정·연락처와 동의를 입력하고 최초 예상 제작비 180,000원, 수거 무료 조건을 확인한다.
+9. Mock 결제를 완료해 주문 `RB-20260817-0001`을 생성하고 `ORDER_PLACED`를 확인한다.
+10. `PICKUP_SCHEDULED → PICKUP_IN_PROGRESS → PRODUCT_RECEIVED`로 진행한다.
+11. 주문 후 공식 장인 최종 실물 검수에서 사진으로 보이지 않던 내부 원단 손상을 확인하고 `CHANGE_REQUIRED`로 전환한다.
+12. 고객은 변경 재활용률 68%, 제작비 195,000원, 예상 기간 4~5주와 사유를 비교하고 변경 조건을 승인한다.
+13. `PRODUCTION_READY → IN_PRODUCTION → QUALITY_CHECK → SHIPPED → DELIVERED → COMPLETED`를 확인한다.
+14. 완료 후 보증서 `ESG-RB-20260817-0001`, 최종 재활용률 68%, 예상 탄소 절감량 3.43kg CO2e를 확인한다.
+
+## 상태 흐름
+
+### 접수·분석
 
 ```text
-PENDING_PAYMENT → PENDING_APPROVAL → APPROVED → RECEIVING_PRODUCT
-→ PRODUCT_RECEIVED → IN_PRODUCTION → QUALITY_CHECK → SHIPPED → COMPLETED
+DRAFT → READY_TO_SUBMIT → SUBMITTED → AI_ANALYZING → AI_COMPLETED
 ```
 
-배송 상태는 `PICKUP_RESERVED → PICKUP_IN_PROGRESS → AT_WORKSHOP → OUT_FOR_DELIVERY → DELIVERED`로 표현한다.
+대표 분기는 다음과 같다.
+
+```text
+AI_ANALYZING → SUPPLEMENT_REQUIRED → DRAFT
+AI_ANALYZING → AI_INELIGIBLE
+AI_ANALYZING → FAILED → AI_ANALYZING
+```
+
+### 주문·제작
+
+```text
+PENDING_PAYMENT → ORDER_PLACED → PICKUP_SCHEDULED → PICKUP_IN_PROGRESS
+→ PRODUCT_RECEIVED → EXPERT_INSPECTION → CHANGE_APPROVAL_REQUIRED
+→ PRODUCTION_READY → IN_PRODUCTION → QUALITY_CHECK
+→ SHIPPED → DELIVERED → COMPLETED
+```
+
+전문가 실물 검수는 주문 전 승인 게이트가 아니다. 주문·Mock 결제와 제품 수거가 끝난 뒤에만 수행한다.
 
 ## 고객 예외 흐름
 
-- 업로드 형식·개수·크기가 계약과 다르면 입력을 보존하고 수정 방법을 안내한다.
-- 사진 품질이 낮으면 `POST /analyses`가 `422 IMAGE_QUALITY_INSUFFICIENT`를 반환한다. 성공 분석은 생성하지 않으며 `imageQuality.issues`의 `assetId`, 문제 코드와 `guidanceKo`를 사용해 해당 사진의 재촬영을 안내한다.
-- live 분석이 실패했을 때 `AI_MODE=hybrid`이면 준비된 Fixture를 사용하고 폴백 사실을 응답과 UI에서 숨기지 않는다.
-- 사진 품질 오류는 제공자 장애가 아니므로 hybrid 폴백 대상으로 처리하지 않는다.
-- 분석이 실패하거나 추천 가능한 제품이 없으면 신청으로 강제 진행하지 않고 재시도 또는 안내 상태를 보여 준다.
-- 정품 신호가 `REVIEW_REQUIRED`이면 이를 정품·가품 판정으로 표현하지 않는다. 시스템은 `PENDING` 수동 검토 건을 만들고 `POST /applications`에서 `422 AUTHENTICITY_REVIEW_REQUIRED`, `applicationCreationBlocked = true`, `nextAction = AWAIT_MANUAL_REVIEW`를 반환한다.
-- `AUTHENTICITY_REVIEW_REQUIRED`는 신청 상태가 아니라 신청 전 오류·검토 사유다. 이 경로에서는 신청, 결제와 제작 타임라인을 생성하지 않는다.
-- 생성된 신청은 `ADDITIONAL_REVIEW_REQUIRED`, `PRODUCTION_UNAVAILABLE`, `CANCELED` 예외 상태를 표시할 수 있다.
+- 업로드 형식·개수·크기가 JPG/JPEG·PNG, 3~4장, 장당 10MB 규칙과 다르면 입력을 보존하고 수정 방법을 안내한다.
+- 카메라 권한이 거부되거나 지원되지 않으면 파일 선택 폴백으로 같은 슬롯에 등록한다.
+- 사진 품질이 낮으면 `422 IMAGE_QUALITY_INSUFFICIENT`와 이미지별 재촬영 안내를 보여 주고 성공 분석을 만들지 않는다.
+- live 분석이 실패하면 fixture/hybrid 폴백을 사용한다. 같은 접수에서는 예상 수치가 바뀌지 않아야 한다.
+- 명백한 비대상 제품은 `AI_INELIGIBLE`로 주문을 차단할 수 있다. 이를 공식 가품 판정으로 표현하지 않는다.
+- 추천 후보가 없으면 주문으로 강제 진행하지 않고 재촬영·정보 보완 또는 상담 안내를 제공한다.
+- 실물 검수 결과가 `NO_CHANGE`이면 바로 `PRODUCTION_READY`로 진행한다.
+- 실물 검수 결과가 `CHANGE_REQUIRED`이면 변경 사유·재활용률·금액·기간을 표시한다. 고객 승인 전에는 제작을 시작하지 않는다.
+- 변경 조건을 거절하거나 `PRODUCTION_UNAVAILABLE`이면 주문을 `CANCELED`로 전환하고 Mock 결제 취소·환불 안내를 표시한다.
 - 결제·배송·보증서가 아직 생성되지 않은 경우 빈 상태를 오류와 구분한다.
-- 다른 고객의 분석·신청 식별자로 접근하면 데이터 내용을 노출하지 않고 권한 오류를 반환한다.
+- 다른 고객의 접수·주문 식별자로 접근하면 데이터 내용을 노출하지 않고 권한 오류를 반환한다.
 
-## 운영자 흐름
+## 운영자·장인 표현
 
-1. 데모 운영자로 로그인한다.
-2. 신청 목록을 상태로 필터링하고 상세를 연다.
-3. 분석 요약, 선택 제품, 배송 정보와 현재 상태를 검토한다.
-4. 승인 가능한 신청만 승인하고 멱등성 키를 사용한다.
-5. 고객 화면에서 승인 이후 타임라인이 정상 진행되는지 확인한다.
-
-운영자 MVP는 생성된 신청의 목록·상세·승인에 집중한다. `REVIEW_REQUIRED` 수동 검토 건을 완료하거나 차단을 해제하는 API·UI는 제공하지 않는다. 장인 배정, 실물 검수, 생산 용량, A/S와 상세 감사 화면은 Phase 2다.
+- `OPERATOR`는 주문 목록과 데모 상태를 조회할 수 있지만 고객 골든 패스에 별도 선승인 동작을 요구하지 않는다.
+- 공식 장인 실물 검수는 `PRODUCT_RECEIVED` 이후 Mock 공정으로 자동 또는 준비된 시나리오에 의해 실행한다.
+- 골든 시나리오는 `InspectionResult = CHANGE_REQUIRED`, `ChangeDecision = APPROVED`다.
+- 실제 장인 계정, 검수 입력 도구, 생산 배정과 외부 운영 콘솔은 MVP 범위 밖이다.
+- 제작 후 `QUALITY_CHECK`는 완성품 QA이며 주문 전 AI 판단을 승인하는 단계가 아니다.
 
 ## 공개·보조 흐름
 
-- 상태 확인용 `/health`는 인증 없이 사용할 수 있다.
-- 보증서 검증 URL은 공개지만 데모 데이터이며 법적 효력을 주장하지 않는다.
-- 분석 퍼널 이벤트는 인증 사용자 또는 익명으로 보낼 수 있으므로 개인정보를 담지 않고 남용 방지 정책을 둔다.
+- API 계약의 상태 확인용 `/health`는 인증 없는 엔드포인트로 정의되어 있다. 현재 앱에는 해당 Route Handler가 없으므로 런타임 상태 확인 URL로 안내하지 않는다.
+- 진행 중 보증서 미리보기는 가능하지만 공식 `ISSUED` 표시는 `COMPLETED` 뒤에만 제공한다.
+- 보증서 검증 URL은 공개할 수 있으나 데모 데이터이며 법적 효력을 주장하지 않는다.
+- 분석 퍼널 이벤트에는 개인정보를 넣지 않고 남용 방지 정책을 둔다.
 
 ## 화면 공통 상태
 
-모든 화면은 최소한 로딩, 빈 데이터, 재시도 가능한 오류, 권한 거부를 구분한다. 오류가 발생해도 이전 입력과 사용자가 취할 다음 행동을 가능한 한 보존한다.
+모든 화면은 로딩, 빈 데이터, 재시도 가능한 오류, 권한 거부를 구분한다. 등록·주문 단계에서 오류가 나도 사진과 입력을 가능한 한 보존한다. 예상치에는 `사진 기반 AI 예상`, 주문 후 변경에는 `공식 장인 실물 검수 결과`를 명시해 두 값을 혼동시키지 않는다.
+
+## Historical 전이 참고
+
+2026-08-17 이전 문서의 아래 전이는 기록 보존용이며 현재 골든 흐름에 사용하지 않는다.
+
+```text
+PENDING_PAYMENT → PENDING_APPROVAL → APPROVED
+REVIEW_REQUIRED → AWAIT_MANUAL_REVIEW → 신청 생성 차단
+```
+
+현재는 `PENDING_PAYMENT → ORDER_PLACED` 뒤 제품 수거와 실물 검수로 진행한다.

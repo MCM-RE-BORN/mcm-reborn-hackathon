@@ -2,31 +2,17 @@ import Image from "next/image";
 import Link from "next/link";
 import { AppShell } from "@/components/layout/AppShell";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { Section } from "@/components/layout/Section";
 import { StickyActionBar } from "@/components/layout/StickyActionBar";
 import { ButtonLink } from "@/components/ui/Button";
+import { DEMO_SCENARIO } from "@/data/demo-scenario";
 import { DemoStatePanel } from "./DemoStatePanel";
+import { MockupViewer } from "./MockupViewer";
 import styles from "./analysis-design.module.css";
 import type { DemoState } from "./types";
 
 type MockupDetailScreenProps = {
   state: DemoState;
 };
-
-const GALLERY = [
-  {
-    alt: "Ottomar 여권 지갑 정면",
-    image: "/assets/mvp-beta/passport-wallet-front.png",
-  },
-  {
-    alt: "Ottomar 여권 지갑 내부",
-    image: "/assets/mvp-beta/passport-wallet-open.png",
-  },
-  {
-    alt: "Ottomar 여권 지갑 후면",
-    image: "/assets/mvp-beta/passport-wallet-back.png",
-  },
-];
 
 function MockupHeader() {
   return (
@@ -80,73 +66,43 @@ export function MockupDetailScreen({ state }: MockupDetailScreenProps) {
       footer={
         <StickyActionBar>
           <ButtonLink fullWidth href="/orders/new">
-            디자인 신청하기
+            이 디자인으로 주문 신청
           </ButtonLink>
         </StickyActionBar>
       }
       header={<MockupHeader />}
     >
       <article className={styles.mockupContent}>
-        <section
-          aria-describedby="mockup-beta-note"
-          aria-label="Ottomar 비세토스 여권 지갑 3D 목업 미리보기"
-          className={styles.mockupHero}
-        >
-          <Image
-            alt="Ottomar 비세토스 여권 지갑 정면 목업"
-            fill
-            priority
-            sizes="(max-width: 360px) calc(100vw - 40px), (max-width: 402px) calc(100vw - 52px), 350px"
-            src="/assets/mvp-beta/product-passport-wallet.png"
-          />
-          {/* TODO(post-beta): replace the static PNG entry with the contract-backed interactive GLB/glTF rotate and zoom viewer. */}
-        </section>
+        <MockupViewer />
 
         <header className={styles.productDetailHeader}>
-          <h1>Ottomar 비세토스 여권 지갑</h1>
+          <h1>{DEMO_SCENARIO.selectedDesign.name}</h1>
           <a className={styles.engravingLink} href="#engraving-note">
-            각인 문구 추가하기
+            각인 옵션 안내
           </a>
         </header>
 
         <p className={styles.productDescription}>
-          현대적 글로벌 노마드를 위해 제작된 이 클래식한 코냑 패스포트
-          홀더는 뮌헨 하우스의 &apos;여행&apos;에 대한 정신을 보여줍니다. 내부는
-          여행에 필요한 서류와 재정 관리를 위한 소지품을 효율적으로 수납할
-          수 있는 부드러운 가죽으로 제작되었습니다.
+          오래 함께한 모노그램 원단의 표정을 살려 새로운 여행을 위한
+          여권지갑으로 제안합니다. 사진에서 확인한 상태가 좋은 전면 원단과
+          측면 가죽을 중심으로 배치한 예상 디자인입니다.
         </p>
 
-        <aside className={styles.contractNotice} id="mockup-beta-note">
+        <aside className={styles.contractNotice}>
           <strong>목업 이용 안내</strong>
           <p>
-            현재 베타는 Figma의 정적 목업 이미지로 회전·확대 진입점을
-            표현합니다. 소재와 장인 수작업 특성상 실제 결과는 목업과 다를 수
-            있습니다.
+            이 목업은 사진 기반 예상 이미지입니다. 주문 후 장인이 실물을
+            확인하면 패턴 위치·재단 범위·세부 마감이 달라질 수 있으며 변경
+            조건은 제작 전에 고객에게 안내합니다.
           </p>
         </aside>
 
-        <Section
-          description="Figma에서 제공된 실제 제품 목업 이미지입니다."
-          title="디테일 보기"
-        >
-          <ul className={styles.mockupGallery}>
-            {GALLERY.map((item) => (
-              <li className={styles.galleryItem} key={item.image}>
-                <Image
-                  alt={item.alt}
-                  fill
-                  sizes="(max-width: 360px) calc(100vw - 40px), (max-width: 402px) calc(100vw - 52px), 350px"
-                  src={item.image}
-                />
-              </li>
-            ))}
-          </ul>
-        </Section>
-
         <aside className={styles.engravingNotice} id="engraving-note">
-          <strong>각인 옵션</strong>
-          <p>각인 문구 편집과 옵션 저장은 정식 제품 단계에서 연결됩니다.</p>
-          {/* TODO(post-beta): connect engraving option editing and persistence to the selected product configuration. */}
+          <strong>각인 옵션 안내</strong>
+          <p>
+            각인 서비스는 제품 상태와 제작 방식에 따라 제공 여부가 달라질 수
+            있습니다. 실물 검수 후 가능한 위치와 크기를 안내합니다.
+          </p>
         </aside>
       </article>
     </AppShell>

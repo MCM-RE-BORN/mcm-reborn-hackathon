@@ -25,7 +25,7 @@ const CONTEXT_LABEL = {
 const STATE_COPY: Record<Exclude<DemoState, "normal">, StateCopy> = {
   loading: {
     title: "정보를 불러오고 있어요",
-    description: "잠시만 기다려 주세요. 데모 데이터가 곧 표시됩니다.",
+    description: "잠시만 기다려 주세요. 요청한 정보가 곧 표시됩니다.",
     tone: "loading",
   },
   empty: {
@@ -50,7 +50,7 @@ const STATE_COPY: Record<Exclude<DemoState, "normal">, StateCopy> = {
   },
   canceled: {
     title: "접수가 취소되었어요",
-    description: "취소된 데모 접수는 분석과 제작 단계로 진행되지 않습니다.",
+    description: "취소된 접수는 분석과 제작 단계로 진행되지 않습니다.",
     tone: "permission",
   },
 };

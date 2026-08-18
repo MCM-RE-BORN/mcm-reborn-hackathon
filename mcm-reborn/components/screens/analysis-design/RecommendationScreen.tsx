@@ -4,116 +4,29 @@ import { AppShell } from "@/components/layout/AppShell";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { StickyActionBar } from "@/components/layout/StickyActionBar";
 import { ButtonLink } from "@/components/ui/Button";
-import { StatusPanel } from "@/components/ui/StatusPanel";
+import { DEMO_SCENARIO, formatKrw } from "@/data/demo-scenario";
 import { DemoStatePanel } from "./DemoStatePanel";
 import styles from "./analysis-design.module.css";
-import type { DemoState, RecommendationCategory } from "./types";
+import type { DemoState } from "./types";
 
 type RecommendationScreenProps = {
-  category: RecommendationCategory;
   state: DemoState;
 };
 
-type Recommendation = {
-  category: Exclude<RecommendationCategory, "keyring">;
-  detailHref?: string;
-  image: string;
-  name: string;
-};
-
-const TABS: Array<{
-  id: RecommendationCategory;
-  label: string;
-}> = [
-  { id: "wallet", label: "지갑" },
-  { id: "pouch", label: "파우치" },
-  { id: "keyring", label: "키링" },
-];
-
-const RECOMMENDATIONS: Recommendation[] = [
-  {
-    category: "wallet",
-    image: "/assets/mvp-beta/recommendation-crossbody-wallet.png",
-    name: "L Pina 스터드 크로스바디 월렛",
-  },
-  {
-    category: "wallet",
-    image: "/assets/mvp-beta/recommendation-studded-wallet.png",
-    name: "S Pina 스터드 장식 비세토스 지갑",
-  },
-  {
-    category: "pouch",
-    image: "/assets/mvp-beta/recommendation-card-pouch.png",
-    name: "Aren 비세토스 카드 파우치",
-  },
-  {
-    category: "wallet",
-    image: "/assets/mvp-beta/recommendation-bifold-wallet.png",
-    name: "Aren 비세토스 브라스 플레이트 지갑",
-  },
-  {
-    category: "wallet",
-    detailHref: "/submissions/demo/designs/passport-wallet",
-    image: "/assets/mvp-beta/recommendation-passport-wallet.png",
-    name: "Ottomar 비세토스 여권 지갑",
-  },
-  {
-    category: "wallet",
-    image: "/assets/mvp-beta/recommendation-chain-wallet.png",
-    name: "Tracy 비세토스 체인 월렛",
-  },
-  {
-    category: "wallet",
-    image: "/assets/mvp-beta/recommendation-card-holder.png",
-    name: "Aren 비세토스 카드 홀더",
-  },
-  {
-    category: "pouch",
-    image: "/assets/mvp-beta/recommendation-zip-wallet.png",
-    name: "Ottomar 비세토스 지퍼 파우치",
-  },
-];
-
-function RecommendationHeader({
-  category,
-}: Pick<RecommendationScreenProps, "category">) {
+function RecommendationHeader() {
   return (
     <div className={styles.recommendationHeader}>
       <PageHeader
         backHref="/submissions/demo/analysis"
-        description="계약 카탈로그는 파우치·카드지갑·키링이며, 아래 이미지는 Figma 시각 후보입니다"
+        description="사진 기반 예상 재활용률·기간·제작 제약을 비교해보세요."
         title="추천 디자인"
       />
-      <nav aria-label="추천 품목" className={styles.productTabs}>
-        {TABS.map((tab) => {
-          const isActive = tab.id === category;
-
-          return (
-            <Link
-              aria-current={isActive ? "page" : undefined}
-              className={[
-                styles.productTab,
-                isActive ? styles.productTabActive : "",
-              ]
-                .filter(Boolean)
-                .join(" ")}
-              href={`/submissions/demo/designs?category=${tab.id}`}
-              key={tab.id}
-            >
-              {tab.label}
-            </Link>
-          );
-        })}
-      </nav>
     </div>
   );
 }
 
-export function RecommendationScreen({
-  category,
-  state,
-}: RecommendationScreenProps) {
-  const header = <RecommendationHeader category={category} />;
+export function RecommendationScreen({ state }: RecommendationScreenProps) {
+  const header = <RecommendationHeader />;
 
   if (state !== "normal") {
     return (
@@ -126,7 +39,7 @@ export function RecommendationScreen({
                 : "/submissions/demo/analysis"
             }
             actionLabel={
-              state === "limited" ? "제작 불가 결과 보기" : "분석 결과로 돌아가기"
+              state === "limited" ? "접수 불가 안내 보기" : "분석 결과로 돌아가기"
             }
             context="recommendation"
             state={state}
@@ -136,34 +49,6 @@ export function RecommendationScreen({
     );
   }
 
-  const items = RECOMMENDATIONS.filter(
-    (recommendation) => recommendation.category === category,
-  );
-
-  if (items.length === 0) {
-    return (
-      <AppShell header={header}>
-        <div className={styles.statePage}>
-          <StatusPanel
-            action={
-              <ButtonLink
-                fullWidth
-                href="/submissions/demo/designs?category=wallet"
-              >
-                지갑 추천 보기
-              </ButtonLink>
-            }
-            description="정확한 Figma 제품 이미지가 준비된 추천안만 표시합니다. 키링 추천은 다음 베타에서 제공할 예정입니다."
-            title="키링 추천안이 아직 없어요"
-            tone="empty"
-          />
-        </div>
-      </AppShell>
-    );
-  }
-
-  const isAnimated = category === "wallet";
-
   return (
     <AppShell
       contentWidth="full"
@@ -171,65 +56,64 @@ export function RecommendationScreen({
         <StickyActionBar>
           <ButtonLink
             fullWidth
-            href={
-              category === "wallet"
-                ? "/submissions/demo/designs/passport-wallet"
-                : "/submissions/demo/designs?category=wallet"
-            }
+            href="/submissions/demo/designs/passport-wallet"
           >
-            {category === "wallet"
-              ? "3D 목업 미리보기"
-              : "3D 목업 제공 디자인 보기"}
+            선택한 디자인 3D 목업 보기
           </ButtonLink>
         </StickyActionBar>
       }
       header={header}
     >
       <div className={styles.recommendationViewport}>
-        <ul
-          aria-label={`${TABS.find((tab) => tab.id === category)?.label} 추천 목록`}
-          className={[
-            styles.recommendationTrack,
-            isAnimated ? styles.recommendationTrackAnimated : "",
-          ]
-            .filter(Boolean)
-            .join(" ")}
-        >
-          {/* TODO(post-beta): persist the selected recommendation and resolve a contract-backed 3D asset for each product. */}
-          {items.map((item, index) => {
+        <ul aria-label="AI 추천 디자인 목록" className={styles.recommendationTrack}>
+          {DEMO_SCENARIO.recommendations.map((item, index) => {
             const cardContent = (
               <>
                 <span className={styles.productImage}>
                   <Image
-                    alt={`${item.name} 추천 디자인`}
+                    alt={`${item.name} 예상 디자인`}
                     fill
                     loading={index < 4 ? "eager" : "lazy"}
                     sizes="(max-width: 360px) calc(100vw - 40px), (max-width: 402px) 50vw, 168px"
                     src={item.image}
                   />
+                  {item.recommended ? (
+                    <span className={styles.recommendationBadge}>AI 추천 1순위</span>
+                  ) : null}
                 </span>
                 <span className={styles.productName}>{item.name}</span>
+                <span className={styles.recommendationMetrics}>
+                  <span>예상 재활용 {item.expectedReuseRate}%</span>
+                  <span>{item.estimatedDuration}</span>
+                  <strong>{formatKrw(item.priceKrw)}</strong>
+                </span>
+                <span className={styles.recommendationConstraint}>
+                  {item.constraint}
+                </span>
               </>
             );
 
             return (
-              <li key={item.name}>
-                {item.detailHref ? (
-                  <Link className={styles.productCard} href={item.detailHref}>
+              <li key={item.id}>
+                {"detailHref" in item ? (
+                  <Link
+                    aria-current="true"
+                    className={`${styles.productCard} ${styles.productCardSelected}`}
+                    href={item.detailHref}
+                  >
                     {cardContent}
                   </Link>
                 ) : (
-                  <article
-                    aria-label={`${item.name} 시각 후보 · 상세 미제공`}
-                    className={styles.productCard}
-                  >
-                    {cardContent}
-                  </article>
+                  <article className={styles.productCard}>{cardContent}</article>
                 )}
               </li>
             );
           })}
         </ul>
+        <p className={styles.recommendationNotice}>
+          추천 순서와 수치는 사진 기반 예상값입니다. 주문 후 실물 검수에서
+          최종 디자인·견적·제작 기간이 달라질 수 있어요.
+        </p>
       </div>
     </AppShell>
   );

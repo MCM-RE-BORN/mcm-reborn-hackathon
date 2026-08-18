@@ -7,8 +7,6 @@ export type DemoState =
   | "limited"
   | "canceled";
 
-export type RecommendationCategory = "wallet" | "pouch" | "keyring";
-
 const DEMO_STATES: DemoState[] = [
   "normal",
   "loading",
@@ -17,12 +15,6 @@ const DEMO_STATES: DemoState[] = [
   "permission",
   "limited",
   "canceled",
-];
-
-const RECOMMENDATION_CATEGORIES: RecommendationCategory[] = [
-  "wallet",
-  "pouch",
-  "keyring",
 ];
 
 function firstValue(value: string | string[] | undefined) {
@@ -37,16 +29,4 @@ export function readDemoState(
   return DEMO_STATES.includes(candidate as DemoState)
     ? (candidate as DemoState)
     : "normal";
-}
-
-export function readRecommendationCategory(
-  value: string | string[] | undefined,
-): RecommendationCategory {
-  const candidate = firstValue(value);
-
-  return RECOMMENDATION_CATEGORIES.includes(
-    candidate as RecommendationCategory,
-  )
-    ? (candidate as RecommendationCategory)
-    : "wallet";
 }
