@@ -22,29 +22,28 @@
 
 ## 앱 소유 영역
 
-`mcm-reborn/`은 Next.js `16.3.0`, React `19.2.8` 실행 앱의 루트다. 현재는 고객 데모 화면, 실제 브라우저 카메라와 중앙 Fixture 여정, `/operations` PC Fixture 콘솔, 운영자 lifecycle command Route Handler가 구현되어 있다. 전체 인증·HTTP API·DB 영속화·외부 서비스 연동이 완료된 제품은 아니다.
+`mcm-reborn/`은 Next.js `16.3.0`, React `19.2.8` 실행 앱의 루트다. 고객 데모 화면, 실제 브라우저 카메라, 중앙 Fixture 여정, `/operations` PC Fixture 콘솔과 OpenAPI 25개 API operation을 구현하는 23개 v2 Route Handler 파일이 있다. 화면은 아직 API에 연결되지 않았고 실제 Supabase/OpenAI 런타임도 검증되지 않았으므로, 코드 범위와 외부 통합 완료를 구분한다. 상세 구조는 [`BACKEND_V2_DESIGN.md`](./BACKEND_V2_DESIGN.md)를 따른다.
 
 | 현재 경로 | 책임과 구현 상태 |
 |---|---|
-| `mcm-reborn/app/` | App Router 페이지와 레이아웃. `/`·`/intro`는 서비스 소개, `/home`은 홈을 렌더한다. `app/api/v2/admin/applications/[applicationId]/lifecycle-commands`만 Route Handler로 구현됨 |
-| `mcm-reborn/server/` | lifecycle command의 Bearer 인증, 서버 전용 멱등성 예약·캐시, Supabase RPC와 operator RLS 조회 helper |
+| `mcm-reborn/app/` | App Router 페이지·레이아웃과 `app/api/v2/` Route Handler. `/`·`/intro`는 서비스 소개, `/home`은 홈이며 API 디렉터리가 OpenAPI 25개 operation을 구현함 |
+| `mcm-reborn/server/` | 인증·HTTP body 제한, 분석·OpenAI·제품·업로드·신청·결제·검수·변경 승인·lifecycle·보증서 서비스, 멱등성과 Supabase RLS/RPC adapter |
+| `mcm-reborn/lib/` | 지연 생성 public/user/admin Supabase server client와 공용 연결 유틸리티 |
+| `mcm-reborn/contracts/` | v2 분석·신청·제품·오류 타입과 Zod 검증 계약 |
 | `mcm-reborn/components/` | 레이아웃, 공용 UI와 화면별 데모 컴포넌트 |
 | `mcm-reborn/data/demo-scenario.ts` | 접수·분석·추천·주문·검수·보증서에 공통으로 쓰는 중앙 Fixture |
 | `mcm-reborn/public/assets/` | 저장소에 공개 가능한 데모·카탈로그 자산. 고객이 촬영한 원본의 저장 위치가 아님 |
 
-| 향후 경로 | 도입할 때의 책임 |
+| 향후 경로·작업 | 도입할 때의 책임 |
 |---|---|
-| `mcm-reborn/app/api/v2/`의 나머지 경로 | API 계약 v2.0.0을 구현할 OpenAPI 3.1.0 기반 HTTP Route Handler |
-| `mcm-reborn/server/` | 인증, 도메인 서비스, Supabase·OpenAI adapter와 서버 전용 로직 |
-| `mcm-reborn/lib/` | Supabase·OpenAPI 연결 등 프레임워크 공용 유틸리티 |
-| `mcm-reborn/contracts/` | OpenAPI에서 파생하거나 수동 관리하는 앱 타입·상수 |
-| `mcm-reborn/public/assets/products/` | 공개 가능한 제품 목록·poster 이미지 |
-| `mcm-reborn/public/assets/models/` | 공개 가능한 GLB·glTF 자산 |
-| `mcm-reborn/tests/` | 단위·통합·브라우저 테스트 |
+| UI의 API client 계층 | 현재 Fixture 고객·운영 콘솔을 `/api/v2` Auth·로딩·빈 상태·오류 처리에 연결 |
+| `mcm-reborn/public/assets/products/` | 권리와 파일을 확인한 공개 제품 poster 이미지. 준비 전 `model_3d_ready=false` 유지 |
+| `mcm-reborn/public/assets/models/` | 권리와 무결성을 확인한 GLB·glTF 자산. 이미지 파일을 GLB로 가장하지 않음 |
+| `mcm-reborn/tests/` | disposable Supabase를 포함한 단위·API 통합·RLS·브라우저 테스트 |
 
 영속 저장을 도입할 때 고객 원본 사진은 `public/`에 넣지 않고 Supabase private bucket에 저장해야 한다. 비밀키, 실제 고객 데이터와 운영 로그도 저장소에 추가하지 않는다.
 
-신규 DB의 전체 bootstrap 기준은 `supabase-schema.sql`이다. 기존 DB에는 루트 `supabase/migrations/`의 버전 migration을 순서대로 적용하고, 구조 롤백은 대응하는 `supabase/rollbacks/` 파일과 데이터 안전 조건을 따른다. lifecycle 무결성은 `202608180001_lifecycle_integrity.sql`, 이전 4장 계약은 `202608180002_capture_four_views.sql`, 현행 7장 계약은 `202608180003_capture_seven_views.sql`과 각각의 rollback으로 관리하며 bootstrap·migration·rollback을 같은 계약 변경 단위로 검증한다.
+신규 DB의 전체 bootstrap 기준은 `supabase-schema.sql`이다. 호환되는 기존 v2 데모 DB에는 루트 `supabase/migrations/`의 버전 migration을 순서대로 적용하고, 구조 롤백은 대응하는 `supabase/rollbacks/` 파일과 데이터 안전 조건을 따른다. lifecycle 무결성은 `202608180001_lifecycle_integrity.sql`, 이전 4장 계약은 `202608180002_capture_four_views.sql`, 현행 7장 계약은 `202608180003_capture_seven_views.sql`, Product3D readiness·결제·고객 변경안 결정·이벤트·Storage metadata binding·외부 AI 동의 증적·신청/옵션 제약은 `202608180004_backend_v2_runtime.sql`과 rollback으로 관리한다. `origin/feature-backend` v1 DB는 이 migration 체인의 입력으로 지원하지 않는다.
 
 ## 지침 적용 순서
 

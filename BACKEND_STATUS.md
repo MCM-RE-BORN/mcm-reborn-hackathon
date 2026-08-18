@@ -1,101 +1,124 @@
-# 백엔드 구현 상태
+# 백엔드 v2 통합 상태
 
-## ✅ 구현 완료된 API (10개)
+기준 브랜치는 `feature-backend-v2-integration`이며 `origin/feature-backend`
+(`5dc293e`)에서 분기했다. HTTP 계약은 `openapi.yaml`의 API 계약 v2.0.0
+(OpenAPI 3.1.0), 데이터 구조는 `supabase-schema.sql`과
+`supabase/migrations/`, 제품 흐름은 `docs/MVP_DEMO_CANONICAL.md`를 따른다.
 
-| Method | Path | 파일 | 상태 |
-|--------|------|------|------|
-| `GET` | `/health` | `app/api/v1/health/route.ts` | ✅ 완료 |
-| `POST` | `/auth/demo-login` | `app/api/v1/auth/demo-login/route.ts` | ✅ 완료 |
-| `GET` | `/me` | `app/api/v1/me/route.ts` | ✅ 완료 |
-| `POST` | `/uploads/presign` | `app/api/v1/uploads/presign/route.ts` | ✅ 완료 |
-| `POST` | `/analyses` | `app/api/v1/analyses/route.ts` | ✅ 완료 |
-| `GET` | `/analyses` | `app/api/v1/analyses/route.ts` | ✅ 완료 |
-| `GET` | `/products` | `app/api/v1/products/route.ts` | ✅ 완료 |
-| `GET` | `/products/{productId}` | `app/api/v1/products/[productId]/route.ts` | ✅ 완료 |
-| `POST` | `/applications` | `app/api/v1/applications/route.ts` | ✅ 완료 |
-| `POST` | `/applications/{applicationId}/mock-payment` | `app/api/v1/applications/[applicationId]/mock-payment/route.ts` | ✅ 완료 |
-| `POST` | `/admin/applications/{applicationId}/approve` | `app/api/v1/admin/applications/[applicationId]/approve/route.ts` | ✅ 완료 |
+## 판정 요약
 
-## ⚠️ 미구현 API (OpenAPI 대비 누락, 9개)
+- `feature-backend`에는 Supabase Auth·Database·Storage를 호출하는 코드와 RLS
+  SQL이 있었지만, 프로젝트 URL·키·CLI link·적용된 migration·실행 검증 기록은
+  없었다. 따라서 **Supabase 연동 코드가 존재했을 뿐 실제 프로젝트 연결은
+  확인되지 않았다.**
+- 기존 `/api/v1`은 주문 전 운영자 승인, 1~4장 분석, 시간 기반 자동 상태 등
+  현재 v2 흐름과 맞지 않고 코드가 참조하는 컬럼도 당시 SQL과 다수 불일치했다.
+  이 브랜치는 v1을 제거하고 v2 계약에 맞춰 Route Handler와 서비스를 재작성했다.
+- 로컬 저장소에는 실제 Supabase 값이 없다. 환경변수와 원격 프로젝트가 준비되지
+  않은 상태에서 lint·typecheck·build·계약 검증은 가능하지만, Auth/RLS/Storage/RPC
+  통합 성공을 의미하지 않는다.
 
-### 필수 (P0~P1)
-| Method | Path | 우선순위 | 필요성 |
-|--------|------|----------|--------|
-| `GET` | `/analyses/{analysisId}` | P1 | 분석 결과 상세 조회 |
-| `GET` | `/applications/{applicationId}` | P0 | 신청 상세 조회 (고객·운영자) |
-| `GET` | `/applications` | P1 | 내 신청 목록 |
-| `GET` | `/applications/{applicationId}/timeline` | P1 | 진행 타임라인 |
-| `GET` | `/admin/applications` | P0 | 운영자 신청 목록 |
-| `GET` | `/admin/applications/{applicationId}` | P1 | 운영자 신청 상세 |
+## v2 API 범위
 
-### 선택 (P2)
-| Method | Path | 우선순위 | 필요성 |
-|--------|------|----------|--------|
-| `GET` | `/applications/{applicationId}/shipment` | P2 | Mock 운송장 조회 |
-| `GET` | `/applications/{applicationId}/certificate` | P2 | ESG 보증서 |
-| `GET` | `/certificates/{certificateId}/verify` | P2 | 보증서 검증 |
-| `POST` | `/events` | P2 | KPI 이벤트 기록 |
+23개 `route.ts` 파일이 아래 25개 OpenAPI operation을 구현한다. GET/POST가 같은
+collection 파일에 공존하는 두 곳 때문에 파일 수와 operation 수가 다르다. 모든
+경로의 실제 URL에는 `/api/v2` 접두사가 붙는다.
 
-## 📊 구현된 서버 로직 (13개)
+| 영역 | Operation |
+|---|---|
+| 시스템·인증 | `GET /health`, `POST /auth/demo-login`, `GET /me` |
+| 업로드 | `POST /uploads/presign` |
+| 분석 | `POST /analyses`, `GET /analyses`, `GET /analyses/{analysisId}` |
+| 제품 | `GET /products`, `GET /products/{productId}` |
+| 신청 | `POST /applications`, `GET /applications`, `GET /applications/{applicationId}` |
+| 주문 조회 | `GET /applications/{applicationId}/timeline`, `GET /applications/{applicationId}/shipment` |
+| 결제·보증서 | `POST /applications/{applicationId}/mock-payment`, `GET /applications/{applicationId}/certificate`, `GET /certificates/{certificateId}/verify` |
+| 운영자 | `GET /admin/applications`, `GET /admin/applications/{applicationId}`, `POST /admin/applications/{applicationId}/lifecycle-commands`, `POST /admin/applications/{applicationId}/inspection` |
+| 변경 승인 | `GET /applications/{applicationId}/change-request`, `POST /applications/{applicationId}/change-request/approve`, `POST /applications/{applicationId}/change-request/reject` |
+| 분석 이벤트 | `POST /events` |
 
-### 핵심 서비스
-- `server/analyses/analysisService.ts` - 분석 생성, 추천 계산
-- `server/applications/applicationService.ts` - 신청 생성, 검증
-- `server/applications/resolveMockStatus.ts` - 자동 상태 계산
-- `server/products/productService.ts` - 제품 조회
-- `server/payments/mockPaymentAdapter.ts` - Mock 결제
+고객·운영 콘솔 화면은 아직 중앙 Fixture를 사용하며 이 API에 연결되지 않았다.
+또한 Route 파일과 정적 검증이 있다는 사실만으로 원격 Supabase/OpenAI에서
+동작한다고 표시하지 않는다. 상세 설계는 `docs/BACKEND_V2_DESIGN.md`에 정리한다.
 
-### AI 분석
-- `server/openai/OpenAiVisionProvider.ts` - OpenAI 실제 분석
-- `server/openai/FixtureVisionProvider.ts` - Fixture 제공자
-- `server/openai/HybridVisionProvider.ts` - 폴백 처리
-- `server/openai/visionProviderFactory.ts` - 제공자 팩토리
+## 핵심 설계
 
-### 인프라
-- `server/auth/middleware.ts` - JWT 인증, 권한 검사
-- `server/auth/errorHandler.ts` - 오류 처리
-- `server/storage/uploadService.ts` - 이미지 업로드
-- `server/recommendation/calculateRecommendations.ts` - 추천 계산
+### 인증과 권한
 
-### 계약
-- `contracts/errors.ts` - 오류 타입
-- `contracts/analysis.ts` - 분석 스키마
-- `contracts/product.ts` - 제품 타입
-- `contracts/application.ts` - 신청 타입
+- Supabase access token을 `Authorization: Bearer ...`로 받는다.
+- CUSTOMER는 본인 분석·신청만 읽고 변경 결정을 내릴 수 있다.
+- OPERATOR는 신청 목록·상세, 실물 검수와 lifecycle command를 수행한다.
+- service role이 필요한 쓰기는 사용자 인증과 리소스 소유권 또는 OPERATOR 역할을
+  먼저 검증한 뒤 제한적으로 수행한다. service role 키는 응답·로그·클라이언트
+  번들에 노출하지 않는다.
 
-## 📝 다음 작업
+### 이미지와 분석
 
-### 1단계: 필수 API 완성 (P0~P1)
+- 원본은 private `source-products` bucket의 사용자별 경로에 저장한다.
+- presign은 한 요청에 1~4개씩 발급할 수 있지만 분석 생성은 정면·후면·상단·하단·
+  좌측면·우측면·일련번호의 정확히 7개 자산을 순서대로 요구한다.
+- 분석은 `DEMO_FIXTURE`, `SEEDED_ESTIMATE`, `LIVE` 모드를 지원하며 모두 사진 기반
+  예상치로 표현한다.
+- `LIVE`는 배포 opt-in·privacy notice·요청별 동의 증적이 있어야 하며 공식 OpenAI
+  JavaScript SDK의 Chat Completions Structured Outputs를 사용한다. 제공자 장애에는
+  Fixture로 폴백하지만 이미지 품질 실패는 폴백하지 않는다.
+
+### 주문과 실물 검수
+
+- Mock 결제 성공 후 `ORDER_PLACED`가 되며 주문 전 장인 승인 단계는 없다.
+- 수거·제작·품질·배송은 OPERATOR lifecycle command와 DB transition guard로 바로
+  다음 단계만 진행한다.
+- `CHANGE_REQUIRED` 실물 검수는 검수·변경안·상태 이력을 하나의 RPC transaction으로
+  생성한다.
+- `COMPLETED` 전 보증서 생성은 DB trigger가 차단한다.
+
+### 이벤트·제품 자산
+
+- 이벤트는 Bearer 인증 필수이며 허용 event/metadata, 리소스 가시성과 사용자별
+  rate limit을 확인한다. `anon`/`authenticated`의 직접 DB INSERT는 허용하지 않는다.
+- Product3D JSON은 DB에 보존하지만 실제 GLB/poster가 준비되지 않은 제품은
+  `model_3d_ready=false`이며 API가 3D를 노출하지 않는다.
+
+## Supabase 연결 완료 기준
+
+다음 항목을 모두 확인해야 “연결 완료”로 판정한다.
+
+1. 추적되지 않는 `mcm-reborn/.env.local` 또는 배포 환경에 URL·publishable key·
+   service role key가 설정되어 있다.
+2. 신규 프로젝트에는 `supabase-schema.sql`, 호환되는 기존 v2 데모 DB에는 migration
+   001→002→003→004가 실제 적용되었다. `feature-backend` v1 DB는 이 체인의 입력으로
+   지원하지 않으므로 실제 백업에 맞춘 별도 변환 또는 빈 v2 staging을 사용한다.
+3. CUSTOMER·OPERATOR Auth 사용자와 같은 UUID의 `profiles` 행이 존재한다.
+4. `/api/v2/health`가 DB 연결을 확인하고 정상 상태를 반환한다.
+5. CUSTOMER/OPERATOR 권한 거부, 7장 업로드·분석, Mock 결제, 수거→검수→변경 승인→
+   제작→배송→완료→보증서 흐름을 원격 DB에서 검증한다.
+6. service role 없이 가능한 조회/RPC는 요청 JWT와 RLS가 실제로 적용됨을 확인한다.
+
+현재 작업 환경은 1~6의 원격 실행 증거가 없으므로 **v2 코드 구현 / Supabase·OpenAI
+실제 연결 미확인 / Fixture UI 미연결** 상태다.
+
+## 남은 검증 공백
+
+- 이 저장소에는 자동 API 통합 테스트 스크립트와 disposable Supabase/PostgreSQL
+  runtime이 없다.
+- migration과 rollback은 정적 검증만으로 충분하지 않다. staging 프로젝트에서
+  적용·권한·원자성·롤백을 확인해야 한다.
+- 멱등성 예약 뒤 프로세스가 종료되는 경우와 외부 AI/Storage 장애를 포함한 동시성
+  테스트가 필요하다.
+- `/operations` Fixture 콘솔은 실데이터를 연결하기 전에 OPERATOR 인증과 개인정보
+  최소 노출을 적용해야 한다.
+
+## 로컬 검증
+
+저장소 루트에서 실행한다.
+
 ```bash
-# 신청 조회 API
-app/api/v1/applications/[applicationId]/route.ts
-app/api/v1/applications/[applicationId]/timeline/route.ts
-
-# 분석 상세
-app/api/v1/analyses/[analysisId]/route.ts
-
-# 운영자
-app/api/v1/admin/applications/route.ts
-app/api/v1/admin/applications/[applicationId]/route.ts
+python -X utf8 validate_package.py
+python -X utf8 scripts/validate_collaboration.py
+npm --prefix mcm-reborn run lint
+npm --prefix mcm-reborn run typecheck
+npm --prefix mcm-reborn run build
 ```
 
-### 2단계: 선택 API (P2)
-```bash
-# ESG 보증서
-app/api/v1/applications/[applicationId]/certificate/route.ts
-app/api/v1/applications/[applicationId]/shipment/route.ts
-app/api/v1/certificates/[certificateId]/verify/route.ts
-
-# 분석
-app/api/v1/events/route.ts
-```
-
-### 3단계: 환경 설정
-- `.env.local` 환경변수 설정
-- Supabase 스키마 적용
-- 데모 계정 생성
-
-### 4단계: 검증
-- API 테스트
-- 타입 체크
-- 빌드 확인
+`package.json`에는 자동 테스트 스크립트가 없다. 위 명령의 성공을 API 통합 테스트
+성공으로 과장하지 않는다.

@@ -43,9 +43,9 @@
 - 홈 hero는 준비된 실제 영상을 muted·loop·inline 방식으로 재생하고, `상품 진단하기` CTA로 제품 등록을 시작한다.
 - 홈 hero 원본 영상에 포함된 시계·카메라·통신·배터리 등 모바일 OS 상태바 영역은 화면 밖으로 잘라낸다.
 - 실제 브라우저 카메라와 파일 선택 폴백은 구현되어 있다. 촬영 Blob과 입력은 클라이언트 세션 메모리에 있으므로 전체 새로고침 뒤에는 준비된 데모 자산으로 복구한다.
-- AI 분석·이미지 품질 판정·고객 인증·주문·결제·검수·보증서는 중앙 Fixture와 화면 상태로 시연한다. 운영자 lifecycle command만 `mcm-reborn/app/api/v2/` Route Handler와 Supabase RPC 연동이 있고 나머지 고객 여정은 영속 저장이 없다.
+- AI 분석·이미지 품질 판정·고객 인증·주문·결제·검수·보증서는 현재 브라우저 화면에서 중앙 Fixture로 시연한다. 서버에는 OpenAPI 25개 API operation을 구현하는 23개 v2 Route Handler 파일과 Supabase 계약이 있지만 UI가 아직 호출하지 않으며, 실제 Supabase/OpenAI 환경에서의 영속 동작도 검증되지 않았다.
 - PC `/operations` 목록과 `/operations/[applicationId]` 상세는 단계별 관리자·장인 담당을 표시하는 통합 Fixture 콘솔이다. 다음 단계 버튼은 데모 상태만 진행하며 live 연결 시 기존 v2 lifecycle command를 사용한다.
-- HTTP 기준은 API 계약 v2.0.0이며 `openapi.yaml`은 OpenAPI 3.1.0 형식이다. lifecycle command 외 OpenAPI·Mock·SQL은 현재 브라우저 앱의 실행 서버가 아니라 향후 연동 기준이다.
+- HTTP 기준은 API 계약 v2.0.0이며 `openapi.yaml`은 OpenAPI 3.1.0 형식이다. Route Handler 구현 구조는 [`BACKEND_V2_DESIGN.md`](./BACKEND_V2_DESIGN.md)를 따르며, 브라우저 Fixture 상태와 실제 API·DB 상태를 같은 것으로 표현하지 않는다.
 
 ## 3. 중앙 데모 시나리오
 

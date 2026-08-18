@@ -2,7 +2,7 @@
 
 > 2026-08-17 현재 흐름. 이전의 `REVIEW_REQUIRED` 주문 차단과 `PENDING_APPROVAL → APPROVED` 운영자 선승인 흐름은 **superseded/historical**이다. 제품 의미와 중앙 시나리오는 [`MVP_DEMO_CANONICAL.md`](./MVP_DEMO_CANONICAL.md), 정확한 요청·응답은 `openapi.yaml`을 따른다.
 
-현행 웹 진입은 서비스 소개 `/` 또는 `/intro`에서 시작하고 홈은 `/home`이다. 아래 고객 식별자와 화면 상태는 현재 앱에서 Fixture로 시연되며 서버에 생성·저장되는 것은 아니다. OpenAPI 중 운영자 lifecycle command만 Route Handler로 구현되어 있고 실물 검수와 나머지 경로는 아직 계약 기준이다.
+현행 웹 진입은 서비스 소개 `/` 또는 `/intro`에서 시작하고 홈은 `/home`이다. 아래 고객 식별자와 화면 상태는 현재 앱에서 Fixture로 시연되며 아직 v2 API에 연결되지 않았다. 별도 서버 경계에는 OpenAPI 25개 API operation을 구현하는 23개 Route Handler 파일과 DB 계약이 있지만, 실제 Supabase 프로젝트·환경변수·migration·OpenAI LIVE 호출은 검증되지 않았다.
 
 공통 하단 내비게이션은 `신청 내역`(`/orders`)·`홈`(`/home`)·`마이페이지`(`/mypage`) 3개다. 사용자 표기는 `진행조회`가 아니라 `신청 내역`이며, `/orders` 목록에서 상품을 선택하면 `/orders/demo` 상세가 열린다.
 
@@ -71,7 +71,7 @@ PENDING_PAYMENT → ORDER_PLACED → PICKUP_SCHEDULED → PICKUP_IN_PROGRESS
 
 - `OPERATOR`는 PC `/operations`에서 신청 목록을 확인하고 상품을 선택해 `/operations/[applicationId]` 상세로 이동한다.
 - 관리자 보기에서는 수거·배송 등 운영 단계를, 장인 보기에서는 실물 검수·제작·품질 단계를 확인하고 준비된 다음 단계 버튼을 누른다.
-- 현재 버튼은 중앙 Fixture의 화면 상태만 진행한다. 실제 서버 연결 시 현행 v2 lifecycle command의 인접 전이·운영자 권한·멱등성 규칙을 그대로 적용한다.
+- 현재 버튼은 중앙 Fixture의 화면 상태만 진행한다. 후속 UI→API 통합에서는 구현된 v2 lifecycle command의 인접 전이·운영자 권한·멱등성 규칙을 그대로 사용한다.
 - 고객 골든 패스에 주문 전 선승인 동작을 추가하지 않는다. 공식 장인 실물 검수는 `PRODUCT_RECEIVED` 이후에만 나타난다.
 - 골든 시나리오는 `InspectionResult = CHANGE_REQUIRED`, `ChangeDecision = APPROVED`다.
 - 실제 장인 계정, 검수 입력 도구, 생산 배정과 외부 운영 데이터 연동은 MVP 범위 밖이다.
@@ -79,10 +79,10 @@ PENDING_PAYMENT → ORDER_PLACED → PICKUP_SCHEDULED → PICKUP_IN_PROGRESS
 
 ## 공개·보조 흐름
 
-- API 계약의 상태 확인용 `/health`는 인증 없는 엔드포인트로 정의되어 있다. 현재 앱에는 해당 Route Handler가 없으므로 런타임 상태 확인 URL로 안내하지 않는다.
+- 상태 확인은 공개 `GET /api/v2/health` Route Handler를 사용한다. HTTP 200만 보지 않고 `status`가 `ok`인지 확인하며, 외부 설정·DB 조회가 준비되지 않은 현재 로컬 환경의 `degraded`를 연결 성공으로 해석하지 않는다.
 - 진행 중 보증서 미리보기는 가능하지만 공식 `ISSUED` 표시는 `COMPLETED` 뒤에만 제공한다.
 - 보증서 검증 URL은 공개할 수 있으나 데모 데이터이며 법적 효력을 주장하지 않는다.
-- 분석 퍼널 이벤트에는 개인정보를 넣지 않고 남용 방지 정책을 둔다.
+- 분석 퍼널 이벤트는 Bearer 인증 사용자만 전송하며 개인정보를 넣지 않는다. event/metadata allowlist, 연결 리소스 가시성 검사와 사용자별 rate limit을 적용한다.
 
 ## 화면 공통 상태
 

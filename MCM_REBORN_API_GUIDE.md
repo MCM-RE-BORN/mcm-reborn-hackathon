@@ -6,7 +6,7 @@
 >
 > 목적: 서비스 시연·데모 MVP의 프론트엔드, Route Handler, Mock, Supabase 구현 기준
 >
-> 구현 상태: 운영자 lifecycle command만 `mcm-reborn/app/api/v2/admin/applications/[applicationId]/lifecycle-commands` Route Handler와 Supabase RPC 연결이 구현되어 있습니다. Supabase 환경변수·운영자 JWT·migration이 준비된 환경에서 실행되며, 실물 검수와 나머지 API 및 고객 화면은 중앙 Fixture 또는 향후 구현 기준입니다.
+> 구현 상태: `openapi.yaml`의 25개 API operation을 구현하는 `mcm-reborn/app/api/v2/` Route Handler 파일 23개와 서비스·DB 계약이 있습니다. 고객·운영 콘솔 화면은 아직 중앙 Fixture를 사용하며 API에 연결되지 않았고, 실제 Supabase 프로젝트·migration·OpenAI LIVE 호출도 검증되지 않았습니다. 상세 판정은 [`docs/BACKEND_V2_DESIGN.md`](docs/BACKEND_V2_DESIGN.md)를 따릅니다.
 
 기계 판독 기준은 `openapi.yaml`입니다. 이 문서는 구현 의도와 대표 시나리오를 설명하며, 값이 다르면 OpenAPI를 우선합니다. 데모 고정값은 `mock-data.json`, DB 타입과 무결성 규칙은 `supabase-schema.sql`을 함께 확인합니다.
 
@@ -23,11 +23,12 @@
 
 - Base URL: `/api/v2`
 - 인증: Supabase access token을 `Authorization: Bearer <token>`으로 전달합니다.
-- 쓰기 요청: `Idempotency-Key`를 전달합니다.
+- 분석·신청 생성, Mock 결제, lifecycle, 실물 검수와 변경 결정처럼 OpenAPI가 지정한 상태 변경에는 `Idempotency-Key`를 전달합니다. Presign·demo-login·이벤트에는 요구하지 않습니다.
 - 통화: `KRW`
 - 시간: ISO 8601 UTC 저장, UI에서 Asia/Seoul로 표시
 - 오류 형식: `{ "error": { "code", "message", "requestId", "details" } }`
 - 외부 Provider 키와 service-role 키는 서버에서만 사용합니다.
+- `POST /events`도 Bearer 인증이 필수이며 익명 이벤트를 허용하지 않습니다.
 
 ## 3. 사진 업로드와 분석 생성
 
@@ -117,6 +118,19 @@ RECEIVED | ANALYZING | SUPPLEMENT_REQUIRED | COMPLETED | FAILED
 
 어떤 모드를 사용하더라도 UI는 `confidencePercent`와 `notice`를 숨기지 않습니다. 재활용률 필드명은 항상 `estimatedReusableMaterialRate`입니다.
 
+`LIVE`는 공식 OpenAI JavaScript SDK의 `chat.completions.parse`와 Zod `zodResponseFormat`을 사용하는 Chat Completions Structured Outputs 구현입니다. 제공자 장애에는 canonical `DEMO_FIXTURE`로 폴백하지만, 이미지 품질 실패는 성공으로 바꾸지 않습니다.
+
+private 이미지를 외부 AI에 보내려면 배포의 `ENABLE_EXTERNAL_AI=true`, 고정된 `EXTERNAL_AI_PRIVACY_NOTICE_VERSION`, OpenAI 서버 설정과 아래 요청 필드를 모두 만족해야 합니다.
+
+```json
+{
+  "externalAiProcessingConsentAccepted": true,
+  "externalAiPrivacyNoticeVersion": "<현재 배포의 notice version>"
+}
+```
+
+서버는 외부 전송 전에 동의 증적을 기록하고 완료 후 같은 고객의 `COMPLETED` `analysisId`를 한 번만 연결합니다. FK는 `ON DELETE RESTRICT`이므로 연결된 분석 삭제가 증적을 함께 지우지 않습니다. 브라우저 기본 데모는 `DEMO_FIXTURE`이므로 이 동의나 외부 전송이 필요하지 않습니다. 실제 LIVE 호출과 원격 DB 증적은 staging 검증 전까지 연결 완료로 표현하지 않습니다.
+
 ### 3.4 사진 기반 주문 가능성 사전 신호
 
 ```json
@@ -147,11 +161,15 @@ v2 데모 제품은 아래 네 가지입니다.
 
 대표 선택은 여권지갑이며 최초 예상 가격은 180,000원, 최초 예상 기간은 3~4주입니다.
 
+DB는 네 제품의 canonical Product3D JSON을 보존하지만 실제 GLB/poster 자산이 준비되지 않은 현재 seed는 `model_3d_ready=false`입니다. 제품 API는 이 경우 `has3d=false`, `model3d=null`로 반환하고 브라우저는 정적 다각도 목업을 사용합니다. 실제 자산을 배치·검증하기 전 readiness만 임의로 켜지 않습니다.
+
 ## 5. 주문과 결제
 
 `POST /applications`는 기술적으로 주문을 생성합니다. 반환되는 `applicationId`가 전 구간에서 사용하는 단일 `orderId`입니다. `applicationNumber`는 사람이 읽는 주문 번호입니다.
 
 주문 생성 시 분석이 `COMPLETED`, 이미지 품질이 `ACCEPTABLE`, `authenticityPrecheck.status`가 `ORDER_ELIGIBLE`인지 확인합니다. 생성 직후 상태는 `PENDING_PAYMENT`입니다.
+
+`selectedOptions`는 선택 제품의 `optionGroups`에 정의된 key만 허용하고 SELECT 값·필수 여부·TEXT 최대 길이를 검증합니다. 여권지갑 canonical 선택은 `edgeColor=COGNAC`, 선택 이니셜은 최대 3자입니다. `applications.analysis_id`는 unique이므로 같은 분석으로 신청을 두 개 만들 수 없습니다.
 
 계약상 주문 생성 요청은 수거 희망 일정과 세 가지 필수 동의를 함께 전달하며, 서버 구현은 이를 주문에 저장해야 합니다. 동의는 모두 `true`여야 하며 임의의 예전 키나 추가 키를 받지 않습니다.
 
@@ -250,7 +268,7 @@ Supabase RPC `advance_application_lifecycle`는 변경된 상태와 `shipment_id
 1. 실물 검수 결과가 `NO_CHANGE`이고 주문 상태가 `PRODUCTION_READY`입니다.
 2. 실물 검수 결과가 `CHANGE_REQUIRED`이며 연결된 변경안이 `APPROVED`이고 주문 상태가 `PRODUCTION_READY`입니다.
 
-향후 API 서비스 구현과 `supabase-schema.sql`의 DB trigger는 모두 이 규칙을 검사해야 합니다. UI에서 버튼을 숨기는 것만으로는 충분하지 않습니다.
+구현된 API 서비스와 `supabase-schema.sql`의 DB trigger가 모두 이 규칙을 검사합니다. UI에서 버튼을 숨기는 것만으로는 충분하지 않으며, 실제 staging에서도 우회 쓰기가 거부되는지 확인해야 합니다.
 
 ## 7. 주문 후 전문가 실물 검수
 
@@ -319,48 +337,57 @@ Supabase RPC `submit_physical_inspection`은 같은 트랜잭션에서 만든 `c
 
 ## 9. 엔드포인트 요약
 
-| Method | Path | 역할 |
-|---|---|---|
-| POST | `/uploads/presign` | 소스 사진 점진 업로드 URL 발급 |
-| POST | `/analyses` | 필수 6면과 일련번호 사진, 총 7장과 제품 정보로 분석 생성 |
-| GET | `/analyses/{analysisId}` | 분석 상태·예상 결과 조회 |
-| GET | `/products` | 최종 제품 4종 조회 |
-| POST | `/applications` | 주문 생성 |
-| POST | `/applications/{applicationId}/mock-payment` | 데모 결제, 성공 시 `ORDER_PLACED` |
-| GET | `/applications/{applicationId}/timeline` | 주문 상태 이력 조회 |
-| POST | `/admin/applications/{applicationId}/lifecycle-commands` | 운영자 수거·제작·품질·배송 상태 한 단계 진행 |
-| POST | `/admin/applications/{applicationId}/inspection` | 주문 후 전문가 실물 검수 |
-| GET | `/applications/{applicationId}/change-request` | 고객 변경안 조회 |
-| POST | `/applications/{applicationId}/change-request/approve` | 고객 변경안 승인 |
-| POST | `/applications/{applicationId}/change-request/reject` | 고객 변경안 거절·주문 취소 |
-| GET | `/applications/{applicationId}/certificate` | 완료된 주문 보증서 조회 |
+아래 25개 API operation은 23개 Route Handler 파일로 구현되어 있습니다. 실제 URL에는 모두 `/api/v2` 접두사가 붙습니다.
+
+| 영역 | Method / Path |
+|---|---|
+| 시스템·인증 | `GET /health`, `POST /auth/demo-login`, `GET /me` |
+| 업로드 | `POST /uploads/presign` |
+| 분석 | `POST /analyses`, `GET /analyses`, `GET /analyses/{analysisId}` |
+| 제품 | `GET /products`, `GET /products/{productId}` |
+| 신청 | `POST /applications`, `GET /applications`, `GET /applications/{applicationId}` |
+| 주문 조회 | `GET /applications/{applicationId}/timeline`, `GET /applications/{applicationId}/shipment` |
+| 결제·보증서 | `POST /applications/{applicationId}/mock-payment`, `GET /applications/{applicationId}/certificate`, `GET /certificates/{certificateId}/verify` |
+| 운영자 | `GET /admin/applications`, `GET /admin/applications/{applicationId}`, `POST /admin/applications/{applicationId}/lifecycle-commands`, `POST /admin/applications/{applicationId}/inspection` |
+| 변경 승인 | `GET /applications/{applicationId}/change-request`, `POST /applications/{applicationId}/change-request/approve`, `POST /applications/{applicationId}/change-request/reject` |
+| 이벤트 | `POST /events` (Bearer 인증 필수) |
+
+현재 브라우저 Fixture 화면이 이 경로를 호출한다는 뜻은 아니며, 실제 Supabase/OpenAI 연결 완료를 뜻하지도 않습니다.
+
+### 이벤트 보안
+
+`POST /events`는 Bearer 인증을 요구합니다. 서버는 event name과 metadata key/value를 allowlist로 제한하고, `analysisId`·`productId`·`applicationId`가 있으면 요청 사용자가 해당 리소스를 볼 수 있는지 RLS로 확인합니다. 사용자당 최근 1분 이벤트 수가 한도를 넘으면 `429`를 반환합니다. DB는 `anon`·`authenticated` 직접 INSERT를 허용하지 않으며 검증을 마친 서버만 service role로 기록합니다.
 
 ## 10. 구현·검증 체크리스트
 
-- [ ] Presign은 요청당 1~4개, 분석 생성은 정확히 7개 제한을 서로 다르게 적용한다.
-- [ ] 소스 업로드는 JPG/PNG와 파일당 10 MiB만 허용한다.
-- [ ] 분석 요청의 제품 정보 필수·선택 필드를 구분한다.
-- [ ] 분석 enum을 OpenAPI, TypeScript, SQL, Mock에서 동일하게 사용한다.
-- [ ] 모든 분석 예상 결과에 `estimateMeta`와 `authenticityPrecheck.notice`를 노출한다.
-- [x] 주문 생성 시 `pickupSchedule`과 정확히 세 개의 필수 동의 키를 저장할 DB 계약과 검증을 둔다. 주문 생성 Route Handler 연결은 별도다.
-- [ ] 결제 성공 직후 `ORDER_PLACED` 이력을 남긴다.
+- [x] Presign은 요청당 1~4개, 분석 생성은 정확히 7개 제한을 서로 다르게 적용한다.
+- [x] 소스 업로드는 JPG/PNG와 파일당 10 MiB만 허용한다.
+- [x] 분석 요청의 제품 정보 필수·선택 필드를 구분한다.
+- [x] 분석 enum을 OpenAPI, TypeScript, SQL, Mock에서 동일하게 사용한다.
+- [x] 모든 분석 예상 결과에 `estimateMeta`와 `authenticityPrecheck.notice`를 노출한다.
+- [x] 주문 생성 시 `pickupSchedule`과 정확히 세 개의 필수 동의 키를 검증·저장한다.
+- [x] 결제 성공 직후 `ORDER_PLACED` 이력을 남기고 대상 상태가 맞지 않으면 결제까지 롤백한다.
 - [x] 운영자 lifecycle command는 즉시 다음 상태, 멱등 키, 역할 권한과 409 guard를 검증한다.
 - [x] `SHIPPED` command에서 운송장을 만들고 중앙 배송 Fixture `DEMO-RB-20260817-0001`과 필드명을 맞춘다.
-- [x] `CHANGE_REQUIRED` 검수와 `PENDING` 변경안·상태 이력을 DB RPC 한 트랜잭션으로 저장한다. 실물 검수 Route Handler 연결은 별도다.
-- [ ] 실물 검수와 변경안 승인 전 제작 시작을 서버·DB에서 차단한다.
+- [x] `CHANGE_REQUIRED` 검수와 `PENDING` 변경안·상태 이력을 DB RPC 한 트랜잭션으로 저장한다.
+- [x] 실물 검수와 변경안 승인 전 제작 시작을 서버·DB에서 차단한다.
 - [x] `PRODUCTION_UNAVAILABLE`은 안내·Mock 결제 취소 후 `CANCELED`로만 전환한다.
-- [ ] 대표 주문은 `RB-20260817-0001` 하나만 사용한다.
-- [ ] 보증서에는 실물 검수 후 확정된 68%, 2,860 cm², 3.43 kgCO₂e 값을 사용한다.
+- [x] 대표 Fixture 주문은 `RB-20260817-0001` 하나만 사용한다.
+- [x] 보증서에는 실물 검수 후 확정된 68%, 2,860 cm², 3.43 kgCO₂e 값을 사용한다.
+
+위 체크는 저장소 코드·계약 구현 상태다. 실제 Supabase migration·Auth/RLS/Storage/RPC와 OpenAI LIVE 호출은 아직 검증되지 않았으므로 [`SETUP_GUIDE.md`](SETUP_GUIDE.md)의 staging 체크리스트는 별도로 모두 통과해야 한다.
 
 ### 기존 DB migration·rollback
 
 - 신규 DB는 `supabase-schema.sql`을 bootstrap 기준으로 사용합니다.
 - 기존 DB는 `supabase/migrations/202608180001_lifecycle_integrity.sql`을 적용합니다. 이 migration은 수거 일정·동의와 `CHANGE_REQUIRED.proposed_terms`를 backfill한 뒤 제약을 검증하고 lifecycle RPC·보증서 trigger를 설치합니다.
 - 이어서 `supabase/migrations/202608180002_capture_four_views.sql`을 적용해 이전 정확히 4장 guard를 설치한 뒤, `supabase/migrations/202608180003_capture_seven_views.sql`을 적용합니다. 003 migration은 `analysis_images.display_order`를 0~6으로 확장하고 분석 상태 전이 시 정면·후면·상단·하단·좌측면·우측면·일련번호 사진이 정확히 7장인지 DB에서도 강제합니다. 기존 완료 분석은 이력으로 유지하고, 진행 중인 4장 분석은 사진을 임의 생성하지 않으며 나머지 세 사진을 받은 뒤 다음 상태로 진행합니다.
+- 마지막으로 `supabase/migrations/202608180004_backend_v2_runtime.sql`을 적용합니다. 004는 네 제품의 canonical Product3D JSON을 보존하되 실제 자산 준비 전 `model_3d_ready=false`로 두고, 상태가 맞지 않는 PAID 결제를 원자적으로 거부하며, 고객 변경안 결정이 RLS를 우회해 권한을 넓히지 않도록 `auth.uid()`·소유권·`PENDING`을 재검증하는 `SECURITY DEFINER` trigger를 설치합니다. 또한 이벤트 enum·server-only INSERT·rate-limit index, matching `PENDING` metadata가 필요한 Storage 정책, 외부 AI 동의 증적, `applications.analysis_id` unique·terms 제약과 여권지갑 optionGroups를 정합화합니다.
 - legacy 동의 키의 자동 변환은 정확히 모두 `true`인 `PRIMARY_SCENARIO` 데모 행으로 제한합니다. 기존 주문에 최초 이력이 없으면 `created_at` 시각의 `PENDING_PAYMENT`를 `MIGRATION_BACKFILL_INITIAL_STATUS` 표식으로 보완합니다.
 - 증명할 수 없는 동의·변경안·기존 보증서가 있으면 migration은 값을 만들어 내지 않고 중단합니다. 운영자가 해당 행을 검토한 뒤 재실행해야 합니다.
 - 구조 롤백은 쓰기를 중지한 뒤 `supabase/rollbacks/202608180001_lifecycle_integrity.sql`을 사용합니다. migration 뒤 생성된 주문이 있으면 자동 롤백을 중단하므로 별도 매핑 또는 point-in-time restore가 필요합니다.
 - 최신 7장 사진 계약만 되돌릴 때는 `supabase/rollbacks/202608180003_capture_seven_views.sql`을 먼저 적용합니다. 0~6 순서를 사용하는 행이 있으면 롤백은 삭제 대신 중단하며 수동 처리 후 정확히 4장 guard로 복원합니다. 이어서 002까지 되돌릴 때만 `supabase/rollbacks/202608180002_capture_four_views.sql`을 적용해 기존 3~4장 guard를 복원합니다.
+- 전체 롤백은 `supabase/rollbacks/202608180004_backend_v2_runtime.sql`부터 시작합니다. 004 rollback은 migration 당시 private backup으로 제품 JSON·trigger·정책·권한을 복원하며, migration 뒤 해당 값이 바뀌었거나 실제 LIVE 동의 증적 행이 있으면 덮어쓰거나 증적을 삭제하지 않고 중단합니다.
 
 ## 11. v1 → v2 마이그레이션 이력
 
@@ -377,4 +404,4 @@ Supabase RPC `submit_physical_inspection`은 같은 트랜잭션에서 만든 `c
 | `RECEIVING_PRODUCT`, `ADDITIONAL_REVIEW_REQUIRED` | 세분화된 수거·검수·변경 승인 상태 머신 |
 | `reusableMaterialRate` | `estimatedReusableMaterialRate` |
 
-기존 v1 클라이언트와 DB enum은 v2와 호환되지 않습니다. 같은 배포에서 OpenAPI 타입, Route Handler, 클라이언트 상태 매핑, SQL migration, Seed를 함께 교체해야 합니다.
+기존 v1 클라이언트와 DB enum은 v2와 호환되지 않으며 `/api/v1` Route Handler도 이 브랜치에서 제거했습니다. 이 migration 체인은 `origin/feature-backend` v1 DB의 in-place 변환을 지원하지 않습니다. 보존 데이터가 있으면 실제 백업을 기준으로 전용 변환 migration을 별도 설계하고, 데모 데이터뿐이면 신규·빈 v2 staging에 최종 bootstrap을 적용합니다.
