@@ -95,7 +95,7 @@ export function ProductCaptureScreen({
       header={
         <PageHeader
           backHref="/home"
-          description="분석할 MCM 제품의 모습을 선명하게 등록해주세요."
+          description="최소 3장과 각인 사진을 선명하게 등록해주세요."
           title="제품 사진 등록"
         />
       }

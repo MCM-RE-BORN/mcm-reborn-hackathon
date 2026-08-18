@@ -22,7 +22,7 @@ export type CaptureAsset = {
 export type CaptureAssets = Partial<Record<CaptureSlotId, CaptureAsset>>;
 
 export type ProductDetails = {
-  category: "bag";
+  category: "BACKPACK";
   conditionNote: string;
   desiredUse: string;
   purchaseYear: string;
@@ -31,7 +31,7 @@ export type ProductDetails = {
 };
 
 const INITIAL_PRODUCT_DETAILS: ProductDetails = {
-  category: "bag",
+  category: "BACKPACK",
   conditionNote: DEMO_SCENARIO.sourceProduct.conditionNote,
   desiredUse: DEMO_SCENARIO.sourceProduct.desiredUse,
   purchaseYear: DEMO_SCENARIO.sourceProduct.purchaseYear,

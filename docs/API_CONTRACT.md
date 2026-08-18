@@ -9,7 +9,9 @@
 - 영속 구조, 제약과 RLS의 기준은 `supabase-schema.sql`이다.
 - 제품·데모 의미의 기준은 `docs/MVP_DEMO_CANONICAL.md`다.
 - 현재 계약 버전은 `openapi.yaml`의 `info.version`, 기준 브랜치는 `develop`을 따른다.
-- 이번 데모 MVP의 현행 계약 표기는 **OpenAPI 2.0.0**이다.
+- 현행 제품 계약은 **API 계약 v2.0.0**이고, `openapi.yaml`은 **OpenAPI 3.1.0** 형식이다. 제품 계약 버전과 명세 형식 버전을 혼용하지 않는다.
+
+현재 실행 앱에는 운영자용 `POST /api/v2/admin/applications/{applicationId}/lifecycle-commands` Route Handler만 구현되어 있다. 이 경로는 Supabase 환경변수·인증 사용자·migration이 준비된 환경에서 동작한다. 실물 검수를 포함한 나머지 OpenAPI 경로는 아직 Route Handler가 없으므로 아래 계약 전체가 현재 브라우저 앱에서 실행된다는 뜻은 아니다.
 
 파일이 서로 다르면 조용히 UI만 우회하지 않는다. Canonical 흐름을 기준으로 차이, 소비자와 데이터 영향, 호환 가능한 선택지와 롤백을 기록하고 OpenAPI·Mock·DB·클라이언트·문서를 같은 변경 단위에서 정합화한다.
 
@@ -35,8 +37,11 @@
 - Mock 결제 성공은 주문 `RB-20260817-0001`을 `ORDER_PLACED`로 만든다. 주문 전 장인 승인이나 수동 검토 완료를 요구하지 않는다.
 - 공식 장인 실물 검수는 `PRODUCT_RECEIVED` 뒤 `EXPERT_INSPECTION`에서만 수행한다.
 - 실물 검수 결과가 `CHANGE_REQUIRED`이면 `CHANGE_APPROVAL_REQUIRED`에서 고객 결정을 기다린다. 승인 전에는 `IN_PRODUCTION`으로 이동하지 않는다.
+- `CHANGE_REQUIRED` 검수에는 `proposedTerms`가 필수이며, 검수·변경안·주문 상태·상태 이력은 하나의 트랜잭션으로 생성한다. 성공 응답은 같은 트랜잭션에서 생성한 `changeRequest`를 반환한다.
 - 골든 변경안은 재활용률 68%, 제작비 195,000원, 예상 기간 4~5주이며 고객 승인 후 `PRODUCTION_READY`로 이동한다.
+- 수거·제작·품질·배송 상태는 운영자 전용 멱등 lifecycle command로 현재 상태의 바로 다음 단계만 진행한다. 제작·품질 단계의 `PRODUCTION_UNAVAILABLE`과 그 다음 `CANCELED`도 명시된 source 상태에서만 허용한다.
 - 변경 거절 또는 `PRODUCTION_UNAVAILABLE`은 `CANCELED`와 Mock 결제 취소·환불 안내로 종료한다.
+- canonical 배송 Fixture는 주문 `RB-20260817-0001`의 운송장 `DEMO-RB-20260817-0001`, 상태 `DELIVERED`다.
 - `COMPLETED` 뒤에만 보증서 `ESG-RB-20260817-0001`을 발급하며 최종 재활용률 68%, 예상 탄소 절감량 3.43kg CO2e를 사용한다.
 - 접수 `SUB-RB-20260817-0001`, 주문과 보증서는 서로 다른 식별자지만 동일 중앙 시나리오와 변경 이력을 가리킨다.
 
@@ -55,6 +60,14 @@ PENDING_PAYMENT → ORDER_PLACED → PICKUP_SCHEDULED → PICKUP_IN_PROGRESS
 PENDING_PAYMENT → PENDING_APPROVAL → APPROVED
 REVIEW_REQUIRED → AWAIT_MANUAL_REVIEW → application creation blocked
 ```
+
+## 2026-08-18 lifecycle 무결성 보완과 버전 판단
+
+사용자는 `COMPLETED` 전 보증서 생성 차단, guarded lifecycle command, `CHANGE_REQUIRED` 검수와 변경안의 원자 처리, 기존 DB migration·backfill, canonical 배송 Fixture를 하나의 lifecycle 무결성 변경으로 명시 승인했다.
+
+계약 버전은 `2.0.0`을 유지한다. 이 변경은 외부에 배포된 v2 서버가 없던 상태에서 승인된 breaking v2 계약의 누락을 완성했으며, lifecycle endpoint와 배송 Fixture는 추가 계약이다. 이후 lifecycle Route Handler가 이 계약의 첫 실행 경로로 추가되었다. `CHANGE_REQUIRED`에서 `proposedTerms`를 필수로 하는 조건은 이미 문서화된 변경안 생성 불변조건을 JSON Schema로 강제하는 보완이다. v2가 외부 소비자에게 배포된 뒤 동일한 필수 조건을 추가한다면 같은 버전을 덮어쓰지 않고 별도 계약 버전으로 올려야 한다.
+
+기존 DB는 fresh bootstrap 파일만 재적용하지 않는다. `supabase/migrations/202608180001_lifecycle_integrity.sql`에서 새 제약·함수·trigger를 만들고, 기존 행을 backfill한 뒤 검증을 활성화한다. 롤백은 `supabase/rollbacks/202608180001_lifecycle_integrity.sql`과 이전 Route Handler 계약을 함께 적용하며 OpenAPI·DB 중 한쪽만 되돌리지 않는다.
 
 ## 변경 게이트
 

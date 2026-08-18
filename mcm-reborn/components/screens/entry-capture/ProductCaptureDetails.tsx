@@ -22,7 +22,7 @@ export function ProductCaptureDetails() {
       <fieldset className={styles.productTypeGroup}>
         <legend>제품 카테고리</legend>
         <label>
-          <input checked name="product-category" readOnly type="radio" value="bag" />
+          <input checked name="product-category" readOnly type="radio" value="BACKPACK" />
           <span>가방</span>
         </label>
       </fieldset>

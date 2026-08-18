@@ -27,6 +27,10 @@
   gap: var(--space-13);
 }
 
+.customerNameInput {
+  width: 5.375rem;
+}
+
 .addressRow {
   display: grid;
   grid-template-columns: minmax(var(--space-0), 1fr) auto;
@@ -166,13 +170,13 @@
   flex: 1;
   flex-direction: column;
   align-items: center;
-  padding-top: var(--space-25);
+  padding-top: clamp(7rem, 20dvh, 10.9375rem);
   text-align: center;
 }
 
 .completeIcon {
-  width: min(var(--asset-size-complete), 42vw);
-  height: min(var(--asset-size-complete), 42vw);
+  width: min(6.75rem, 42vw);
+  height: min(6.75rem, 42vw);
 }
 
 .completeCopy {

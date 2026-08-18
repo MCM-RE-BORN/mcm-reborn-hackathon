@@ -2,6 +2,8 @@
 
 > 2026-08-17 현재 흐름. 이전의 `REVIEW_REQUIRED` 주문 차단과 `PENDING_APPROVAL → APPROVED` 운영자 선승인 흐름은 **superseded/historical**이다. 제품 의미와 중앙 시나리오는 [`MVP_DEMO_CANONICAL.md`](./MVP_DEMO_CANONICAL.md), 정확한 요청·응답은 `openapi.yaml`을 따른다.
 
+현행 웹 진입은 서비스 소개 `/` 또는 `/intro`에서 시작하고 홈은 `/home`이다. 아래 고객 식별자와 화면 상태는 현재 앱에서 Fixture로 시연되며 서버에 생성·저장되는 것은 아니다. OpenAPI 중 운영자 lifecycle command만 Route Handler로 구현되어 있고 실물 검수와 나머지 경로는 아직 계약 기준이다.
+
 ## 고객 골든 흐름
 
 1. 서비스 소개를 확인하고 데모 고객으로 로그인하거나 홈으로 이동한다.
@@ -70,7 +72,7 @@ PENDING_PAYMENT → ORDER_PLACED → PICKUP_SCHEDULED → PICKUP_IN_PROGRESS
 
 ## 공개·보조 흐름
 
-- 상태 확인용 `/health`는 인증 없이 사용할 수 있다.
+- API 계약의 상태 확인용 `/health`는 인증 없는 엔드포인트로 정의되어 있다. 현재 앱에는 해당 Route Handler가 없으므로 런타임 상태 확인 URL로 안내하지 않는다.
 - 진행 중 보증서 미리보기는 가능하지만 공식 `ISSUED` 표시는 `COMPLETED` 뒤에만 제공한다.
 - 보증서 검증 URL은 공개할 수 있으나 데모 데이터이며 법적 효력을 주장하지 않는다.
 - 분석 퍼널 이벤트에는 개인정보를 넣지 않고 남용 방지 정책을 둔다.

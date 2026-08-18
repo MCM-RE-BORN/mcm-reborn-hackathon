@@ -1,3 +1,7 @@
+"use client";
+
+import { useRouter } from "next/navigation";
+import type { FormEvent } from "react";
 import { AppShell } from "@/components/layout/AppShell";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Section } from "@/components/layout/Section";
@@ -9,6 +13,7 @@ import { TextField } from "@/components/ui/TextField";
 import { DEMO_SCENARIO, formatKrw } from "@/data/demo-scenario";
 import type { DemoState } from "./demo-state";
 import { DemoStatePanel } from "./DemoStatePanel";
+import { useOrderDraft } from "./OrderDraftProvider";
 import styles from "./order-certificate.module.css";
 
 type OrderNewScreenProps = {
@@ -19,8 +24,28 @@ type OrderNewScreenProps = {
 };
 
 export function OrderNewScreen({ state }: OrderNewScreenProps) {
+  const router = useRouter();
+  const { orderDraft, setOrderDraft } = useOrderDraft();
   const isNormal = state === "normal";
-  const { order, selectedDesign } = DEMO_SCENARIO;
+  const { selectedDesign } = DEMO_SCENARIO;
+
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    const readValue = (name: string) =>
+      String(formData.get(name) ?? "").trim();
+
+    setOrderDraft({
+      address: readValue("address"),
+      addressDetail: readValue("addressDetail"),
+      name: readValue("customerName"),
+      phone: readValue("customerPhone"),
+      pickupDate: readValue("pickupDate"),
+      pickupTime: readValue("pickupTime"),
+      postalCode: readValue("postalCode"),
+    });
+    router.push("/checkout");
+  };
 
   return (
     <AppShell
@@ -36,7 +61,7 @@ export function OrderNewScreen({ state }: OrderNewScreenProps) {
       header={
         <PageHeader
           backHref="/submissions/demo/designs/passport-wallet"
-          title="업사이클링 주문"
+          title="업사이클링 신청"
         />
       }
     >
@@ -76,18 +101,22 @@ export function OrderNewScreen({ state }: OrderNewScreenProps) {
           <section aria-label="수거 방법" className={styles.pickupMethod}>
             <KeyValueList
               items={[
-                { label: "수거 방법", value: "방문 택배 수거" },
-                { label: "수거 비용", value: "무료" },
+                { label: "수거 방법", value: "방문 택배 수거 · 무료" },
               ]}
             />
           </section>
           <SectionBand />
-          <form action="/checkout" id="order-application-form" method="get">
+          <form
+            id="order-application-form"
+            method="post"
+            onSubmit={handleSubmit}
+          >
             <Section title="주문자 정보">
               <div className={styles.fieldStack}>
                 <TextField
                   autoComplete="name"
-                  defaultValue={order.customer.name}
+                  className={styles.customerNameInput}
+                  defaultValue={orderDraft.name}
                   id="customer-name"
                   label="이름"
                   name="customerName"
@@ -95,7 +124,7 @@ export function OrderNewScreen({ state }: OrderNewScreenProps) {
                 />
                 <TextField
                   autoComplete="tel"
-                  defaultValue={order.customer.phone}
+                  defaultValue={orderDraft.phone}
                   id="customer-phone"
                   inputMode="tel"
                   label="휴대폰 번호"
@@ -105,7 +134,7 @@ export function OrderNewScreen({ state }: OrderNewScreenProps) {
                 />
                 <TextField
                   autoComplete="postal-code"
-                  defaultValue={order.customer.postalCode}
+                  defaultValue={orderDraft.postalCode}
                   id="customer-postal-code"
                   inputMode="numeric"
                   label="우편번호"
@@ -114,7 +143,7 @@ export function OrderNewScreen({ state }: OrderNewScreenProps) {
                 />
                 <TextField
                   autoComplete="street-address"
-                  defaultValue={order.customer.address}
+                  defaultValue={orderDraft.address}
                   id="customer-address"
                   label="주소"
                   name="address"
@@ -122,7 +151,7 @@ export function OrderNewScreen({ state }: OrderNewScreenProps) {
                 />
                 <TextField
                   autoComplete="address-line2"
-                  defaultValue={order.customer.addressDetail}
+                  defaultValue={orderDraft.addressDetail}
                   id="customer-address-detail"
                   label="상세 주소"
                   name="addressDetail"
@@ -137,7 +166,7 @@ export function OrderNewScreen({ state }: OrderNewScreenProps) {
             >
               <div className={styles.scheduleGrid}>
                 <TextField
-                  defaultValue={order.pickupDate}
+                  defaultValue={orderDraft.pickupDate}
                   id="pickup-date"
                   label="수거 희망일"
                   name="pickupDate"
@@ -145,7 +174,7 @@ export function OrderNewScreen({ state }: OrderNewScreenProps) {
                   type="date"
                 />
                 <TextField
-                  defaultValue={order.pickupTimeLabel}
+                  defaultValue={orderDraft.pickupTime}
                   id="pickup-time"
                   label="수거 시간대"
                   name="pickupTime"
@@ -155,18 +184,30 @@ export function OrderNewScreen({ state }: OrderNewScreenProps) {
               <fieldset className={styles.consentGroup}>
                 <legend>필수 확인</legend>
                 <label className={styles.checkRow}>
-                  <input name="termsAccepted" required type="checkbox" />
+                  <input
+                    name="serviceAndPrivacyTermsAccepted"
+                    required
+                    type="checkbox"
+                  />
                   <span>서비스 이용 약관과 개인정보 처리 내용을 확인했습니다.</span>
                 </label>
                 <label className={styles.checkRow}>
-                  <input name="estimateAccepted" required type="checkbox" />
+                  <input
+                    name="aiEstimateNoticeAccepted"
+                    required
+                    type="checkbox"
+                  />
                   <span>
                     AI 분석 결과는 예상치이며 실물 검수 후 조정될 수 있음을
                     확인했습니다.
                   </span>
                 </label>
                 <label className={styles.checkRow}>
-                  <input name="inspectionAccepted" required type="checkbox" />
+                  <input
+                    name="inspectionChangeNoticeAccepted"
+                    required
+                    type="checkbox"
+                  />
                   <span>
                     변경된 제작 조건은 확인과 승인 후 적용됨을 확인했습니다.
                   </span>

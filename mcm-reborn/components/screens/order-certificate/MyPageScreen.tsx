@@ -8,6 +8,7 @@ import { SectionBand } from "@/components/ui/SectionBand";
 import fieldStyles from "@/components/ui/ui.module.css";
 import { DEMO_SCENARIO } from "@/data/demo-scenario";
 import type { DemoState } from "./demo-state";
+import { DemoLogoutButton } from "./DemoLogoutButton";
 import { DemoStatePanel } from "./DemoStatePanel";
 import styles from "./order-certificate.module.css";
 
@@ -138,8 +139,8 @@ export function MyPageScreen({ state }: MyPageScreenProps) {
               고객센터
             </button>
             <span aria-hidden="true" />
-            {/* TODO(integration): revoke the authenticated session through the approved auth contract. */}
-            <Link href="/login">로그아웃</Link>
+            {/* TODO(integration): also revoke the authenticated server session when auth is connected. */}
+            <DemoLogoutButton />
           </nav>
         </div>
       )}

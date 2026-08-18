@@ -2,6 +2,8 @@
 
 > 2026-08-17 현재 기준. 이전의 “1~4장·6MB·WebP, 주문 전 수동 검토 차단, 운영자 선승인” 범위는 **superseded/historical**이다. 제품·시나리오 값은 [`MVP_DEMO_CANONICAL.md`](./MVP_DEMO_CANONICAL.md)를 따른다.
 
+이 문서는 최종 PRD와 유저플로우를 반영한 제품 완료 기준이다. 2026-08-18 구현은 실제 브라우저 카메라와 Fixture 기반 고객 여정, Supabase에 연결하는 운영자 lifecycle command Route Handler를 제공한다. 고객 Auth/API/DB·OpenAI·결제·실제 물류 연동과 실물 검수 Route Handler는 없다. 아래 API 응답·권한·이벤트 항목은 lifecycle command를 제외하면 승인 계약과 향후 연동 완료 기준이다.
+
 ## 제품 정의
 
 사용자가 MCM 가방을 모바일로 촬영하거나 사진을 올리면 사진 기반 AI 예상 분석을 확인하고, 추천 디자인·목업·Mock 주문·수거 후 공식 장인 실물 검수·변경 조건 승인·제작·ESG 보증서까지 하나의 웹 데모로 체험하게 한다.
@@ -73,5 +75,5 @@
 - 앱 변경은 저장소 루트에서 `npm --prefix mcm-reborn ci`, `npm --prefix mcm-reborn run lint`, `npm --prefix mcm-reborn run typecheck`, `npm --prefix mcm-reborn run build`가 통과한다.
 - 현재 `mcm-reborn/package.json`에는 테스트 스크립트가 없다. 자동 테스트를 실행했다고 표시하지 말고, 추가 전까지 완료 조건별 수동·계약 검증을 기록한다.
 - 새 환경에서 루트 `.env.example`을 `mcm-reborn/.env.local`로 복사해 구성할 수 있다.
-- `docs/DEMO.md`의 복구 경로로 외부 API 실패 상황에서도 시연을 완료한다.
+- `docs/DEMO.md`의 로컬 Fixture 복구 경로로 외부 API 없이도 시연을 완료한다. 향후 live API를 연결하면 같은 시나리오로 제공자 실패 폴백을 추가 검증한다.
 - 사람 리뷰와 스테이징 확인을 거치고 Canonical 문서·OpenAPI·Mock·DB·앱이 일치한다.

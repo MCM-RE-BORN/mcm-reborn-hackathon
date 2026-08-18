@@ -21,6 +21,13 @@ export const ORDER_STAGES = [
 
 export type OrderStage = (typeof ORDER_STAGES)[number];
 
+export const CANCELLATION_REASONS = [
+  "change-rejected",
+  "production-unavailable",
+] as const;
+
+export type CancellationReason = (typeof CANCELLATION_REASONS)[number];
+
 export type DemoSearchParams = Promise<
   Record<string, string | string[] | undefined>
 >;
@@ -43,4 +50,14 @@ export function resolveOrderStage(
   return ORDER_STAGES.includes(candidate as OrderStage)
     ? (candidate as OrderStage)
     : "pickup";
+}
+
+export function resolveCancellationReason(
+  value: string | string[] | undefined,
+): CancellationReason {
+  const candidate = Array.isArray(value) ? value[0] : value;
+
+  return CANCELLATION_REASONS.includes(candidate as CancellationReason)
+    ? (candidate as CancellationReason)
+    : "change-rejected";
 }

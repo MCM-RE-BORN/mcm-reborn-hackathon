@@ -13,6 +13,7 @@
 - 주문 후 실물 검수는 `CHANGE_REQUIRED`이며 변경 조건 68%, 195,000원, 4~5주를 고객이 승인한다.
 - 같은 주문에서 제작·품질·배송·완료로 진행하고 최종 보증서에 68%, 예상 3.43kg CO2e를 표시한다.
 - 2026-08-14의 `PENDING_APPROVAL` 완료 화면과 별도 `COMPLETED` 프레젠테이션 신청 분리는 현재 기준에서 사용하지 않는다.
+- 현재 `/`와 `/intro`는 서비스 소개, `/home`은 홈이다. 아래 historical 표의 “홈 `/`”은 2026-08-14 당시 구현 기록이므로 수정하지 않고 현재 라우트가 대체했음을 여기에 명시한다.
 
 ### 현재 검증 요구
 
@@ -31,7 +32,7 @@ npm --prefix mcm-reborn run build
 
 2026-08-14 기준 `feature-mvp-beta-ui` 브랜치에 고객용 MVP 베타 UI를 구현했다. 17개 주요 라우트와 2개 상태 호환 alias가 독립 렌더되며, 제품 등록에서 AI 사전 분석·추천·3D 목업·신청·Mock 결제·완료 신청·디지털 ESG Passport까지 하나의 정적 데모 흐름으로 연결된다.
 
-이번 결과물은 승인된 OpenAPI 1.1.0, `mock-data.json`, Supabase 스키마를 변경하지 않는 프레젠테이션 레이어다. 실제 인증·카메라·AI·3D 렌더러·결제·물류·NFC/QR 동작은 구현하지 않았고, 코드의 확장 지점에 `TODO(post-beta):`를 남겼다.
+이번 결과물은 당시 승인된 API 계약 v1.1.0, `mock-data.json`, Supabase 스키마를 변경하지 않는 프레젠테이션 레이어다. 실제 인증·카메라·AI·3D 렌더러·결제·물류·NFC/QR 동작은 구현하지 않았고, 코드의 확장 지점에 `TODO(post-beta):`를 남겼다.
 
 ## 구현 범위
 
@@ -70,7 +71,7 @@ npm --prefix mcm-reborn run build
 - 사진 0장에서는 분석 CTA가 비활성화된다.
 - 이미지 품질 실패는 `IMAGE_QUALITY_INSUFFICIENT` / `RECAPTURE_REQUIRED`, 수동 검토는 `REVIEW_REQUIRED` / `PENDING` / `AWAIT_MANUAL_REVIEW`로 분리했다.
 - AI가 정품·가품을 확정한다는 표현을 사용하지 않는다.
-- 신청 폼은 `postalCode`와 `demoTermsAccepted`, `aiEstimateNoticeAccepted`, `esgEstimateNoticeAccepted`에 대응하며 이름·전화·주소를 URL query에 싣지 않는다.
+- **역사 기록 정정:** 당시 보고서는 신청 폼이 이름·전화·주소를 URL query에 싣지 않는다고 적었지만, 2026-08-14 구현은 GET query로 전달해 이 주장은 사실과 달랐다. 현재 구현은 POST와 클라이언트 주문 초안 상태로 교체했으며, 당시 동의 키와 개인정보 처리 설명은 superseded다.
 - 활성 결제수단은 계약값 `DEMO_CARD` 하나이며, 필수 확인 전에는 제출되지 않는다.
 - Mock 결제 직후 신청은 `PENDING_APPROVAL`로 표시한다. Passport 흐름은 다른 `COMPLETED` 프레젠테이션 신청임을 명시한다.
 - Passport는 OpenAPI `EsgCertificate`의 필수 필드 12개에 대응하고, 탄소·보증서가 법적·공인 수치가 아닌 데모임을 표시한다.

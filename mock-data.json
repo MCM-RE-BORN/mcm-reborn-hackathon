@@ -218,6 +218,8 @@
       "statusOverride": null,
       "selectedOptions": { "edgeColor": "COGNAC", "initials": "MCM" },
       "shippingAddress": { "recipientName": "김민지", "postalCode": "04524", "address1": "서울시 중구 퇴계로 24", "address2": "101동 1203호", "phone": "010-1234-5678" },
+      "pickupSchedule": { "requestedDate": "2026-08-19", "timeWindow": "14:00-16:00" },
+      "consents": { "serviceAndPrivacyTermsAccepted": true, "aiEstimateNoticeAccepted": true, "inspectionChangeNoticeAccepted": true },
       "initialTerms": { "productId": "10000000-0000-4000-8000-000000000001", "amount": { "amount": 180000, "currency": "KRW" }, "estimatedDuration": "3~4주", "estimatedReusableMaterialRate": 72 },
       "finalTerms": { "productId": "10000000-0000-4000-8000-000000000001", "amount": { "amount": 195000, "currency": "KRW" }, "estimatedDuration": "4~5주", "estimatedReusableMaterialRate": 68 },
       "createdAt": "2026-08-17T05:20:00Z",
@@ -227,6 +229,16 @@
   ],
   "mockPayments": [
     { "id": "31000000-0000-4000-8000-000000000001", "applicationId": "30000000-0000-4000-8000-000000000001", "transactionId": "PAY-RB-20260817-0001", "status": "PAID", "amountKrw": 180000, "applicationStatusAfterPayment": "ORDER_PLACED", "paidAt": "2026-08-17T05:22:00Z" }
+  ],
+  "mockShipments": [
+    {
+      "applicationId": "30000000-0000-4000-8000-000000000001",
+      "carrierCode": "MCM_REBORN_DEMO",
+      "carrierName": "MCM RE:BORN Demo Logistics",
+      "trackingNumber": "DEMO-RB-20260817-0001",
+      "trackingUrl": null,
+      "status": "DELIVERED"
+    }
   ],
   "applicationStatusHistory": [
     { "applicationId": "30000000-0000-4000-8000-000000000001", "status": "PENDING_PAYMENT", "occurredAt": "2026-08-17T05:20:00Z" },
@@ -251,6 +263,7 @@
       "confirmedReusableMaterialRate": 68,
       "confirmedReusableAreaCm2": 2860,
       "reason": "사진에서 보이지 않던 내부 원단 손상이 확인되어 재단 범위를 조정했어요.",
+      "proposedTerms": { "productId": "10000000-0000-4000-8000-000000000001", "amount": { "amount": 195000, "currency": "KRW" }, "estimatedDuration": "4~5주", "estimatedReusableMaterialRate": 68 },
       "inspectedBy": "00000000-0000-4000-8000-000000000002",
       "inspectedAt": "2026-08-21T05:00:00Z"
     }

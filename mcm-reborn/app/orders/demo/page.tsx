@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import {
   OrderDetailsScreen,
+  resolveCancellationReason,
   resolveDemoState,
   resolveOrderStage,
   type DemoSearchParams,
@@ -39,6 +40,13 @@ export default async function OrderDetailsPage({
     ],
   );
   const stage = resolveOrderStage(requestedStage);
+  const cancellationReason = resolveCancellationReason(query.reason);
 
-  return <OrderDetailsScreen stage={stage} state={state} />;
+  return (
+    <OrderDetailsScreen
+      cancellationReason={cancellationReason}
+      stage={stage}
+      state={state}
+    />
+  );
 }

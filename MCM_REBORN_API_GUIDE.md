@@ -2,9 +2,11 @@
 
 > 계약 버전: **2.0.0 (BREAKING)**
 >
-> 기준일: 2026-08-17
+> 기준일: 2026-08-18
 >
 > 목적: 서비스 시연·데모 MVP의 프론트엔드, Route Handler, Mock, Supabase 구현 기준
+>
+> 구현 상태: 운영자 lifecycle command만 `mcm-reborn/app/api/v2/admin/applications/[applicationId]/lifecycle-commands` Route Handler와 Supabase RPC 연결이 구현되어 있습니다. Supabase 환경변수·운영자 JWT·migration이 준비된 환경에서 실행되며, 실물 검수와 나머지 API 및 고객 화면은 중앙 Fixture 또는 향후 구현 기준입니다.
 
 기계 판독 기준은 `openapi.yaml`입니다. 이 문서는 구현 의도와 대표 시나리오를 설명하며, 값이 다르면 OpenAPI를 우선합니다. 데모 고정값은 `mock-data.json`, DB 타입과 무결성 규칙은 `supabase-schema.sql`을 함께 확인합니다.
 
@@ -39,7 +41,7 @@
 | Presign 1회 요청 | 1~4개 |
 | 분석 생성에 연결할 사진 | 3~4개 |
 
-`POST /uploads/presign`은 점진 업로드를 위해 1개 사진만 요청해도 됩니다. 최종 `POST /analyses`에서는 업로드가 완료된 서로 다른 자산 3~4개가 필요합니다. Route Handler는 자산 소유자, 업로드 완료 여부, MIME, 크기, 목적을 다시 검증합니다.
+`POST /uploads/presign`은 점진 업로드를 위해 1개 사진만 요청해도 됩니다. 최종 `POST /analyses`에서는 업로드가 완료된 서로 다른 자산 3~4개가 필요합니다. Route Handler를 구현할 때는 자산 소유자, 업로드 완료 여부, MIME, 크기, 목적을 다시 검증해야 합니다.
 
 `mock-data.json.primaryScenario.source.images`의 WebP 경로는 앱에 번들된 표시용 Fixture입니다. 고객이 Presign으로 올리는 소스 파일의 허용 MIME에는 WebP가 포함되지 않습니다.
 
@@ -147,6 +149,34 @@ v2 데모 제품은 아래 네 가지입니다.
 
 주문 생성 시 분석이 `COMPLETED`, 이미지 품질이 `ACCEPTABLE`, `authenticityPrecheck.status`가 `ORDER_ELIGIBLE`인지 확인합니다. 생성 직후 상태는 `PENDING_PAYMENT`입니다.
 
+계약상 주문 생성 요청은 수거 희망 일정과 세 가지 필수 동의를 함께 전달하며, 서버 구현은 이를 주문에 저장해야 합니다. 동의는 모두 `true`여야 하며 임의의 예전 키나 추가 키를 받지 않습니다.
+
+```json
+{
+  "analysisId": "20000000-0000-4000-8000-000000000001",
+  "productId": "10000000-0000-4000-8000-000000000001",
+  "selectedOptions": { "edgeColor": "COGNAC", "initials": "MCM" },
+  "shippingAddress": {
+    "recipientName": "김민지",
+    "phone": "010-1234-5678",
+    "postalCode": "04524",
+    "address1": "서울시 중구 퇴계로 24",
+    "address2": "101동 1203호"
+  },
+  "pickupSchedule": {
+    "requestedDate": "2026-08-19",
+    "timeWindow": "14:00-16:00"
+  },
+  "consents": {
+    "serviceAndPrivacyTermsAccepted": true,
+    "aiEstimateNoticeAccepted": true,
+    "inspectionChangeNoticeAccepted": true
+  }
+}
+```
+
+계약의 `ApplicationDetail`은 저장된 `pickupSchedule`을 동일한 형태로 반환합니다. 서버 구현은 동의 원문을 저장하되 고객 응답에 다시 노출하지 않아야 합니다.
+
 `POST /applications/{applicationId}/mock-payment`가 성공하면 상태는 반드시 `ORDER_PLACED`가 됩니다. 결제 실패 시 `PENDING_PAYMENT`를 유지합니다.
 
 ## 6. 주문 상태 머신
@@ -177,7 +207,37 @@ EXPERT_INSPECTION
 → 고객 reject: CANCELED
 ```
 
-예외 종료 상태는 `PRODUCTION_UNAVAILABLE`, `CANCELED`입니다.
+`PRODUCTION_UNAVAILABLE`은 제작 불가 판정을 표시하는 예외 상태입니다. 고객 안내와 Mock 결제 취소·환불 처리 후 `CANCELED`로 전환하며, `CANCELED`에서 여정이 종료됩니다.
+
+### 운영자 상태 진행 명령
+
+수거·제작·품질·배송의 실제 서버 연동은 운영자 전용 `POST /admin/applications/{applicationId}/lifecycle-commands` 한 곳에서 진행합니다. 모든 요청은 `Idempotency-Key`가 필요하며, 현재 상태에서 허용된 바로 다음 상태로만 이동합니다.
+
+```json
+{
+  "targetStatus": "SHIPPED",
+  "note": "최종 품질 검수를 통과해 배송을 시작합니다.",
+  "trackingNumber": "DEMO-RB-20260817-0001",
+  "carrierCode": "MCM_REBORN_DEMO",
+  "carrierName": "MCM RE:BORN Demo Logistics"
+}
+```
+
+명령 target은 아래 값만 사용합니다.
+
+```text
+PICKUP_SCHEDULED | PICKUP_IN_PROGRESS | PRODUCT_RECEIVED | EXPERT_INSPECTION
+IN_PRODUCTION | QUALITY_CHECK | SHIPPED | DELIVERED | COMPLETED
+PRODUCTION_UNAVAILABLE | CANCELED
+```
+
+- `SHIPPED`에는 `trackingNumber`가 필수이며 `carrierCode`, `carrierName`은 생략 시 데모 물류 기본값을 사용합니다. 다른 target에는 이 배송 필드를 보내지 않습니다.
+- `PRODUCTION_READY`와 `CHANGE_APPROVAL_REQUIRED`는 이 명령으로 만들지 않습니다. 실물 검수와 고객 변경안 결정 API만 해당 상태를 만들 수 있습니다.
+- `PRODUCTION_UNAVAILABLE` target은 `IN_PRODUCTION` 또는 `QUALITY_CHECK`에서 공정 중 제작 불가를 발견했을 때만 허용합니다. `EXPERT_INSPECTION`의 제작 불가는 검수 outcome으로 기록합니다.
+- `CANCELED` target은 현재 상태가 `PRODUCTION_UNAVAILABLE`일 때만 허용합니다.
+- 건너뛰기, 역행, guard 미충족은 `409 Conflict`이며 상태 이력을 남기지 않습니다. 같은 멱등 키와 같은 정규화 요청의 재시도는 최초 결과를 반환하고, 같은 키를 다른 payload에 재사용하면 `409`입니다.
+
+Supabase RPC `advance_application_lifecycle`는 변경된 상태와 `shipment_id`를 반환합니다. 구현된 Route Handler는 이 ID로 Mock 배송 행을 읽어 HTTP `ApplicationLifecycleCommandResponse.shipment`에 객체 또는 `null`을 채웁니다.
 
 ### 제작 시작 무결성 규칙
 
@@ -186,7 +246,7 @@ EXPERT_INSPECTION
 1. 실물 검수 결과가 `NO_CHANGE`이고 주문 상태가 `PRODUCTION_READY`입니다.
 2. 실물 검수 결과가 `CHANGE_REQUIRED`이며 연결된 변경안이 `APPROVED`이고 주문 상태가 `PRODUCTION_READY`입니다.
 
-API 서비스와 `supabase-schema.sql`의 DB trigger가 모두 이 규칙을 검사합니다. UI에서 버튼을 숨기는 것만으로는 충분하지 않습니다.
+향후 API 서비스 구현과 `supabase-schema.sql`의 DB trigger는 모두 이 규칙을 검사해야 합니다. UI에서 버튼을 숨기는 것만으로는 충분하지 않습니다.
 
 ## 7. 주문 후 전문가 실물 검수
 
@@ -213,7 +273,11 @@ API 서비스와 `supabase-schema.sql`의 DB trigger가 모두 이 규칙을 검
 
 - `NO_CHANGE` → `PRODUCTION_READY`
 - `CHANGE_REQUIRED` → 변경안 생성 + `CHANGE_APPROVAL_REQUIRED`
-- `PRODUCTION_UNAVAILABLE` → `PRODUCTION_UNAVAILABLE`
+- `PRODUCTION_UNAVAILABLE` → `PRODUCTION_UNAVAILABLE` 기록 → 제작 불가 안내·Mock 결제 취소 후 `CANCELED`
+
+`CHANGE_REQUIRED` 요청에는 `proposedTerms`가 필수입니다. 서버는 실물 검수 행, 연결된 `PENDING` 변경안, 주문 상태와 상태 이력을 **하나의 트랜잭션**에서 생성해야 합니다. 하나라도 실패하면 모두 롤백하며 검수만 남거나 변경안 없는 `CHANGE_APPROVAL_REQUIRED` 상태를 만들지 않습니다. 성공 응답의 `changeRequest`는 이 트랜잭션에서 생성된 변경안을 반환하고, 다른 outcome에서는 생략하거나 `null`로 반환합니다.
+
+Supabase RPC `submit_physical_inspection`은 같은 트랜잭션에서 만든 `change_request_id`를 반환합니다. Route Handler는 `CHANGE_REQUIRED`일 때 해당 변경안을 읽어 `PhysicalInspectionResponse.changeRequest`에 포함합니다.
 
 ### 7.2 변경안 조회와 고객 결정
 
@@ -239,8 +303,10 @@ API 서비스와 `supabase-schema.sql`의 DB trigger가 모두 이 규칙을 검
 | 예상 신뢰도 | 87% |
 | 주문 가능성 사전 신호 | 91%, `ORDER_ELIGIBLE` |
 | 최초 선택 | RE:BORN 여권지갑, 180,000원, 3~4주 |
+| 수거 희망 일정 | 2026-08-19, `14:00-16:00` |
 | 실물 검수 변경 | 68%, 195,000원, 4~5주 |
 | 고객 결정 | `APPROVED` |
+| Mock 배송 | `DEMO-RB-20260817-0001`, `DELIVERED` |
 | 최종 보증서 | `ESG-RB-20260817-0001` |
 | 최종 재활용 정보 | 68%, 2,860 cm², 3.43 kgCO₂e 예상 절감 |
 | ESG 방법론 | `DEMO_LCA_V2` |
@@ -258,6 +324,7 @@ API 서비스와 `supabase-schema.sql`의 DB trigger가 모두 이 규칙을 검
 | POST | `/applications` | 주문 생성 |
 | POST | `/applications/{applicationId}/mock-payment` | 데모 결제, 성공 시 `ORDER_PLACED` |
 | GET | `/applications/{applicationId}/timeline` | 주문 상태 이력 조회 |
+| POST | `/admin/applications/{applicationId}/lifecycle-commands` | 운영자 수거·제작·품질·배송 상태 한 단계 진행 |
 | POST | `/admin/applications/{applicationId}/inspection` | 주문 후 전문가 실물 검수 |
 | GET | `/applications/{applicationId}/change-request` | 고객 변경안 조회 |
 | POST | `/applications/{applicationId}/change-request/approve` | 고객 변경안 승인 |
@@ -271,10 +338,23 @@ API 서비스와 `supabase-schema.sql`의 DB trigger가 모두 이 규칙을 검
 - [ ] 분석 요청의 제품 정보 필수·선택 필드를 구분한다.
 - [ ] 분석 enum을 OpenAPI, TypeScript, SQL, Mock에서 동일하게 사용한다.
 - [ ] 모든 분석 예상 결과에 `estimateMeta`와 `authenticityPrecheck.notice`를 노출한다.
+- [x] 주문 생성 시 `pickupSchedule`과 정확히 세 개의 필수 동의 키를 저장할 DB 계약과 검증을 둔다. 주문 생성 Route Handler 연결은 별도다.
 - [ ] 결제 성공 직후 `ORDER_PLACED` 이력을 남긴다.
+- [x] 운영자 lifecycle command는 즉시 다음 상태, 멱등 키, 역할 권한과 409 guard를 검증한다.
+- [x] `SHIPPED` command에서 운송장을 만들고 중앙 배송 Fixture `DEMO-RB-20260817-0001`과 필드명을 맞춘다.
+- [x] `CHANGE_REQUIRED` 검수와 `PENDING` 변경안·상태 이력을 DB RPC 한 트랜잭션으로 저장한다. 실물 검수 Route Handler 연결은 별도다.
 - [ ] 실물 검수와 변경안 승인 전 제작 시작을 서버·DB에서 차단한다.
+- [x] `PRODUCTION_UNAVAILABLE`은 안내·Mock 결제 취소 후 `CANCELED`로만 전환한다.
 - [ ] 대표 주문은 `RB-20260817-0001` 하나만 사용한다.
 - [ ] 보증서에는 실물 검수 후 확정된 68%, 2,860 cm², 3.43 kgCO₂e 값을 사용한다.
+
+### 기존 DB migration·rollback
+
+- 신규 DB는 `supabase-schema.sql`을 bootstrap 기준으로 사용합니다.
+- 기존 DB는 `supabase/migrations/202608180001_lifecycle_integrity.sql`을 적용합니다. 이 migration은 수거 일정·동의와 `CHANGE_REQUIRED.proposed_terms`를 backfill한 뒤 제약을 검증하고 lifecycle RPC·보증서 trigger를 설치합니다.
+- legacy 동의 키의 자동 변환은 정확히 모두 `true`인 `PRIMARY_SCENARIO` 데모 행으로 제한합니다. 기존 주문에 최초 이력이 없으면 `created_at` 시각의 `PENDING_PAYMENT`를 `MIGRATION_BACKFILL_INITIAL_STATUS` 표식으로 보완합니다.
+- 증명할 수 없는 동의·변경안·기존 보증서가 있으면 migration은 값을 만들어 내지 않고 중단합니다. 운영자가 해당 행을 검토한 뒤 재실행해야 합니다.
+- 구조 롤백은 쓰기를 중지한 뒤 `supabase/rollbacks/202608180001_lifecycle_integrity.sql`을 사용합니다. migration 뒤 생성된 주문이 있으면 자동 롤백을 중단하므로 별도 매핑 또는 point-in-time restore가 필요합니다.
 
 ## 11. v1 → v2 마이그레이션 이력
 

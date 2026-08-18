@@ -57,7 +57,7 @@
 4. SQL이 생성한 `source-products` private bucket과 Storage 정책을 확인합니다.
 5. 보유한 목록 이미지와 GLB·glTF 자산을 `mock-data.json`의 경로에 맞게 배치하거나 URL을 수정합니다.
 6. 루트의 `.env.example`을 `mcm-reborn/.env.local`로 복사하고 OpenAI·Supabase 값을 설정합니다.
-7. `openapi.yaml`을 기준으로 Route Handler를 구현합니다.
+7. 구현된 운영자 lifecycle command 외의 Route Handler는 `openapi.yaml`을 기준으로 추가합니다.
 8. `examples/openai-analysis.ts`와 프롬프트를 AI Provider에 적용합니다.
 9. `mock-data.json`의 중앙 시나리오 `MCM_BACKPACK_CHANGE_APPROVED_20260817`와 단일 대표 주문 `RB-20260817-0001`에 연결된 상태 이력·검수·변경안·보증서를 Seed합니다.
 10. 대표 주문, 저품질 재촬영, `INELIGIBLE` 사진 보완, AI 장애 폴백, 실물 검수 후 변경 승인 흐름을 각각 리허설합니다.

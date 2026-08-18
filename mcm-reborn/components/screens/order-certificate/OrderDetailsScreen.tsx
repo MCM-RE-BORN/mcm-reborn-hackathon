@@ -1,3 +1,5 @@
+"use client";
+
 import Image from "next/image";
 import { AppShell } from "@/components/layout/AppShell";
 import { BottomNav } from "@/components/layout/BottomNav";
@@ -9,11 +11,21 @@ import { ProgressStepper } from "@/components/ui/ProgressStepper";
 import { SectionBand } from "@/components/ui/SectionBand";
 import { StatusPanel } from "@/components/ui/StatusPanel";
 import { DEMO_SCENARIO, formatKrw } from "@/data/demo-scenario";
-import type { DemoState, OrderStage } from "./demo-state";
+import type {
+  CancellationReason,
+  DemoState,
+  OrderStage,
+} from "./demo-state";
 import { DemoStatePanel } from "./DemoStatePanel";
+import {
+  formatPickupDateLabel,
+  formatPickupTimeLabel,
+  useOrderDraft,
+} from "./OrderDraftProvider";
 import styles from "./order-certificate.module.css";
 
 type OrderDetailsScreenProps = {
+  cancellationReason: CancellationReason;
   stage: OrderStage;
   state: Extract<
     DemoState,
@@ -115,14 +127,18 @@ const FINAL_TERM_STAGES: OrderStage[] = [
 ];
 
 export function OrderDetailsScreen({
+  cancellationReason,
   stage,
   state,
 }: OrderDetailsScreenProps) {
+  const { orderDraft } = useOrderDraft();
   const { analysis, expertInspection, order, selectedDesign } = DEMO_SCENARIO;
   const usesFinalTerms = FINAL_TERM_STAGES.includes(stage);
   const displayedPrice = usesFinalTerms
     ? expertInspection.revisedPriceKrw
     : selectedDesign.initialPriceKrw;
+  const productionUnavailable =
+    cancellationReason === "production-unavailable";
 
   return (
     <AppShell
@@ -173,11 +189,11 @@ export function OrderDetailsScreen({
             <summary>주문자 정보</summary>
             <KeyValueList
               items={[
-                { label: "이름", value: order.customer.name },
-                { label: "휴대폰", value: order.customer.phone },
+                { label: "이름", value: orderDraft.name },
+                { label: "휴대폰", value: orderDraft.phone },
                 {
                   label: "수거지",
-                  value: `${order.customer.address} ${order.customer.addressDetail}`,
+                  value: `${orderDraft.address} ${orderDraft.addressDetail}`,
                 },
               ]}
             />
@@ -192,14 +208,23 @@ export function OrderDetailsScreen({
                     홈으로 이동
                   </ButtonLink>
                 }
-                description="변경된 제작 조건을 승인하지 않아 주문이 취소되었습니다. 결제 승인 취소와 전액 환불이 접수되었습니다. 시연 환경에서는 실제 청구나 환불이 발생하지 않습니다."
+                description={
+                  productionUnavailable
+                    ? "전문가 실물 검수 결과 안전한 제작이 어려워 주문이 취소되었습니다. 결제 승인 취소와 전액 환불이 접수되었습니다. 시연 환경에서는 실제 청구나 환불이 발생하지 않습니다."
+                    : "변경된 제작 조건을 승인하지 않아 주문이 취소되었습니다. 결제 승인 취소와 전액 환불이 접수되었습니다. 시연 환경에서는 실제 청구나 환불이 발생하지 않습니다."
+                }
                 title="주문이 취소되었습니다"
                 tone="empty"
               />
               <KeyValueList
                 items={[
                   { label: "주문번호", value: order.number },
-                  { label: "취소 사유", value: "실물 검수 후 변경 조건 미승인" },
+                  {
+                    label: "취소 사유",
+                    value: productionUnavailable
+                      ? "실물 검수 결과 제작 불가"
+                      : "실물 검수 후 변경 조건 미승인",
+                  },
                   { label: "결제 상태", value: "승인 취소 · 전액 환불 접수" },
                 ]}
               />
@@ -232,7 +257,7 @@ export function OrderDetailsScreen({
                   items={[
                     {
                       label: "수거 일정",
-                      value: `${order.pickupDateLabel} ${order.pickupTimeLabel}`,
+                      value: `${formatPickupDateLabel(orderDraft.pickupDate)} ${formatPickupTimeLabel(orderDraft.pickupTime)}`,
                     },
                     {
                       label: "예상 제작 기간",

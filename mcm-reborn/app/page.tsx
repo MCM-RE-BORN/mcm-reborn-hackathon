@@ -1,4 +1,5 @@
 import { IntroScreen } from "@/components/screens/entry-capture/IntroScreen";
+import { StartScreen } from "@/components/screens/entry-capture/StartScreen";
 import {
   type EntryPageProps,
   readEntrySearchParams,
@@ -7,5 +8,5 @@ import {
 export default async function LandingPage({ searchParams }: EntryPageProps) {
   const { state } = await readEntrySearchParams(searchParams);
 
-  return <IntroScreen state={state} />;
+  return state === "normal" ? <StartScreen /> : <IntroScreen state={state} />;
 }

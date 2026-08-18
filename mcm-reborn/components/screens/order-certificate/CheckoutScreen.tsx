@@ -1,3 +1,7 @@
+"use client";
+
+import { useRouter } from "next/navigation";
+import type { FormEvent } from "react";
 import { AppShell } from "@/components/layout/AppShell";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Section } from "@/components/layout/Section";
@@ -8,10 +12,14 @@ import { SectionBand } from "@/components/ui/SectionBand";
 import { DEMO_SCENARIO, formatKrw } from "@/data/demo-scenario";
 import type { DemoState } from "./demo-state";
 import { DemoStatePanel } from "./DemoStatePanel";
+import {
+  formatPickupDateLabel,
+  formatPickupTimeLabel,
+  useOrderDraft,
+} from "./OrderDraftProvider";
 import styles from "./order-certificate.module.css";
 
 type CheckoutScreenProps = {
-  orderDraft: CheckoutOrderDraft;
   state: Extract<
     DemoState,
     | "normal"
@@ -23,20 +31,16 @@ type CheckoutScreenProps = {
   >;
 };
 
-export type CheckoutOrderDraft = {
-  address: string;
-  addressDetail: string;
-  customerName: string;
-  customerPhone: string;
-  pickupDateLabel: string;
-  pickupTimeLabel: string;
-  postalCode: string;
-};
-
-export function CheckoutScreen({ orderDraft, state }: CheckoutScreenProps) {
+export function CheckoutScreen({ state }: CheckoutScreenProps) {
+  const router = useRouter();
+  const { orderDraft } = useOrderDraft();
   const isNormal = state === "normal";
   const { analysis, order, selectedDesign } = DEMO_SCENARIO;
   const initialPrice = formatKrw(selectedDesign.initialPriceKrw);
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    router.push("/orders/demo/complete");
+  };
 
   return (
     <AppShell
@@ -84,11 +88,11 @@ export function CheckoutScreen({ orderDraft, state }: CheckoutScreenProps) {
                 },
                 {
                   label: "주문자",
-                  value: orderDraft.customerName,
+                  value: orderDraft.name,
                 },
                 {
                   label: "연락처",
-                  value: orderDraft.customerPhone,
+                  value: orderDraft.phone,
                 },
                 {
                   label: "수거지",
@@ -96,13 +100,13 @@ export function CheckoutScreen({ orderDraft, state }: CheckoutScreenProps) {
                 },
                 {
                   label: "수거 일정",
-                  value: `${orderDraft.pickupDateLabel} ${orderDraft.pickupTimeLabel}`,
+                  value: `${formatPickupDateLabel(orderDraft.pickupDate)} ${formatPickupTimeLabel(orderDraft.pickupTime)}`,
                 },
               ]}
             />
           </section>
           <SectionBand />
-          <form action="/orders/demo/complete" id="checkout-form" method="get">
+          <form id="checkout-form" method="post" onSubmit={handleSubmit}>
             <Section title="결제 수단">
               <fieldset className={styles.paymentFieldset}>
                 <legend className={styles.visuallyHidden}>결제 수단 선택</legend>

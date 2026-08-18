@@ -1,3 +1,5 @@
+"use client";
+
 import Image from "next/image";
 import { AppShell } from "@/components/layout/AppShell";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -5,6 +7,11 @@ import { ButtonLink } from "@/components/ui/Button";
 import { DEMO_SCENARIO } from "@/data/demo-scenario";
 import type { DemoState } from "./demo-state";
 import { DemoStatePanel } from "./DemoStatePanel";
+import {
+  formatPickupDateLabel,
+  formatPickupTimeLabel,
+  useOrderDraft,
+} from "./OrderDraftProvider";
 import styles from "./order-certificate.module.css";
 
 type OrderCompleteScreenProps = {
@@ -15,10 +22,13 @@ type OrderCompleteScreenProps = {
 };
 
 export function OrderCompleteScreen({ state }: OrderCompleteScreenProps) {
+  const { orderDraft } = useOrderDraft();
   const { order } = DEMO_SCENARIO;
 
   return (
-    <AppShell header={<PageHeader backHref="/checkout" />}>
+    <AppShell
+      header={state === "normal" ? undefined : <PageHeader backHref="/checkout" />}
+    >
       {state !== "normal" ? (
         <div className={styles.stateInset}>
           <h1 className={styles.visuallyHidden}>주문 접수 완료</h1>
@@ -46,7 +56,8 @@ export function OrderCompleteScreen({ state }: OrderCompleteScreenProps) {
               주문번호 <u>{order.number}</u>
             </p>
             <p>
-              {order.pickupDateLabel} {order.pickupTimeLabel} 수거 예정
+              {formatPickupDateLabel(orderDraft.pickupDate)}{" "}
+              {formatPickupTimeLabel(orderDraft.pickupTime)} 수거 예정
             </p>
           </div>
           <ButtonLink fullWidth href="/orders/demo?stage=pickup">

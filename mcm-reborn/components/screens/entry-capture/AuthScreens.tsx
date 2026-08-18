@@ -1,6 +1,9 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
-import type { ReactNode } from "react";
+import { useRouter } from "next/navigation";
+import type { FormEvent, ReactNode } from "react";
 import { AppShell } from "@/components/layout/AppShell";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { ButtonLink } from "@/components/ui/Button";
@@ -92,20 +95,25 @@ function AuthState({ kind, state }: { kind: "login" | "signup"; state: PageState
 }
 
 export function LoginScreen({ state }: AuthScreenProps) {
+  const router = useRouter();
   const hasError = state === "error";
   const showForm = state === "normal" || hasError;
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    router.push("/home");
+  };
 
   return (
-    <AppShell header={<PageHeader backHref="/intro" />}>
-      <div className={styles.authContent}>
+    <AppShell>
+      <div className={`${styles.authContent} ${styles.authContentLogin}`}>
         <h1 className={styles.visuallyHidden}>로그인</h1>
         <AuthBrand expanded subtitle="MODERN CREATION, REBORN" />
         {showForm ? (
           <>
             <form
-              action="/home"
               className={`${styles.authForm} ${styles.authFormTight}`}
-              method="get"
+              method="post"
+              onSubmit={handleSubmit}
             >
               <TextField
                 autoComplete="username"
@@ -151,14 +159,23 @@ export function LoginScreen({ state }: AuthScreenProps) {
 }
 
 export function SignupScreen({ state }: AuthScreenProps) {
+  const router = useRouter();
   const hasError = state === "error";
   const showForm = state === "normal" || hasError;
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    router.push("/home");
+  };
 
   return (
     <AppShell header={<PageHeader backHref="/login" title="회원가입" />}>
       <div className={styles.authContent}>
         {showForm ? (
-          <form action="/home" className={styles.authForm} method="get">
+          <form
+            className={styles.authForm}
+            method="post"
+            onSubmit={handleSubmit}
+          >
             <TextField
               autoComplete="name"
               density="compact"

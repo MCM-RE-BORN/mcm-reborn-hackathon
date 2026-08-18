@@ -71,13 +71,12 @@ export function ProductCapturePhotos({
 
   return (
     <section aria-labelledby="capture-guide-title" className={styles.captureGuide}>
-      <div className={styles.captureSectionHeading}>
-        <div>
-          <h2 id="capture-guide-title">제품 사진</h2>
-          <p>정면, 측면, 내부, 각인을 차례로 확인해주세요.</p>
-        </div>
-        <span>{completedCount}/{CAPTURE_SLOTS.length}</span>
-      </div>
+      <h2 className={styles.visuallyHidden} id="capture-guide-title">
+        제품 사진 {completedCount}/{CAPTURE_SLOTS.length}
+      </h2>
+      <p className={styles.visuallyHidden}>
+        정면, 측면, 내부, 각인을 차례로 확인해주세요.
+      </p>
 
       <div className={styles.captureGrid}>
         {CAPTURE_SLOTS.map((slot) => {

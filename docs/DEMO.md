@@ -6,11 +6,11 @@
 
 - 목적은 실제 AI 정확도보다 최종 서비스 흐름을 자연스럽고 안정적으로 완주하는 것이다.
 - 실제 AI가 어려운 상태·정품·재활용 판단은 중앙 Fixture 또는 재현 가능한 예상치로 표시한다.
-- 같은 접수에서는 새로고침하거나 화면을 이동해도 수치와 제품 정보가 바뀌지 않는다.
+- 중앙 Fixture의 수치와 제품은 새로고침·화면 이동에도 바뀌지 않는다. 실제 촬영 Blob과 사용자가 수정한 입력은 현재 클라이언트 세션 메모리만 사용하므로 전체 새로고침 시 준비된 데모 자산·기본값으로 복구된다.
 - 화면과 발표에서 AI 값은 사진 기반 예상, 결제·물류·탄소·보증서는 Mock임을 밝힌다.
 - 주문 전에는 정품·제작 가능·원단 활용·견적을 확정 표현으로 말하지 않는다.
 - 공식 장인 실물 검수는 주문·Mock 결제와 제품 수거가 끝난 뒤에만 수행한다.
-- 외부 API가 실패해도 fixture/hybrid 폴백으로 같은 주문과 보증서까지 진행한다.
+- 현재 브라우저 데모는 외부 API를 호출하지 않고 `DEMO_FIXTURE`로 같은 주문과 보증서까지 진행한다. 향후 live 연동을 추가할 때도 계약에 맞는 Fixture 복구 경로를 유지한다.
 
 ## 중앙 시나리오 빠른 참조
 
@@ -25,23 +25,31 @@
 | 실물 검수 | `CHANGE_REQUIRED` |
 | 변경 조건 | 68%, 195,000원, 4~5주 |
 | 고객 결정 | 승인 |
+| Mock 배송 | `DEMO-RB-20260817-0001`, `DELIVERED` |
 | 보증서 | `ESG-RB-20260817-0001`, 68%, 3.43kg CO2e |
 
 ## 사전 준비
 
-1. 루트 `.env.example`을 `mcm-reborn/.env.local`로 복사하고 공개값과 서버 전용 값을 구분한다.
-2. 고객 데모 계정과 필요한 경우 조회용 운영자 계정을 준비한다.
+1. 저장소 루트에서 앱을 실행하고 `/` 또는 `/intro`의 서비스 소개에서 시작한다. 홈의 직접 주소는 `/home`이다.
+2. 현재 로그인·회원가입은 데모 폼이므로 실제 고객·운영자 계정이나 비밀값을 준비하지 않는다.
 3. 모바일 또는 모바일 에뮬레이션 환경에서 HTTPS/localhost 카메라 권한과 후면 카메라를 확인한다.
 4. 실제 촬영 실패에 대비해 정면·측면·내부·각인 JPG/PNG 예시 사진을 준비한다.
-5. 중앙 시나리오 Fixture와 `DEMO_FIXTURE` 또는 동일한 fallback 모드를 준비한다.
-6. 접수·주문·보증서 식별자와 모든 수치가 중앙 시나리오와 같은지 확인한다.
-7. 저장소 루트에서 계약·앱 검증 명령을 실행한다.
+5. 중앙 시나리오 `DEMO_FIXTURE`가 접수·주문·보증서에서 같은 식별자와 수치를 표시하는지 확인한다.
+6. 저장소 루트에서 계약·앱 검증 명령을 실행한다.
 
-서버 전용인 `SUPABASE_SERVICE_ROLE_KEY`와 `OPENAI_API_KEY`에는 절대 `NEXT_PUBLIC_` 접두사를 붙이지 않는다.
+현재 Fixture 고객 데모 실행에는 Supabase·OpenAI 환경변수가 필요하지 않다. 운영자 lifecycle command Route Handler를 연동 테스트할 때는 `.env.example`을 `mcm-reborn/.env.local`로 복사하고 Supabase URL·publishable key·service role key를 설정한다. 서버 전용인 `SUPABASE_SERVICE_ROLE_KEY`와 `OPENAI_API_KEY`에는 절대 `NEXT_PUBLIC_` 접두사를 붙이지 않는다.
 
 ```powershell
 Copy-Item .\.env.example .\mcm-reborn\.env.local
 ```
+
+앱 실행:
+
+```bash
+npm --prefix mcm-reborn run dev
+```
+
+별도 터미널에서 검증:
 
 ```bash
 python validate_package.py
@@ -66,7 +74,7 @@ npm --prefix mcm-reborn run build
 9. Mock 결제를 완료하고 주문 `RB-20260817-0001`, `ORDER_PLACED`를 보여 준다.
 10. 수거 예정·수거 완료 뒤 공식 장인 최종 실물 검수로 이동한다.
 11. 내부 원단 손상으로 `CHANGE_REQUIRED`가 된 사유와 72%→68%, 180,000원→195,000원, 4~5주 변경을 비교한다.
-12. 고객이 변경 조건을 승인하고 `PRODUCTION_READY → IN_PRODUCTION → QUALITY_CHECK → SHIPPED → DELIVERED → COMPLETED`를 빠른 타임라인으로 보여 준다.
+12. 고객이 변경 조건을 승인하고 `PRODUCTION_READY → IN_PRODUCTION → QUALITY_CHECK → SHIPPED → DELIVERED → COMPLETED`를 빠른 타임라인으로 보여 준다. HTTP/Mock 계약을 함께 설명할 때는 운송장 `DEMO-RB-20260817-0001`을 사용한다.
 13. 보증서 `ESG-RB-20260817-0001`, 최종 재활용률 68%, 예상 탄소 절감 3.43kg CO2e로 마무리한다.
 
 골든 흐름에서는 운영자 화면으로 전환해 주문 전 승인하지 않는다. 장인 판단은 수거 후 실물 검수 단계에서만 나타난다.
@@ -75,12 +83,12 @@ npm --prefix mcm-reborn run build
 
 - 카메라 권한 거부: 권한 안내 뒤 `기기에서 사진 선택`으로 복구한다.
 - 사진 부족·형식·용량: JPG/JPEG·PNG, 3~4장, 장당 10MB 기준과 남은 장수를 안내한다.
-- 사진 품질 미달: `422 IMAGE_QUALITY_INSUFFICIENT`와 이미지별 재촬영 안내를 보여 주고 분석을 생성하지 않는다.
-- OpenAI 제공자 오류: fixture/hybrid 폴백으로 전환하되 같은 72%·91%와 같은 접수 번호를 유지한다.
+- 사진 품질 미달: 준비된 품질 미달 상태에서 `422 IMAGE_QUALITY_INSUFFICIENT` 계약과 이미지별 재촬영 안내를 설명한다. 현재 앱이 실제 사진 품질 API를 실행한다고 말하지 않는다.
+- OpenAI 제공자 오류: 현재 앱은 OpenAI를 호출하지 않으므로 제공자 장애 시연 대신 `DEMO_FIXTURE` 복구 원칙을 설명한다. live 연동 후에는 같은 72%·91%와 같은 접수 번호를 유지하는 폴백을 검증한다.
 - AI 비대상: `AI_INELIGIBLE`을 공식 가품 판정이 아니라 사진·정보 기반 사전 접수 불가로 표현한다.
 - 변경 조건 거절: `CHANGE_APPROVAL_REQUIRED → CANCELED`와 Mock 결제 취소·환불 안내를 보여 준다.
-- 제작 불가: `PRODUCTION_UNAVAILABLE → CANCELED`와 상담·Mock 환불 경로를 보여 준다.
-- 권한: 다른 고객의 접수·주문·보증서 내용을 노출하지 않는다.
+- 제작 불가: `/orders/demo?stage=canceled&reason=production-unavailable`에서 `PRODUCTION_UNAVAILABLE → CANCELED`와 상담·Mock 환불 경로를 보여 준다.
+- 권한: 현재 인증·RLS가 없는 데모 화면임을 밝힌다. 다른 고객 격리는 향후 API/Auth 연동 완료 조건으로 검증한다.
 - 빈 상태: 수거·배송·보증서가 아직 없을 때 오류 대신 다음 단계와 조건을 설명한다.
 
 ## 실패 복구
@@ -89,10 +97,10 @@ npm --prefix mcm-reborn run build
 |---|---|
 | 카메라 권한·장치 오류 | 파일 선택 폴백 또는 준비한 JPG/PNG 3장 사용 |
 | 사진 품질 미달 | 안내된 슬롯만 재촬영. 품질 오류를 Fixture 성공으로 위장하지 않음 |
-| OpenAI 지연·오류 | `DEMO_FIXTURE`/hybrid로 전환하고 중앙 시나리오 값을 유지 |
+| OpenAI 지연·오류 | 현재는 외부 호출이 없어 해당 없음. 향후 live 연동 시 `DEMO_FIXTURE`로 전환하고 중앙 시나리오 값을 유지 |
 | 분석 화면 진행 지연 | 접수 ID를 유지한 준비된 `AI_COMPLETED` 상태로 이동 |
 | 타임라인 진행 지연 | 빠른 데모 프로필 또는 준비된 상태 전이 사용 |
-| Storage 실패 | 사전 업로드 자산을 같은 슬롯과 접수에 연결 |
+| Storage 실패 | 현재는 Storage를 사용하지 않으므로 준비된 로컬 데모 자산으로 복구. 실제 Storage 연동 후 같은 슬롯·접수 연결을 검증 |
 | 변경 승인 처리 실패 | 준비된 `CHANGE_APPROVAL_REQUIRED`와 승인 완료 fixture로 복구 |
 | 네트워크 불안정 | 로컬 Fixture로 주문·보증서까지 완주하고 실제 연동은 녹화로 보조 |
 
@@ -121,7 +129,8 @@ npm --prefix mcm-reborn run build
 - [ ] 변경 전후 72%→68%, 180,000원→195,000원, 4~5주와 변경 사유가 표시된다.
 - [ ] 고객 승인 전에는 제작 상태로 이동하지 않는다.
 - [ ] 승인 뒤 제작·품질·배송·완료가 같은 주문으로 이어진다.
+- [ ] OpenAPI와 `mock-data.json`의 배송 Fixture가 `DEMO-RB-20260817-0001`, `DELIVERED`로 일치한다.
 - [ ] `COMPLETED` 뒤 보증서 `ESG-RB-20260817-0001`, 68%, 3.43kg CO2e가 표시된다.
-- [ ] 외부 제공자 실패와 권한 거부를 확인했다.
+- [ ] 현재 인증·외부 API·Storage 미연동 사실과 `DEMO_FIXTURE` 복구 경계를 발표자에게 공유했다.
 - [ ] 비밀값·개인정보가 화면과 로그에 노출되지 않는다.
 - [ ] 데모 값과 Mock 기능 표시를 확인했다.

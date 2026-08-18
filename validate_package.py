@@ -47,6 +47,36 @@ PRODUCT_CODES = {
 UPLOAD_PURPOSES = {'SOURCE_FRONT', 'SOURCE_SIDE', 'INTERIOR', 'ENGRAVING'}
 PRIMARY_SCENARIO_KEY = 'MCM_BACKPACK_CHANGE_APPROVED_20260817'
 INSPECTION_OUTCOMES = {'NO_CHANGE', 'CHANGE_REQUIRED', 'PRODUCTION_UNAVAILABLE'}
+LIFECYCLE_COMMAND_TARGET_STATUSES = {
+    'PICKUP_SCHEDULED',
+    'PICKUP_IN_PROGRESS',
+    'PRODUCT_RECEIVED',
+    'EXPERT_INSPECTION',
+    'IN_PRODUCTION',
+    'QUALITY_CHECK',
+    'SHIPPED',
+    'DELIVERED',
+    'COMPLETED',
+    'PRODUCTION_UNAVAILABLE',
+    'CANCELED',
+}
+CANONICAL_PICKUP_SCHEDULE = {
+    'requestedDate': '2026-08-19',
+    'timeWindow': '14:00-16:00',
+}
+CANONICAL_CONSENTS = {
+    'serviceAndPrivacyTermsAccepted': True,
+    'aiEstimateNoticeAccepted': True,
+    'inspectionChangeNoticeAccepted': True,
+}
+CANONICAL_MOCK_SHIPMENT = {
+    'applicationId': '30000000-0000-4000-8000-000000000001',
+    'carrierCode': 'MCM_REBORN_DEMO',
+    'carrierName': 'MCM RE:BORN Demo Logistics',
+    'trackingNumber': 'DEMO-RB-20260817-0001',
+    'trackingUrl': None,
+    'status': 'DELIVERED',
+}
 
 
 def fail(message: str) -> None:
@@ -194,7 +224,247 @@ def validate_openapi(openapi: dict[str, Any]) -> tuple[int, int]:
     }:
         fail('statusOverride must be limited to v2 exception states')
 
+    lifecycle_targets = schemas['LifecycleCommandTargetStatus']
+    if set(lifecycle_targets.get('enum', [])) != LIFECYCLE_COMMAND_TARGET_STATUSES:
+        fail('LifecycleCommandTargetStatus differs from the guarded operator command contract')
+    lifecycle_request = schemas['ApplicationLifecycleCommandRequest']
+    if lifecycle_request.get('additionalProperties') is not False:
+        fail('ApplicationLifecycleCommandRequest must reject unknown fields')
+    if set(lifecycle_request.get('required', [])) != {'targetStatus'}:
+        fail('ApplicationLifecycleCommandRequest must require only targetStatus by default')
+    lifecycle_request_properties = lifecycle_request.get('properties', {})
+    if set(lifecycle_request_properties) != {
+        'targetStatus',
+        'note',
+        'trackingNumber',
+        'carrierCode',
+        'carrierName',
+    }:
+        fail('ApplicationLifecycleCommandRequest fields differ from the lifecycle RPC contract')
+    if lifecycle_request_properties['targetStatus'].get('$ref') != (
+        '#/components/schemas/LifecycleCommandTargetStatus'
+    ):
+        fail('Lifecycle command targetStatus must reference LifecycleCommandTargetStatus')
+    shipping_rules = [
+        rule
+        for rule in lifecycle_request.get('allOf', [])
+        if rule.get('if', {}).get('properties', {}).get('targetStatus', {}).get('const')
+        == 'SHIPPED'
+    ]
+    if len(shipping_rules) != 1:
+        fail('Lifecycle command must define exactly one SHIPPED conditional rule')
+    shipping_rule = shipping_rules[0]
+    if set(shipping_rule.get('then', {}).get('required', [])) != {'trackingNumber'}:
+        fail('SHIPPED lifecycle command must require trackingNumber')
+    forbidden_shipping_fields = {
+        frozenset(condition.get('required', []))
+        for condition in shipping_rule.get('else', {}).get('not', {}).get('anyOf', [])
+    }
+    if forbidden_shipping_fields != {
+        frozenset({'trackingNumber'}),
+        frozenset({'carrierCode'}),
+        frozenset({'carrierName'}),
+    }:
+        fail('Non-SHIPPED lifecycle commands must reject shipment-only fields')
+    lifecycle_response = schemas['ApplicationLifecycleCommandResponse']
+    if set(lifecycle_response.get('required', [])) != {
+        'applicationId',
+        'previousStatus',
+        'applicationStatus',
+        'occurredAt',
+        'shipment',
+    }:
+        fail('ApplicationLifecycleCommandResponse must expose the complete command result')
+    shipment_variants = lifecycle_response.get('properties', {}).get('shipment', {}).get('oneOf', [])
+    if not (
+        {'$ref': '#/components/schemas/MockShipment'} in shipment_variants
+        and {'type': 'null'} in shipment_variants
+    ):
+        fail('Lifecycle command response shipment must be MockShipment or null')
+    request_carrier_code = lifecycle_request_properties['carrierCode']
+    response_carrier_code = schemas['MockShipment'].get('properties', {}).get('carrierCode', {})
+    for keyword in ('minLength', 'maxLength', 'pattern'):
+        if response_carrier_code.get(keyword) != request_carrier_code.get(keyword):
+            fail(f'MockShipment carrierCode must preserve request {keyword} constraints')
+    if 'const' in response_carrier_code:
+        fail('MockShipment carrierCode must accept every carrierCode allowed by the command request')
+
+    pickup_schedule = schemas['PickupSchedule']
+    if pickup_schedule.get('additionalProperties') is not False:
+        fail('PickupSchedule must reject unknown fields')
+    if set(pickup_schedule.get('required', [])) != {'requestedDate', 'timeWindow'}:
+        fail('PickupSchedule must require requestedDate and timeWindow')
+    pickup_properties = pickup_schedule.get('properties', {})
+    if pickup_properties.get('requestedDate', {}).get('format') != 'date':
+        fail('PickupSchedule.requestedDate must use the OpenAPI date format')
+    time_window = pickup_properties.get('timeWindow', {})
+    if (
+        time_window.get('minLength') != 1
+        or time_window.get('maxLength') != 60
+        or time_window.get('pattern') != r'\S'
+    ):
+        fail('PickupSchedule.timeWindow must be nonblank and at most 60 characters')
+
+    consent_fields = set(CANONICAL_CONSENTS)
+    consents = schemas['Consents']
+    if consents.get('additionalProperties') is not False:
+        fail('Consents must reject unknown fields')
+    if set(consents.get('required', [])) != consent_fields:
+        fail('Consents required fields differ from the canonical customer notices')
+    if set(consents.get('properties', {})) != consent_fields:
+        fail('Consents must contain only the canonical customer notices')
+    if any(
+        definition.get('type') != 'boolean' or definition.get('const') is not True
+        for definition in consents['properties'].values()
+    ):
+        fail('All application consents must be boolean true')
+    serialized_openapi = json.dumps(openapi, ensure_ascii=False)
+    if any(
+        stale_key in serialized_openapi
+        for stale_key in ('demoTermsAccepted', 'esgEstimateNoticeAccepted')
+    ):
+        fail('OpenAPI still contains removed application consent keys')
+
+    create_application = schemas['CreateApplicationRequest']
+    required_application_fields = {
+        'analysisId',
+        'productId',
+        'selectedOptions',
+        'shippingAddress',
+        'pickupSchedule',
+        'consents',
+    }
+    if set(create_application.get('required', [])) != required_application_fields:
+        fail('CreateApplicationRequest required fields differ from the v2 order contract')
+    if create_application['properties']['pickupSchedule'].get('$ref') != '#/components/schemas/PickupSchedule':
+        fail('CreateApplicationRequest.pickupSchedule must reference PickupSchedule')
+    application_detail = schemas['ApplicationDetail']
+    if 'pickupSchedule' not in set(application_detail.get('required', [])):
+        fail('ApplicationDetail must return the persisted pickupSchedule')
+    if application_detail['properties']['pickupSchedule'].get('$ref') != '#/components/schemas/PickupSchedule':
+        fail('ApplicationDetail.pickupSchedule must reference PickupSchedule')
+
+    application_example = (
+        openapi['paths']['/applications']['post']['requestBody']['content']
+        ['application/json'].get('example', {})
+    )
+    if application_example.get('pickupSchedule') != CANONICAL_PICKUP_SCHEDULE:
+        fail('POST /applications example must use the canonical pickup schedule')
+    if application_example.get('consents') != CANONICAL_CONSENTS:
+        fail('POST /applications example must use the canonical consent keys')
+
+    shipment_example = (
+        openapi['paths']['/applications/{applicationId}/shipment']['get']['responses']
+        ['200']['content']['application/json'].get('example', {})
+    )
+    if shipment_example != CANONICAL_MOCK_SHIPMENT:
+        fail('GET shipment example must match the canonical delivered mock shipment')
+
+    lifecycle_path = '/admin/applications/{applicationId}/lifecycle-commands'
+    lifecycle_operation = openapi.get('paths', {}).get(lifecycle_path, {}).get('post', {})
+    if not lifecycle_operation:
+        fail(f'Missing operator lifecycle API: POST {lifecycle_path}')
+    if 'Operator' not in lifecycle_operation.get('tags', []):
+        fail('Lifecycle command endpoint must be OPERATOR-only')
+    if lifecycle_operation.get('x-required-role') != 'OPERATOR':
+        fail('Lifecycle command endpoint must declare x-required-role=OPERATOR')
+    if lifecycle_operation.get('operationId') != 'advanceApplicationLifecycle':
+        fail('Lifecycle command operationId must be advanceApplicationLifecycle')
+    if {'$ref': '#/components/parameters/IdempotencyKey'} not in lifecycle_operation.get('parameters', []):
+        fail('Lifecycle command endpoint must require Idempotency-Key')
+    lifecycle_body_ref = (
+        lifecycle_operation.get('requestBody', {}).get('content', {})
+        .get('application/json', {}).get('schema', {}).get('$ref')
+    )
+    if lifecycle_body_ref != '#/components/schemas/ApplicationLifecycleCommandRequest':
+        fail('Lifecycle command body must reference ApplicationLifecycleCommandRequest')
+    lifecycle_response_ref = (
+        lifecycle_operation.get('responses', {}).get('200', {}).get('content', {})
+        .get('application/json', {}).get('schema', {}).get('$ref')
+    )
+    if lifecycle_response_ref != '#/components/schemas/ApplicationLifecycleCommandResponse':
+        fail('Lifecycle command response must reference ApplicationLifecycleCommandResponse')
+    for status, response_name in {
+        '502': 'BadGateway',
+        '503': 'ServiceUnavailable',
+    }.items():
+        if (
+            lifecycle_operation.get('responses', {}).get(status, {}).get('$ref')
+            != f'#/components/responses/{response_name}'
+        ):
+            fail(f'Lifecycle command endpoint must expose {status} {response_name}')
+    if not {'400', '401', '403', '404', '409'} <= set(lifecycle_operation.get('responses', {})):
+        fail('Lifecycle command must define validation, auth, ownership, not-found, and conflict errors')
+    lifecycle_description = lifecycle_operation.get('description', '')
+    for fragment in (
+        '바로 다음 상태',
+        'PRODUCTION_UNAVAILABLE은 IN_PRODUCTION 또는 QUALITY_CHECK',
+        'CANCELED는 현재 상태가 PRODUCTION_UNAVAILABLE',
+        '409',
+    ):
+        if fragment not in lifecycle_description:
+            fail(f'Lifecycle command guard description is missing: {fragment}')
+
+    inspection_request = schemas['SubmitPhysicalInspectionRequest']
+    inspection_request_rules = [
+        rule
+        for rule in inspection_request.get('allOf', [])
+        if rule.get('if', {}).get('properties', {}).get('outcome', {}).get('const')
+        == 'CHANGE_REQUIRED'
+    ]
+    if len(inspection_request_rules) != 1:
+        fail('Inspection request must define one CHANGE_REQUIRED conditional rule')
+    inspection_request_rule = inspection_request_rules[0]
+    if 'proposedTerms' not in inspection_request_rule.get('then', {}).get('required', []):
+        fail('CHANGE_REQUIRED inspection must require proposedTerms')
+    if (
+        inspection_request_rule.get('then', {}).get('properties', {})
+        .get('proposedTerms', {}).get('$ref')
+        != '#/components/schemas/ApplicationTerms'
+    ):
+        fail('CHANGE_REQUIRED proposedTerms must reference ApplicationTerms')
+    if (
+        inspection_request_rule.get('else', {}).get('properties', {})
+        .get('proposedTerms', {}).get('type')
+        != 'null'
+    ):
+        fail('Non-change inspections must not accept proposedTerms')
+    inspection_reason = inspection_request.get('properties', {}).get('reason', {})
+    if (
+        inspection_reason.get('minLength') != 1
+        or inspection_reason.get('maxLength') != 1000
+        or inspection_reason.get('pattern') != r'\S'
+    ):
+        fail('Inspection reason must match the DB nonblank 1..1000 character contract')
+
+    inspection_response = schemas['PhysicalInspectionResponse']
+    inspection_response_rules = [
+        rule
+        for rule in inspection_response.get('allOf', [])
+        if rule.get('if', {}).get('properties', {}).get('outcome', {}).get('const')
+        == 'CHANGE_REQUIRED'
+    ]
+    if len(inspection_response_rules) != 1:
+        fail('Inspection response must define one CHANGE_REQUIRED conditional rule')
+    inspection_response_rule = inspection_response_rules[0]
+    if 'changeRequest' not in inspection_response_rule.get('then', {}).get('required', []):
+        fail('CHANGE_REQUIRED inspection response must return the created changeRequest')
+    if (
+        inspection_response_rule.get('then', {}).get('properties', {})
+        .get('changeRequest', {}).get('$ref')
+        != '#/components/schemas/ApplicationChangeRequest'
+    ):
+        fail('CHANGE_REQUIRED response changeRequest must use ApplicationChangeRequest')
+    inspection_operation = openapi['paths']['/admin/applications/{applicationId}/inspection']['post']
+    if inspection_operation.get('x-required-role') != 'OPERATOR':
+        fail('Inspection endpoint must declare x-required-role=OPERATOR')
+    if '하나의 트랜잭션' not in inspection_operation.get('description', ''):
+        fail('Inspection endpoint must require atomic inspection/change/status persistence')
+    if '400' not in inspection_operation.get('responses', {}):
+        fail('Inspection endpoint must expose request-validation errors')
+
     required_paths = {
+        lifecycle_path: 'post',
         '/admin/applications/{applicationId}/inspection': 'post',
         '/applications/{applicationId}/change-request': 'get',
         '/applications/{applicationId}/change-request/approve': 'post',
@@ -214,13 +484,19 @@ def validate_openapi(openapi: dict[str, Any]) -> tuple[int, int]:
     return len(operation_ids), len(schemas)
 
 
-def validate_mock(mock: dict[str, Any], version: str) -> tuple[int, int]:
+def validate_mock(mock: dict[str, Any], version: str) -> tuple[int, int, int]:
     if mock.get('meta', {}).get('version') != version:
         fail('Mock version must match OpenAPI v2.0.0')
     if mock.get('meta', {}).get('contractChange') != 'BREAKING':
         fail('Mock metadata must declare the v2 contract as BREAKING')
     if 'manualReviewCases' in mock:
         fail('manualReviewCases was removed in v2')
+    serialized_mock = json.dumps(mock, ensure_ascii=False)
+    if any(
+        stale_key in serialized_mock
+        for stale_key in ('demoTermsAccepted', 'esgEstimateNoticeAccepted')
+    ):
+        fail('Mock still contains removed application consent keys')
 
     upload = mock.get('uploadContract', {})
     if set(upload.get('contentTypes', [])) != {'image/jpeg', 'image/png'}:
@@ -431,10 +707,18 @@ def validate_mock(mock: dict[str, Any], version: str) -> tuple[int, int]:
         or application.get('productId') != primary['productId']
     ):
         fail('Canonical application IDs differ from primaryScenario')
+    if application.get('pickupSchedule') != CANONICAL_PICKUP_SCHEDULE:
+        fail('Canonical application pickupSchedule differs from the order request contract')
+    if application.get('consents') != CANONICAL_CONSENTS:
+        fail('Canonical application consents differ from the order request contract')
 
     payments = mock.get('mockPayments', [])
     if len(payments) != 1 or payments[0].get('applicationStatusAfterPayment') != 'ORDER_PLACED':
         fail('Successful demo payment must transition to ORDER_PLACED')
+
+    shipments = mock.get('mockShipments', [])
+    if shipments != [CANONICAL_MOCK_SHIPMENT]:
+        fail('Canonical mockShipments must contain the single delivered demo shipment')
 
     expected_history = [
         'PENDING_PAYMENT',
@@ -470,7 +754,17 @@ def validate_mock(mock: dict[str, Any], version: str) -> tuple[int, int]:
         or physical[0].get('confirmedReusableAreaCm2') != 2860
     ):
         fail('Physical inspection fixture differs from the primary scenario')
-    if changes[0].get('status') != 'APPROVED' or changes[0].get('applicationId') != primary['orderId']:
+    inspection_fixture = physical[0]
+    change_fixture = changes[0]
+    if inspection_fixture.get('proposedTerms') != change_fixture.get('proposedTerms'):
+        fail('CHANGE_REQUIRED inspection proposedTerms must equal the atomically created change request')
+    if (
+        change_fixture.get('inspectionId') != inspection_fixture.get('id')
+        or change_fixture.get('reason') != inspection_fixture.get('reason')
+        or change_fixture.get('createdAt') != inspection_fixture.get('inspectedAt')
+    ):
+        fail('Inspection and change request fixtures must describe one atomic creation event')
+    if change_fixture.get('status') != 'APPROVED' or change_fixture.get('applicationId') != primary['orderId']:
         fail('Primary changed terms must be customer-approved')
 
     certificates = mock.get('certificates', [])
@@ -487,7 +781,7 @@ def validate_mock(mock: dict[str, Any], version: str) -> tuple[int, int]:
     ):
         fail('Final certificate fixture differs from the approved scenario')
 
-    return len(products), len(recaptures)
+    return len(products), len(recaptures), len(shipments)
 
 
 def validate_sql(sql: str) -> None:
@@ -518,12 +812,34 @@ def validate_sql(sql: str) -> None:
             'completed estimate payload': 'constraint completed_analysis_payload_required',
             'ESG methodology v2': "methodology_version = 'DEMO_LCA_V2'",
             'physical inspections': 'create table public.physical_inspections',
+            'inspection proposed terms persistence': 'proposed_terms jsonb',
+            'inspection proposed terms guard': 'constraint physical_inspections_proposed_terms_contract',
             'change requests': 'create table public.application_change_requests',
             'state transition guard': 'create or replace function public.enforce_application_transition()',
+            'initial status history trigger': 'after insert or update of persisted_status on public.applications',
+            'pickup schedule persistence': 'pickup_schedule jsonb not null',
+            'pickup schedule JSON guard': 'constraint applications_pickup_schedule_contract',
+            'pickup schedule exact keys': "(pickup_schedule - array['requestedDate', 'timeWindow']) = '{}'::jsonb",
+            'pickup time-window maximum': "length(trim(pickup_schedule->>'timeWindow')) <= 60",
+            'consent JSON guard': 'constraint applications_consents_contract',
+            'canonical consent keys': 'serviceAndPrivacyTermsAccepted',
             'production approval guard': 'IN_PRODUCTION requires completed inspection and approved changed terms',
             'payment transition': "set persisted_status = 'ORDER_PLACED'",
+            'production unavailable cancellation': "when 'PRODUCTION_UNAVAILABLE' then new.persisted_status = 'CANCELED'",
+            'atomic inspection RPC': 'create or replace function public.submit_physical_inspection(',
+            'guarded lifecycle RPC': 'create or replace function public.advance_application_lifecycle(',
+            'operator-only RPC guard': 'if auth.uid() is null or not public.is_operator() then',
+            'same-state lifecycle rejection': 'lifecycle command target must be the next status',
+            'production-stage unavailable guard': "current_status not in ('IN_PRODUCTION', 'QUALITY_CHECK')",
+            'unavailable cancellation command guard': "current_status <> 'PRODUCTION_UNAVAILABLE'",
+            'shipping command payload guard': 'shipping fields are accepted only for SHIPPED',
+            'delivered shipment guard': 'DELIVERED requires an existing SHIPPED shipment',
+            'existing shipment response lookup': 'if changed_shipment_id is null then',
             'immutable changed terms': 'customer decision cannot alter proposed terms',
             'customer decision trigger': 'create or replace function public.apply_change_request_decision()',
+            'certificate issuance guard': 'create or replace function public.enforce_certificate_issuance_state()',
+            'certificate issuance trigger': 'create trigger esg_certificates_enforce_issuance_state',
+            'issued certificate inverse guard': 'create trigger applications_protect_issued_certificate_state',
             'private owner path': 'constraint media_assets_owner_path',
             'row-level security': 'alter table public.application_change_requests enable row level security;',
         },
@@ -541,10 +857,67 @@ def validate_sql(sql: str) -> None:
         'DEMO_LCA_V1',
         'UNCHANGED',
         'CHANGES_PROPOSED',
+        'demoTermsAccepted',
+        'esgEstimateNoticeAccepted',
+        'jsonb_object_length',
     ]
     present = [fragment for fragment in forbidden if fragment in sql]
     if present:
         fail(f'SQL still contains removed v1 contract fragments: {present}')
+
+
+def validate_lifecycle_migrations(up_migration: str, rollback: str) -> None:
+    require_fragments(
+        up_migration,
+        '202608180001 lifecycle up migration',
+        {
+            'transaction start': 'begin;',
+            'transaction commit': 'commit;',
+            'private backup table': 'private.mcm_lifecycle_alignment_backup_20260818',
+            'pickup schedule add': 'add column if not exists pickup_schedule jsonb',
+            'pickup schedule backfill': "'timeWindow', '14:00-16:00'",
+            'canonical consent conversion': 'set consents = \'{"serviceAndPrivacyTermsAccepted":true,"aiEstimateNoticeAccepted":true,"inspectionChangeNoticeAccepted":true}\'::jsonb',
+            'manual consent review stop': 'consent backfill requires manual review for non-canonical rows',
+            'legacy consent scenario guard': 'legacy consent conversion is limited to PRIMARY_SCENARIO demo rows',
+            'legacy consent scenario filter': "and a.demo_progress_profile = 'PRIMARY_SCENARIO';",
+            'initial status history backfill': 'MIGRATION_BACKFILL_INITIAL_STATUS',
+            'inspection terms add': 'add column if not exists proposed_terms jsonb',
+            'inspection terms backfill': 'set proposed_terms = acr.proposed_terms',
+            'manual inspection review stop': 'CHANGE_REQUIRED backfill requires an existing change request with proposed terms',
+            'deferred constraint validation': 'not valid',
+            'constraint validation': 'validate constraint physical_inspections_proposed_terms_contract',
+            'atomic inspection RPC': 'create or replace function public.submit_physical_inspection(',
+            'guarded lifecycle RPC': 'create or replace function public.advance_application_lifecycle(',
+            'operator guard': 'if auth.uid() is null or not public.is_operator() then',
+            'same-state lifecycle rejection': 'lifecycle command target must be the next status',
+            'shipment upsert': 'on conflict (application_id) do update set',
+            'existing shipment response lookup': 'if changed_shipment_id is null then',
+            'certificate preflight': 'existing certificate violates COMPLETED/no-override issuance rule',
+            'certificate trigger': 'create trigger esg_certificates_enforce_issuance_state',
+            'inverse certificate trigger': 'create trigger applications_protect_issued_certificate_state',
+            'RPC execute grant': 'grant execute on function public.advance_application_lifecycle(',
+        },
+    )
+    require_fragments(
+        rollback,
+        '202608180001 lifecycle rollback',
+        {
+            'transaction start': 'begin;',
+            'transaction commit': 'commit;',
+            'new-row safety stop': 'rollback requires manual handling of applications created after migration',
+            'remove initial history backfill': "where note = 'MIGRATION_BACKFILL_INITIAL_STATUS'",
+            'drop lifecycle RPC': 'drop function public.advance_application_lifecycle(',
+            'drop inspection RPC': 'drop function public.submit_physical_inspection(',
+            'drop certificate trigger': 'drop trigger if exists esg_certificates_enforce_issuance_state',
+            'drop inverse certificate trigger': 'drop trigger if exists applications_protect_issued_certificate_state',
+            'restore backed-up consents': 'set consents = b.consents',
+            'drop inspection terms': 'drop column if exists proposed_terms',
+            'drop pickup schedule': 'drop column if exists pickup_schedule',
+            'remove backup table': 'drop table private.mcm_lifecycle_alignment_backup_20260818',
+        },
+    )
+    if re.search(r'\bcascade\b', rollback, flags=re.IGNORECASE):
+        fail('Lifecycle rollback must not use broad CASCADE drops')
 
 
 def validate_prompt_and_examples(
@@ -595,6 +968,17 @@ def validate_prompt_and_examples(
             'no-change outcome': "'NO_CHANGE'",
             'change-required outcome': "'CHANGE_REQUIRED'",
             'approved change guard': "changeRequestStatus === 'APPROVED'",
+            'canonical pickup date': "requestedDate: '2026-08-19'",
+            'canonical pickup window': "timeWindow: '14:00-16:00'",
+            'service and privacy consent': 'serviceAndPrivacyTermsAccepted: true',
+            'inspection change consent': 'inspectionChangeNoticeAccepted: true',
+            'unavailable-to-canceled transition': "PRODUCTION_UNAVAILABLE: ['CANCELED']",
+            'lifecycle command target enum': 'LIFECYCLE_COMMAND_TARGET_STATUSES',
+            'lifecycle command request type': 'ApplicationLifecycleCommand',
+            'guarded lifecycle command transitions': 'LIFECYCLE_COMMAND_TRANSITIONS',
+            'production-stage unavailable command': "IN_PRODUCTION: ['QUALITY_CHECK', 'PRODUCTION_UNAVAILABLE']",
+            'canonical delivered shipment': 'PRIMARY_DEMO_SHIPMENT',
+            'canonical tracking number': "trackingNumber: 'DEMO-RB-20260817-0001'",
         },
     )
     for label, text in {'prompt': prompt, 'provider example': provider}.items():
@@ -620,6 +1004,8 @@ def validate_guide(guide: str) -> None:
         'JPG/PNG/WebP',
         '2주 MVP',
         'Phase2',
+        'demoTermsAccepted',
+        'esgEstimateNoticeAccepted',
     ]
     present = [term for term in forbidden_current if term in current_guidance]
     if present:
@@ -630,6 +1016,18 @@ def validate_guide(guide: str) -> None:
         'NO_CHANGE',
         'DEMO_LCA_V2',
         'SUB-RB-20260817-0001',
+        'pickupSchedule',
+        'serviceAndPrivacyTermsAccepted',
+        'inspectionChangeNoticeAccepted',
+        '2026-08-19',
+        '14:00-16:00',
+        '/admin/applications/{applicationId}/lifecycle-commands',
+        'Idempotency-Key',
+        'trackingNumber',
+        '하나의 트랜잭션',
+        'DEMO-RB-20260817-0001',
+        'supabase/migrations/202608180001_lifecycle_integrity.sql',
+        'supabase/rollbacks/202608180001_lifecycle_integrity.sql',
     ):
         if fragment not in current_guidance:
             fail(f'API guide is missing canonical v2 value: {fragment}')
@@ -661,6 +1059,12 @@ def main() -> None:
     openapi = yaml.safe_load((ROOT / 'openapi.yaml').read_text(encoding='utf-8'))
     mock = json.loads((ROOT / 'mock-data.json').read_text(encoding='utf-8'))
     sql = (ROOT / 'supabase-schema.sql').read_text(encoding='utf-8')
+    lifecycle_migration = (
+        ROOT / 'supabase' / 'migrations' / '202608180001_lifecycle_integrity.sql'
+    ).read_text(encoding='utf-8')
+    lifecycle_rollback = (
+        ROOT / 'supabase' / 'rollbacks' / '202608180001_lifecycle_integrity.sql'
+    ).read_text(encoding='utf-8')
     guide = (ROOT / 'MCM_REBORN_API_GUIDE.md').read_text(encoding='utf-8')
     prompt = (ROOT / 'prompts' / 'bag-analysis.system.txt').read_text(encoding='utf-8')
     provider = (ROOT / 'examples' / 'openai-analysis.ts').read_text(encoding='utf-8')
@@ -670,8 +1074,12 @@ def main() -> None:
     env_example = (ROOT / '.env.example').read_text(encoding='utf-8')
 
     operation_count, schema_count = validate_openapi(openapi)
-    product_count, recapture_count = validate_mock(mock, openapi['info']['version'])
+    product_count, recapture_count, shipment_count = validate_mock(
+        mock,
+        openapi['info']['version'],
+    )
     validate_sql(sql)
+    validate_lifecycle_migrations(lifecycle_migration, lifecycle_rollback)
     validate_prompt_and_examples(prompt, provider, recommendation, mock_status)
     validate_guide(guide)
     validate_readme_and_env(readme, env_example)
@@ -683,6 +1091,8 @@ def main() -> None:
         f'{schema_count} schemas,',
         f'{product_count} products,',
         f'{recapture_count} recapture fixture,',
+        f'{shipment_count} canonical shipment,',
+        'versioned lifecycle migration and rollback,',
         'one canonical order RB-20260817-0001.',
     )
 

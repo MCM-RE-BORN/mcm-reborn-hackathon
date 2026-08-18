@@ -74,7 +74,6 @@ export function CertificateScreen({
 
           <div className={styles.divider} />
           <KeyValueList
-            dividers
             items={[
               { label: "보증서 번호", value: certificate.number },
               { label: "주문 번호", value: order.number },
@@ -171,7 +170,6 @@ export function CertificateScreen({
             <ButtonLink
               fullWidth
               href="/orders/demo?stage=completed"
-              variant="outline"
             >
               완료 주문 보기
             </ButtonLink>

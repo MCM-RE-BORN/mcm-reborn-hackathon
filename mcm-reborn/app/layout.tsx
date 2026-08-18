@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { CaptureSessionProvider } from "@/components/screens/entry-capture/CaptureSessionProvider";
+import { OrderDraftProvider } from "@/components/screens/order-certificate/OrderDraftProvider";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -45,7 +46,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         />
       </head>
       <body>
-        <CaptureSessionProvider>{children}</CaptureSessionProvider>
+        <CaptureSessionProvider>
+          <OrderDraftProvider>{children}</OrderDraftProvider>
+        </CaptureSessionProvider>
       </body>
     </html>
   );

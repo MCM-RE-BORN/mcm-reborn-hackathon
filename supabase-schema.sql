@@ -29,6 +29,47 @@ create type public.application_status as enum (
 create type public.inspection_outcome as enum ('NO_CHANGE', 'CHANGE_REQUIRED', 'PRODUCTION_UNAVAILABLE');
 create type public.change_request_status as enum ('PENDING', 'APPROVED', 'REJECTED');
 
+create or replace function public.is_valid_application_terms(terms jsonb)
+returns boolean
+language plpgsql
+immutable
+parallel safe
+set search_path = public, pg_temp
+as $$
+declare
+  amount_value numeric;
+  reusable_rate numeric;
+begin
+  if terms is null
+     or jsonb_typeof(terms) <> 'object'
+     or (terms - array['productId', 'amount', 'estimatedDuration', 'estimatedReusableMaterialRate']) <> '{}'::jsonb
+     or not (terms ?& array['productId', 'amount', 'estimatedDuration', 'estimatedReusableMaterialRate'])
+     or jsonb_typeof(terms->'productId') <> 'string'
+     or terms->>'productId' !~* '^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
+     or jsonb_typeof(terms->'amount') <> 'object'
+     or ((terms->'amount') - array['amount', 'currency']) <> '{}'::jsonb
+     or not ((terms->'amount') ?& array['amount', 'currency'])
+     or jsonb_typeof(terms->'amount'->'amount') <> 'number'
+     or terms->'amount'->>'currency' <> 'KRW'
+     or jsonb_typeof(terms->'estimatedDuration') <> 'string'
+     or length(trim(terms->>'estimatedDuration')) = 0
+     or jsonb_typeof(terms->'estimatedReusableMaterialRate') <> 'number' then
+    return false;
+  end if;
+
+  amount_value := (terms->'amount'->>'amount')::numeric;
+  reusable_rate := (terms->>'estimatedReusableMaterialRate')::numeric;
+
+  return coalesce(amount_value >= 0
+    and amount_value = trunc(amount_value)
+    and reusable_rate between 0 and 100
+    and reusable_rate = trunc(reusable_rate), false);
+exception
+  when invalid_text_representation or numeric_value_out_of_range then
+    return false;
+end;
+$$;
+
 create table public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   role public.user_role not null default 'CUSTOMER',
@@ -162,6 +203,7 @@ create table public.applications (
     check (status_override is null or status_override in ('PRODUCTION_UNAVAILABLE', 'CANCELED')),
   selected_options jsonb not null default '{}'::jsonb,
   shipping_address jsonb not null,
+  pickup_schedule jsonb not null,
   consents jsonb not null,
   initial_terms jsonb not null,
   final_terms jsonb,
@@ -169,7 +211,21 @@ create table public.applications (
   demo_progress_profile text not null default 'PRIMARY_SCENARIO'
     check (demo_progress_profile in ('PRIMARY_SCENARIO', 'STATIC')),
   created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
+  updated_at timestamptz not null default now(),
+  constraint applications_pickup_schedule_contract check (
+    jsonb_typeof(pickup_schedule) = 'object'
+    and (pickup_schedule - array['requestedDate', 'timeWindow']) = '{}'::jsonb
+    and pickup_schedule ? 'requestedDate'
+    and jsonb_typeof(pickup_schedule->'requestedDate') = 'string'
+    and pickup_schedule->>'requestedDate' ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'
+    and pickup_schedule ? 'timeWindow'
+    and jsonb_typeof(pickup_schedule->'timeWindow') = 'string'
+    and length(trim(pickup_schedule->>'timeWindow')) > 0
+    and length(trim(pickup_schedule->>'timeWindow')) <= 60
+  ),
+  constraint applications_consents_contract check (
+    consents = '{"serviceAndPrivacyTermsAccepted":true,"aiEstimateNoticeAccepted":true,"inspectionChangeNoticeAccepted":true}'::jsonb
+  )
 );
 
 create table public.application_status_history (
@@ -198,10 +254,15 @@ create table public.physical_inspections (
   outcome public.inspection_outcome not null,
   confirmed_reusable_material_rate integer not null check (confirmed_reusable_material_rate between 0 and 100),
   confirmed_reusable_area_cm2 integer not null check (confirmed_reusable_area_cm2 >= 0),
-  reason text not null check (length(trim(reason)) > 0),
+  reason text not null check (length(trim(reason)) between 1 and 1000),
+  proposed_terms jsonb,
   inspected_by uuid not null references auth.users(id),
   inspected_at timestamptz not null default now(),
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  constraint physical_inspections_proposed_terms_contract check (
+    (outcome = 'CHANGE_REQUIRED' and public.is_valid_application_terms(proposed_terms))
+    or (outcome <> 'CHANGE_REQUIRED' and proposed_terms is null)
+  )
 );
 
 create table public.application_change_requests (
@@ -220,7 +281,11 @@ create table public.application_change_requests (
   constraint change_response_consistency check (
     (status = 'PENDING' and responded_at is null)
     or (status in ('APPROVED', 'REJECTED') and responded_at is not null)
-  )
+  ),
+  constraint application_change_requests_previous_terms_contract
+    check (public.is_valid_application_terms(previous_terms)),
+  constraint application_change_requests_proposed_terms_contract
+    check (public.is_valid_application_terms(proposed_terms))
 );
 
 create table public.mock_shipments (
@@ -349,7 +414,7 @@ $$;
 create or replace function public.enforce_application_transition()
 returns trigger
 language plpgsql
-set search_path = public
+set search_path = public, pg_temp
 as $$
 declare
   transition_allowed boolean := false;
@@ -372,6 +437,7 @@ begin
     when 'QUALITY_CHECK' then new.persisted_status in ('SHIPPED', 'PRODUCTION_UNAVAILABLE', 'CANCELED')
     when 'SHIPPED' then new.persisted_status = 'DELIVERED'
     when 'DELIVERED' then new.persisted_status = 'COMPLETED'
+    when 'PRODUCTION_UNAVAILABLE' then new.persisted_status = 'CANCELED'
     else false
   end;
 
@@ -389,7 +455,8 @@ begin
           or (
             pi.outcome = 'CHANGE_REQUIRED'
             and exists (
-              select 1 from public.application_change_requests acr
+              select 1
+              from public.application_change_requests acr
               where acr.application_id = new.id and acr.status = 'APPROVED'
             )
           )
@@ -412,19 +479,29 @@ for each row execute function public.enforce_application_transition();
 create or replace function public.record_application_status_change()
 returns trigger
 language plpgsql
-set search_path = public
+set search_path = public, pg_temp
 as $$
+declare
+  lifecycle_note text;
+  status_changed boolean := false;
 begin
-  if new.persisted_status is distinct from old.persisted_status then
-    insert into public.application_status_history (application_id, status, actor_id)
-    values (new.id, new.persisted_status, auth.uid());
+  if tg_op = 'INSERT' then
+    status_changed := true;
+  elsif tg_op = 'UPDATE' then
+    status_changed := new.persisted_status is distinct from old.persisted_status;
+  end if;
+
+  if status_changed then
+    lifecycle_note := nullif(current_setting('mcm.lifecycle_note', true), '');
+    insert into public.application_status_history (application_id, status, actor_id, note)
+    values (new.id, new.persisted_status, auth.uid(), lifecycle_note);
   end if;
   return new;
 end;
 $$;
 
 create trigger applications_record_status_change
-after update of persisted_status on public.applications
+after insert or update of persisted_status on public.applications
 for each row execute function public.record_application_status_change();
 
 create or replace function public.apply_successful_mock_payment()
@@ -449,12 +526,57 @@ for each row execute function public.apply_successful_mock_payment();
 create or replace function public.apply_physical_inspection()
 returns trigger
 language plpgsql
-set search_path = public
+security definer
+set search_path = public, pg_temp
 as $$
+declare
+  application_terms jsonb;
+  application_product_id uuid;
+  current_status public.application_status;
 begin
+  select a.initial_terms, a.product_id, a.persisted_status
+  into application_terms, application_product_id, current_status
+  from public.applications a
+  where a.id = new.application_id
+  for update;
+
+  if not found then
+    raise exception 'application not found for physical inspection' using errcode = 'P0002';
+  end if;
+
+  if not exists (
+    select 1
+    from public.profiles p
+    where p.id = new.inspected_by and p.role = 'OPERATOR'
+  ) then
+    raise exception 'physical inspection requires an operator' using errcode = '42501';
+  end if;
+
   update public.applications
   set persisted_status = 'EXPERT_INSPECTION'
   where id = new.application_id and persisted_status = 'PRODUCT_RECEIVED';
+
+  if new.outcome = 'CHANGE_REQUIRED' then
+    if not public.is_valid_application_terms(application_terms)
+       or lower(application_terms->>'productId') <> application_product_id::text
+       or lower(new.proposed_terms->>'productId') <> application_product_id::text then
+      raise exception 'inspection terms must match the application product' using errcode = '23514';
+    end if;
+
+    insert into public.application_change_requests (
+      application_id,
+      inspection_id,
+      reason,
+      previous_terms,
+      proposed_terms
+    ) values (
+      new.application_id,
+      new.id,
+      new.reason,
+      application_terms,
+      new.proposed_terms
+    );
+  end if;
 
   update public.applications
   set persisted_status = case new.outcome
@@ -479,6 +601,279 @@ $$;
 create trigger physical_inspections_apply_result
 after insert on public.physical_inspections
 for each row execute function public.apply_physical_inspection();
+
+create or replace function public.submit_physical_inspection(
+  p_application_id uuid,
+  p_outcome public.inspection_outcome,
+  p_confirmed_reusable_material_rate integer,
+  p_confirmed_reusable_area_cm2 integer,
+  p_reason text,
+  p_proposed_terms jsonb default null
+)
+returns table (
+  inspection_id uuid,
+  application_id uuid,
+  inspection_outcome public.inspection_outcome,
+  application_status public.application_status,
+  change_request_id uuid,
+  inspected_at timestamptz
+)
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  current_status public.application_status;
+  application_product_id uuid;
+  created_inspection_id uuid;
+  created_change_request_id uuid;
+  inspection_time timestamptz := clock_timestamp();
+begin
+  if auth.uid() is null or not public.is_operator() then
+    raise exception 'operator role required' using errcode = '42501';
+  end if;
+
+  if p_outcome is null
+     or p_confirmed_reusable_material_rate is null
+     or p_confirmed_reusable_material_rate not between 0 and 100
+     or p_confirmed_reusable_area_cm2 is null
+     or p_confirmed_reusable_area_cm2 < 0
+     or p_reason is null
+     or length(trim(p_reason)) not between 1 and 1000 then
+    raise exception 'invalid physical inspection payload' using errcode = '22023';
+  end if;
+
+  if (p_outcome = 'CHANGE_REQUIRED' and not public.is_valid_application_terms(p_proposed_terms))
+     or (p_outcome <> 'CHANGE_REQUIRED' and p_proposed_terms is not null) then
+    raise exception 'proposed terms are required only for CHANGE_REQUIRED' using errcode = '22023';
+  end if;
+
+  select a.persisted_status, a.product_id
+  into current_status, application_product_id
+  from public.applications a
+  where a.id = p_application_id
+  for update;
+
+  if not found then
+    raise exception 'application not found' using errcode = 'P0002';
+  end if;
+
+  if current_status not in ('PRODUCT_RECEIVED', 'EXPERT_INSPECTION') then
+    raise exception 'physical inspection requires PRODUCT_RECEIVED or EXPERT_INSPECTION status'
+      using errcode = '23514';
+  end if;
+
+  if p_outcome = 'CHANGE_REQUIRED'
+     and lower(p_proposed_terms->>'productId') <> application_product_id::text then
+    raise exception 'proposed terms must use the application product' using errcode = '23514';
+  end if;
+
+  insert into public.physical_inspections (
+    application_id,
+    outcome,
+    confirmed_reusable_material_rate,
+    confirmed_reusable_area_cm2,
+    reason,
+    proposed_terms,
+    inspected_by,
+    inspected_at
+  ) values (
+    p_application_id,
+    p_outcome,
+    p_confirmed_reusable_material_rate,
+    p_confirmed_reusable_area_cm2,
+    trim(p_reason),
+    p_proposed_terms,
+    auth.uid(),
+    inspection_time
+  )
+  returning id into created_inspection_id;
+
+  select acr.id
+  into created_change_request_id
+  from public.application_change_requests acr
+  where acr.inspection_id = created_inspection_id;
+
+  select a.persisted_status
+  into current_status
+  from public.applications a
+  where a.id = p_application_id;
+
+  return query
+  select created_inspection_id,
+         p_application_id,
+         p_outcome,
+         current_status,
+         created_change_request_id,
+         inspection_time;
+end;
+$$;
+
+create or replace function public.advance_application_lifecycle(
+  p_application_id uuid,
+  p_target_status public.application_status,
+  p_note text default null,
+  p_tracking_number text default null,
+  p_carrier_code text default null,
+  p_carrier_name text default null
+)
+returns table (
+  application_id uuid,
+  previous_status public.application_status,
+  application_status public.application_status,
+  occurred_at timestamptz,
+  shipment_id uuid
+)
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  current_status public.application_status;
+  current_override public.application_status;
+  changed_at timestamptz := now();
+  changed_shipment_id uuid;
+  normalized_note text;
+  normalized_tracking_number text;
+  normalized_carrier_code text;
+  normalized_carrier_name text;
+begin
+  if auth.uid() is null or not public.is_operator() then
+    raise exception 'operator role required' using errcode = '42501';
+  end if;
+
+  if p_target_status is null or p_target_status not in (
+    'PICKUP_SCHEDULED',
+    'PICKUP_IN_PROGRESS',
+    'PRODUCT_RECEIVED',
+    'EXPERT_INSPECTION',
+    'IN_PRODUCTION',
+    'QUALITY_CHECK',
+    'SHIPPED',
+    'DELIVERED',
+    'COMPLETED',
+    'PRODUCTION_UNAVAILABLE',
+    'CANCELED'
+  ) then
+    raise exception 'unsupported lifecycle target status' using errcode = '22023';
+  end if;
+
+  normalized_note := case when p_note is null then null else trim(p_note) end;
+  if normalized_note is not null and length(normalized_note) not between 1 and 500 then
+    raise exception 'lifecycle note must contain 1 to 500 characters' using errcode = '22023';
+  end if;
+
+  normalized_tracking_number := case when p_tracking_number is null then null else trim(p_tracking_number) end;
+  normalized_carrier_code := coalesce(nullif(trim(p_carrier_code), ''), 'MCM_REBORN_DEMO');
+  normalized_carrier_name := coalesce(nullif(trim(p_carrier_name), ''), 'MCM RE:BORN Demo Logistics');
+
+  if p_target_status = 'SHIPPED' then
+    if normalized_tracking_number is null
+       or length(normalized_tracking_number) not between 1 and 120
+       or length(normalized_carrier_code) not between 1 and 40
+       or length(normalized_carrier_name) not between 1 and 100 then
+      raise exception 'SHIPPED requires valid tracking and carrier values' using errcode = '22023';
+    end if;
+  elsif p_tracking_number is not null or p_carrier_code is not null or p_carrier_name is not null then
+    raise exception 'shipping fields are accepted only for SHIPPED' using errcode = '22023';
+  end if;
+
+  select a.persisted_status, a.status_override
+  into current_status, current_override
+  from public.applications a
+  where a.id = p_application_id
+  for update;
+
+  if not found then
+    raise exception 'application not found' using errcode = 'P0002';
+  end if;
+
+  if current_override is not null then
+    raise exception 'application status override must be cleared before lifecycle commands'
+      using errcode = '23514';
+  end if;
+
+  if p_target_status = current_status then
+    raise exception 'lifecycle command target must be the next status'
+      using errcode = '23514';
+  end if;
+
+  if p_target_status = 'PRODUCTION_UNAVAILABLE'
+     and current_status not in ('IN_PRODUCTION', 'QUALITY_CHECK') then
+    raise exception 'PRODUCTION_UNAVAILABLE requires IN_PRODUCTION or QUALITY_CHECK status'
+      using errcode = '23514';
+  end if;
+
+  if p_target_status = 'CANCELED' and current_status <> 'PRODUCTION_UNAVAILABLE' then
+    raise exception 'CANCELED lifecycle command requires PRODUCTION_UNAVAILABLE status'
+      using errcode = '23514';
+  end if;
+
+  perform set_config('mcm.lifecycle_note', coalesce(normalized_note, ''), true);
+
+  update public.applications a
+  set persisted_status = p_target_status
+  where a.id = p_application_id;
+
+  perform set_config('mcm.lifecycle_note', '', true);
+
+  -- Carrier allocation is optional during pickup. A preallocated shipment is
+  -- kept in sync; SHIPPED creates/upserts the required tracked shipment.
+  if p_target_status in ('PICKUP_SCHEDULED', 'PICKUP_IN_PROGRESS', 'PRODUCT_RECEIVED') then
+    update public.mock_shipments ms
+    set status = p_target_status::text,
+        updated_at = now()
+    where ms.application_id = p_application_id
+    returning ms.id into changed_shipment_id;
+  elsif p_target_status = 'SHIPPED' then
+    insert into public.mock_shipments (
+      application_id,
+      carrier_code,
+      carrier_name,
+      tracking_number,
+      status
+    ) values (
+      p_application_id,
+      normalized_carrier_code,
+      normalized_carrier_name,
+      normalized_tracking_number,
+      'SHIPPED'
+    )
+    on conflict (application_id) do update set
+      carrier_code = excluded.carrier_code,
+      carrier_name = excluded.carrier_name,
+      tracking_number = excluded.tracking_number,
+      status = excluded.status,
+      updated_at = now()
+    returning id into changed_shipment_id;
+  elsif p_target_status = 'DELIVERED' then
+    update public.mock_shipments ms
+    set status = 'DELIVERED',
+        updated_at = now()
+    where ms.application_id = p_application_id
+      and ms.status = 'SHIPPED'
+    returning ms.id into changed_shipment_id;
+
+    if not found then
+      raise exception 'DELIVERED requires an existing SHIPPED shipment' using errcode = '23514';
+    end if;
+  end if;
+
+  if changed_shipment_id is null then
+    select ms.id
+    into changed_shipment_id
+    from public.mock_shipments ms
+    where ms.application_id = p_application_id;
+  end if;
+
+  return query
+  select p_application_id,
+         current_status,
+         p_target_status,
+         changed_at,
+         changed_shipment_id;
+end;
+$$;
 
 create or replace function public.prepare_change_request_decision()
 returns trigger
@@ -533,6 +928,59 @@ create trigger application_change_requests_apply_decision
 after update of status on public.application_change_requests
 for each row execute function public.apply_change_request_decision();
 
+create or replace function public.enforce_certificate_issuance_state()
+returns trigger
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  certificate_allowed boolean;
+begin
+  select a.persisted_status = 'COMPLETED' and a.status_override is null
+  into certificate_allowed
+  from public.applications a
+  where a.id = new.application_id
+  for share;
+
+  if certificate_allowed is distinct from true then
+    raise exception 'certificate issuance requires a completed application without a status override'
+      using errcode = '23514';
+  end if;
+
+  return new;
+end;
+$$;
+
+create trigger esg_certificates_enforce_issuance_state
+before insert or update on public.esg_certificates
+for each row execute function public.enforce_certificate_issuance_state();
+
+create or replace function public.protect_issued_certificate_application_state()
+returns trigger
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+begin
+  if (new.persisted_status <> 'COMPLETED' or new.status_override is not null)
+     and exists (
+       select 1
+       from public.esg_certificates ec
+       where ec.application_id = new.id
+     ) then
+    raise exception 'an issued certificate requires a completed application without a status override'
+      using errcode = '23514';
+  end if;
+
+  return new;
+end;
+$$;
+
+create trigger applications_protect_issued_certificate_state
+before update of persisted_status, status_override on public.applications
+for each row execute function public.protect_issued_certificate_application_state();
+
 alter table public.profiles enable row level security;
 alter table public.media_assets enable row level security;
 alter table public.analyses enable row level security;
@@ -584,10 +1032,44 @@ revoke insert, update, delete on public.analyses, public.analysis_images,
   public.analysis_recommendations, public.applications, public.application_status_history,
   public.mock_payments, public.mock_shipments, public.esg_certificates,
   public.idempotency_keys from anon, authenticated;
-revoke update, delete on public.physical_inspections from anon, authenticated;
+revoke insert, update, delete on public.physical_inspections from anon, authenticated;
 revoke insert, update, delete on public.application_change_requests from anon, authenticated;
 grant update (status, response_reason)
   on public.application_change_requests to authenticated;
+
+revoke all on function public.submit_physical_inspection(
+  uuid,
+  public.inspection_outcome,
+  integer,
+  integer,
+  text,
+  jsonb
+) from public, anon, authenticated;
+grant execute on function public.submit_physical_inspection(
+  uuid,
+  public.inspection_outcome,
+  integer,
+  integer,
+  text,
+  jsonb
+) to authenticated;
+
+revoke all on function public.advance_application_lifecycle(
+  uuid,
+  public.application_status,
+  text,
+  text,
+  text,
+  text
+) from public, anon, authenticated;
+grant execute on function public.advance_application_lifecycle(
+  uuid,
+  public.application_status,
+  text,
+  text,
+  text,
+  text
+) to authenticated;
 
 insert into public.products (
   id, code, name, category, description, required_area_cm2, mock_price_krw,

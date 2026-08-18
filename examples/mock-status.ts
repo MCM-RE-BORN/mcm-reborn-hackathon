@@ -28,12 +28,67 @@ export const APPLICATION_STATUSES = [
 
 export type ApplicationStatus = (typeof APPLICATION_STATUSES)[number];
 
+export const LIFECYCLE_COMMAND_TARGET_STATUSES = [
+  'PICKUP_SCHEDULED',
+  'PICKUP_IN_PROGRESS',
+  'PRODUCT_RECEIVED',
+  'EXPERT_INSPECTION',
+  'IN_PRODUCTION',
+  'QUALITY_CHECK',
+  'SHIPPED',
+  'DELIVERED',
+  'COMPLETED',
+  'PRODUCTION_UNAVAILABLE',
+  'CANCELED',
+] as const satisfies readonly ApplicationStatus[];
+
+export type LifecycleCommandTargetStatus =
+  (typeof LIFECYCLE_COMMAND_TARGET_STATUSES)[number];
+
+type LifecycleCommandCommon = {
+  note?: string;
+};
+
+export type ApplicationLifecycleCommand = LifecycleCommandCommon &
+  (
+    | {
+        targetStatus: 'SHIPPED';
+        trackingNumber: string;
+        carrierCode?: string;
+        carrierName?: string;
+      }
+    | {
+        targetStatus: Exclude<LifecycleCommandTargetStatus, 'SHIPPED'>;
+        trackingNumber?: never;
+        carrierCode?: never;
+        carrierName?: never;
+      }
+  );
+
 export const PAYMENT_SUCCESS_STATUS = 'ORDER_PLACED' as const;
 
 export const PRIMARY_DEMO_ORDER = {
   scenarioKey: 'MCM_BACKPACK_CHANGE_APPROVED_20260817',
   orderId: '30000000-0000-4000-8000-000000000001',
   orderNumber: 'RB-20260817-0001',
+  pickupSchedule: {
+    requestedDate: '2026-08-19',
+    timeWindow: '14:00-16:00',
+  },
+  consents: {
+    serviceAndPrivacyTermsAccepted: true,
+    aiEstimateNoticeAccepted: true,
+    inspectionChangeNoticeAccepted: true,
+  },
+} as const;
+
+export const PRIMARY_DEMO_SHIPMENT = {
+  applicationId: PRIMARY_DEMO_ORDER.orderId,
+  carrierCode: 'MCM_REBORN_DEMO',
+  carrierName: 'MCM RE:BORN Demo Logistics',
+  trackingNumber: 'DEMO-RB-20260817-0001',
+  trackingUrl: null,
+  status: 'DELIVERED',
 } as const;
 
 const ALLOWED_TRANSITIONS: Readonly<
@@ -56,7 +111,30 @@ const ALLOWED_TRANSITIONS: Readonly<
   QUALITY_CHECK: ['SHIPPED', 'PRODUCTION_UNAVAILABLE', 'CANCELED'],
   SHIPPED: ['DELIVERED'],
   DELIVERED: ['COMPLETED'],
+  PRODUCTION_UNAVAILABLE: ['CANCELED'],
 };
+
+const LIFECYCLE_COMMAND_TRANSITIONS: Readonly<
+  Partial<Record<ApplicationStatus, readonly LifecycleCommandTargetStatus[]>>
+> = {
+  ORDER_PLACED: ['PICKUP_SCHEDULED'],
+  PICKUP_SCHEDULED: ['PICKUP_IN_PROGRESS'],
+  PICKUP_IN_PROGRESS: ['PRODUCT_RECEIVED'],
+  PRODUCT_RECEIVED: ['EXPERT_INSPECTION'],
+  PRODUCTION_READY: ['IN_PRODUCTION'],
+  IN_PRODUCTION: ['QUALITY_CHECK', 'PRODUCTION_UNAVAILABLE'],
+  QUALITY_CHECK: ['SHIPPED', 'PRODUCTION_UNAVAILABLE'],
+  SHIPPED: ['DELIVERED'],
+  DELIVERED: ['COMPLETED'],
+  PRODUCTION_UNAVAILABLE: ['CANCELED'],
+};
+
+export function canAdvanceApplicationLifecycle(
+  from: ApplicationStatus,
+  target: LifecycleCommandTargetStatus,
+): boolean {
+  return LIFECYCLE_COMMAND_TRANSITIONS[from]?.includes(target) === true;
+}
 
 export function canTransitionApplicationStatus(
   from: ApplicationStatus,

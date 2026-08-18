@@ -30,6 +30,13 @@
 - 실제 결제·물류·정품 인증·탄소 검증·법적 보증으로 오해할 표현을 사용하지 않는다.
 - 실제 AI·3D·외부 제공자가 실패해도 Fixture와 정적 자산으로 같은 흐름을 완주한다.
 
+### 현행 웹 구현 경계
+
+- `/`와 `/intro`는 서비스 소개를, `/home`은 홈을 렌더한다.
+- 실제 브라우저 카메라와 파일 선택 폴백은 구현되어 있다. 촬영 Blob과 입력은 클라이언트 세션 메모리에 있으므로 전체 새로고침 뒤에는 준비된 데모 자산으로 복구한다.
+- AI 분석·이미지 품질 판정·고객 인증·주문·결제·검수·보증서는 중앙 Fixture와 화면 상태로 시연한다. 운영자 lifecycle command만 `mcm-reborn/app/api/v2/` Route Handler와 Supabase RPC 연동이 있고 나머지 고객 여정은 영속 저장이 없다.
+- HTTP 기준은 API 계약 v2.0.0이며 `openapi.yaml`은 OpenAPI 3.1.0 형식이다. lifecycle command 외 OpenAPI·Mock·SQL은 현재 브라우저 앱의 실행 서버가 아니라 향후 연동 기준이다.
+
 ## 3. 중앙 데모 시나리오
 
 모든 화면, API example, Mock, DB seed와 발표 스크립트는 아래 값을 공유한다.
@@ -53,6 +60,7 @@
 | 변경 제작비 | 195,000원 |
 | 변경 예상 기간 | 4~5주 |
 | 고객 결정 | 변경 조건 승인 |
+| Mock 배송 | `DEMO-RB-20260817-0001` · `DELIVERED` |
 | 최종 보증서 번호 | `ESG-RB-20260817-0001` |
 | 최종 재활용률 | 68% |
 | 예상 탄소 절감량 | 3.43kg CO2e |
@@ -178,6 +186,8 @@ PENDING_PAYMENT → ORDER_PLACED → PICKUP_SCHEDULED → PICKUP_IN_PROGRESS
 → SHIPPED → DELIVERED → COMPLETED
 ```
 
+향후 HTTP/DB 연동에서 수거·제작·품질·배송 상태는 운영자 전용 멱등 lifecycle command로 인접한 다음 상태만 진행한다. `PRODUCTION_READY`와 `CHANGE_APPROVAL_REQUIRED`는 실물 검수·고객 결정 경로만 만들 수 있다. 공정 중 제작 불가는 `IN_PRODUCTION` 또는 `QUALITY_CHECK`에서 `PRODUCTION_UNAVAILABLE`로 기록한 뒤 `CANCELED`로 마감한다. `CHANGE_REQUIRED` 검수는 `proposedTerms`가 필수이며 검수·변경안·상태 이력을 한 트랜잭션으로 저장한다.
+
 기존의 주문 전 `PENDING_APPROVAL → APPROVED` 운영자 승인이나 `REVIEW_REQUIRED` 수동 검토에 의한 신청 차단은 2026-08-17 현재 데모의 골든 패스가 아니다. 과거 계약 호환이 필요하면 historical 상태로만 해석하고 새 사용자 카피에 노출하지 않는다.
 
 ## 7. AI·정품·제작 조건 카피
@@ -208,6 +218,7 @@ PENDING_PAYMENT → ORDER_PLACED → PICKUP_SCHEDULED → PICKUP_IN_PROGRESS
 - 결제는 180,000원 Mock 성공으로 주문을 생성한다.
 - 수거 완료 후 검수 변경안을 68%·195,000원·4~5주로 보여 주고 고객 승인 경로를 시연한다.
 - 승인 뒤 제작·품질·배송 상태는 빠른 타임라인 또는 준비된 정적 상태로 진행한다.
+- canonical 배송 조회는 운송장 `DEMO-RB-20260817-0001`, 상태 `DELIVERED` Fixture를 사용한다.
 - 보증서는 `COMPLETED` 뒤 `ESG-RB-20260817-0001`로 발급하고 68%, 3.43kg CO2e를 표시한다.
 - 진행 중에는 보증서 미리보기를 보여 줄 수 있지만 공식 발급 상태로 표시하지 않는다.
 
