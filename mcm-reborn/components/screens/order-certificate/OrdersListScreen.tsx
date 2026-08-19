@@ -35,20 +35,37 @@ export function OrdersListScreen({ state }: OrdersListScreenProps) {
 
   useEffect(() => {
     let cancelled = false;
-    customerFetch<CustomerApplicationPage>("/api/v2/applications?size=50")
-      .then((response) => {
+    let loading = false;
+    let firstLoad = true;
+    async function loadApplications() {
+      if (loading || document.visibilityState !== "visible") {
+        return;
+      }
+      loading = true;
+      const initialLoad = firstLoad;
+      firstLoad = false;
+      try {
+        const response = await customerFetch<CustomerApplicationPage>(
+          "/api/v2/applications?size=50",
+        );
         if (!cancelled) {
           setApplications(response.items);
+          setRequestError(false);
         }
-      })
-      .catch(() => {
-        if (!cancelled) {
+      } catch {
+        if (!cancelled && initialLoad) {
           setRequestError(true);
         }
-      });
+      } finally {
+        loading = false;
+      }
+    }
+    void loadApplications();
+    const pollId = window.setInterval(() => void loadApplications(), 3000);
 
     return () => {
       cancelled = true;
+      window.clearInterval(pollId);
     };
   }, []);
 

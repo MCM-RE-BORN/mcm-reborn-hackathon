@@ -97,6 +97,24 @@ const STAGE_INDEX = {
   shipping: 4,
 } as const;
 
+const STATUS_ORDER = [
+  "PENDING_PAYMENT",
+  "ORDER_PLACED",
+  "PICKUP_SCHEDULED",
+  "PICKUP_IN_PROGRESS",
+  "PRODUCT_RECEIVED",
+  "EXPERT_INSPECTION",
+  "CHANGE_APPROVAL_REQUIRED",
+  "PRODUCTION_READY",
+  "IN_PRODUCTION",
+  "QUALITY_CHECK",
+  "SHIPPED",
+  "DELIVERED",
+  "COMPLETED",
+  "PRODUCTION_UNAVAILABLE",
+  "CANCELED",
+] as const;
+
 export function OrderDetailsScreen({
   applicationId,
   state,
@@ -120,16 +138,26 @@ export function OrderDetailsScreen({
       return;
     }
     let cancelled = false;
+    let loading = false;
+    let firstLoad = true;
     async function loadApplication() {
+      if (loading || document.visibilityState !== "visible") {
+        return;
+      }
+      loading = true;
+      const initialLoad = firstLoad;
+      firstLoad = false;
       try {
-        setApplication(null);
-        setTimeline(null);
-        setAnalysis(null);
-        setShipment(null);
-        setChangeRequest(null);
-        setChangeRequestResolved(false);
-        setLocalEffectiveStatus(null);
-        setRequestError(false);
+        if (initialLoad) {
+          setApplication(null);
+          setTimeline(null);
+          setAnalysis(null);
+          setShipment(null);
+          setChangeRequest(null);
+          setChangeRequestResolved(false);
+          setLocalEffectiveStatus(null);
+          setRequestError(false);
+        }
         const detail = await customerFetch<CustomerApplicationDetail>(
           `/api/v2/applications/${applicationId}`,
         );
@@ -152,6 +180,11 @@ export function OrderDetailsScreen({
           return;
         }
         setApplication(detail);
+        setLocalEffectiveStatus((current) =>
+          current && statusRank(detail.effectiveStatus) >= statusRank(current)
+            ? null
+            : current,
+        );
         if (timelineResult.status === "fulfilled") {
           setTimeline(timelineResult.value);
         }
@@ -161,20 +194,27 @@ export function OrderDetailsScreen({
         if (shipmentResult.status === "fulfilled") {
           setShipment(shipmentResult.value);
         }
-        setChangeRequest(
-          changeResult.status === "fulfilled" ? changeResult.value : null,
-        );
+        if (changeResult.status === "fulfilled") {
+          setChangeRequest(changeResult.value);
+        } else if (initialLoad) {
+          setChangeRequest(null);
+        }
         setChangeRequestResolved(true);
+        setRequestError(false);
       } catch {
-        if (!cancelled) {
+        if (!cancelled && initialLoad) {
           setRequestError(true);
           setChangeRequestResolved(true);
         }
+      } finally {
+        loading = false;
       }
     }
     void loadApplication();
+    const pollId = window.setInterval(() => void loadApplication(), 3000);
     return () => {
       cancelled = true;
+      window.clearInterval(pollId);
     };
   }, [applicationId]);
 
@@ -542,4 +582,9 @@ function statusLabel(status: string | undefined) {
     SHIPPED: "배송 중",
   };
   return (status && labels[status]) || "확인 중";
+}
+
+function statusRank(status: string) {
+  const index = STATUS_ORDER.indexOf(status as (typeof STATUS_ORDER)[number]);
+  return index === -1 ? Number.NEGATIVE_INFINITY : index;
 }
