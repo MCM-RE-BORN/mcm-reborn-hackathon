@@ -132,17 +132,25 @@ async function executeLifecycleCommand(
   context: OperatorCommandContext,
   command: LifecycleCommand,
 ): Promise<{ body: JsonObject; status: number }> {
+  const rpcBody: JsonObject = {
+    p_application_id: context.applicationId,
+    p_note: command.note,
+    p_target_status: command.targetStatus,
+  };
+
+  // The RPC declares defaults for shipping arguments. Omitting them for
+  // pickup/production transitions keeps the request compatible with older
+  // PostgREST schemas while still sending all three values for SHIPPED.
+  if (command.targetStatus === "SHIPPED") {
+    rpcBody.p_carrier_code = command.carrierCode;
+    rpcBody.p_carrier_name = command.carrierName;
+    rpcBody.p_tracking_number = command.trackingNumber;
+  }
+
   const rows = await callUserRpc<LifecycleRpcRow[]>(
     context,
     "advance_application_lifecycle",
-    {
-      p_application_id: context.applicationId,
-      p_carrier_code: command.carrierCode,
-      p_carrier_name: command.carrierName,
-      p_note: command.note,
-      p_target_status: command.targetStatus,
-      p_tracking_number: command.trackingNumber,
-    },
+    rpcBody,
   );
 
   const row = singleRpcRow(rows);
