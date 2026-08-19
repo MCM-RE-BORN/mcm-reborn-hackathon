@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { Button, ButtonLink } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { KeyValueList } from "@/components/ui/KeyValueList";
+import { formatKrw } from "@/lib/formatters";
 import {
   hasConfirmedInspection,
   getNextOperationTransition,
@@ -576,7 +577,7 @@ export function OperationsDetailScreen({
                         items={[
                           {
                             label: "변경 제작비",
-                            value: `${inspectionProposedTerms.amount.amount.toLocaleString("ko-KR")}원`,
+                            value: formatKrw(inspectionProposedTerms.amount.amount),
                           },
                           {
                             label: "변경 제작 기간",
@@ -672,10 +673,6 @@ function readAddress(value: unknown): string | null {
         : "";
   const combined = [address, addressDetail].filter(Boolean).join(" ").trim();
   return combined || null;
-}
-
-function formatKrw(amount: number) {
-  return `${amount.toLocaleString("ko-KR")}원`;
 }
 
 function displayOperationStatus(

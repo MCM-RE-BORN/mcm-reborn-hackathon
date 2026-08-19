@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Card } from "@/components/ui/Card";
+import { formatKrw } from "@/lib/formatters";
 import {
   hasConfirmedInspection,
   OPERATION_STAGE_PRESENTATION,
@@ -201,8 +202,4 @@ function formatApplicationDate(value: string) {
   return Number.isNaN(date.getTime())
     ? value
     : date.toLocaleDateString("ko-KR");
-}
-
-function formatKrw(amount: number) {
-  return `${amount.toLocaleString("ko-KR")}원`;
 }

@@ -8,6 +8,7 @@ import { Section } from "@/components/layout/Section";
 import { ActionButtonLink } from "@/components/ui/ActionButtonLink";
 import { Button } from "@/components/ui/Button";
 import { KeyValueList } from "@/components/ui/KeyValueList";
+import { formatKrw } from "@/lib/formatters";
 import { ProgressStepper } from "@/components/ui/ProgressStepper";
 import { SectionBand } from "@/components/ui/SectionBand";
 import { StatusPanel } from "@/components/ui/StatusPanel";
@@ -407,7 +408,7 @@ export function OrderDetailsScreen({
                 <span>신청번호 {application.applicationNumber}</span>
               </div>
               <strong>
-                {displayedAmount === null ? "-" : `${displayedAmount.toLocaleString("ko-KR")}원`}
+                {displayedAmount === null ? "-" : formatKrw(displayedAmount)}
               </strong>
             </div>
 
@@ -487,7 +488,7 @@ export function OrderDetailsScreen({
                     <KeyValueList
                       items={[
                         { label: "재사용률", value: `${changeRequest.previousTerms.estimatedReusableMaterialRate}%` },
-                        { label: "제작 금액", value: `${changeRequest.previousTerms.amount.amount.toLocaleString("ko-KR")}원` },
+                        { label: "제작 금액", value: formatKrw(changeRequest.previousTerms.amount.amount) },
                         { label: "제작 기간", value: changeRequest.previousTerms.estimatedDuration },
                       ]}
                     />
@@ -497,7 +498,7 @@ export function OrderDetailsScreen({
                     <KeyValueList
                       items={[
                         { label: "재사용률", value: `${changeRequest.proposedTerms.estimatedReusableMaterialRate}%` },
-                        { label: "제작 금액", value: `${changeRequest.proposedTerms.amount.amount.toLocaleString("ko-KR")}원` },
+                        { label: "제작 금액", value: formatKrw(changeRequest.proposedTerms.amount.amount) },
                         { label: "제작 기간", value: changeRequest.proposedTerms.estimatedDuration },
                       ]}
                     />
