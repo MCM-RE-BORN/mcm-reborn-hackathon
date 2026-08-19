@@ -423,58 +423,6 @@
   text-align: center;
 }
 
-/*
- * Signup's Figma design collapses the terms fieldset behind a
- * "약관 동의 / 펼쳐보기" disclosure row. <details>/<summary> gives
- * native toggle behavior without adding client-side state; browsers
- * already auto-expand a <details> that contains a required field
- * failing validation, so the required consent checkbox stays usable.
- */
-.consentDisclosure {
-  display: grid;
-}
-
-.consentDisclosure summary {
-  display: flex;
-  min-height: var(--touch-target-min);
-  align-items: center;
-  justify-content: space-between;
-  list-style: none;
-  cursor: pointer;
-}
-
-.consentDisclosure summary::-webkit-details-marker {
-  display: none;
-}
-
-.consentSummaryLabel {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-5);
-  color: var(--color-ink);
-  font-size: var(--font-size-control);
-  font-weight: var(--font-weight-regular);
-  line-height: var(--line-height-tight);
-}
-
-.consentChevron {
-  width: var(--space-7);
-  height: auto;
-}
-
-.consentDisclosure[open] .consentChevron {
-  transform: rotate(90deg);
-}
-
-.consentSummaryAction {
-  color: var(--color-link);
-  font-size: var(--font-size-control);
-  font-weight: var(--font-weight-regular);
-  line-height: var(--line-height-tight);
-  text-decoration: underline;
-  text-underline-offset: var(--space-2);
-}
-
 .consentGroupSpacing {
   margin-top: var(--space-7);
 }

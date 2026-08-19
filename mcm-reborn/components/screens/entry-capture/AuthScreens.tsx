@@ -223,35 +223,19 @@ export function SignupScreen({ state }: AuthScreenProps) {
               required
               type="password"
             />
-            <details className={styles.consentDisclosure}>
-              <summary>
-                <span className={styles.consentSummaryLabel}>
-                  약관 동의
-                  <Image
-                    alt=""
-                    aria-hidden="true"
-                    className={styles.consentChevron}
-                    height={9}
-                    src="/assets/mvp-beta/icon-chevron-right.svg"
-                    width={17}
-                  />
-                </span>
-                <span className={styles.consentSummaryAction}>펼쳐보기</span>
-              </summary>
-              <fieldset
-                className={`${styles.consentGroup} ${styles.consentGroupSpacing}`}
-              >
-                <legend className={styles.visuallyHidden}>약관 동의 항목</legend>
-                <label>
-                  <input required type="checkbox" />
-                  <span>[필수] 서비스 이용약관 및 개인정보 처리 동의</span>
-                </label>
-                <label>
-                  <input type="checkbox" />
-                  <span>[선택] 마케팅 정보 수신 동의</span>
-                </label>
-              </fieldset>
-            </details>
+            <fieldset
+              className={`${styles.consentGroup} ${styles.consentGroupSpacing}`}
+            >
+              <legend>약관 동의</legend>
+              <label>
+                <input required type="checkbox" />
+                <span>[필수] 서비스 이용약관 및 개인정보 처리 동의</span>
+              </label>
+              <label>
+                <input type="checkbox" />
+                <span>[선택] 마케팅 정보 수신 동의</span>
+              </label>
+            </fieldset>
             {/* TODO(integration): connect signup, consent records, and duplicate-email validation. */}
             <button className={styles.authSubmit} type="submit">
               가입하기
