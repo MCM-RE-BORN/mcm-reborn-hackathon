@@ -178,7 +178,7 @@ export function RecommendationScreen({
                       src={item.image}
                     />
                     <span aria-hidden="true" className={styles.productHoverLabel}>
-                      여권지갑 목업 보기
+                      3D 목업 보기
                     </span>
                   </span>
                   <span className={styles.productName}>{item.name}</span>
