@@ -2439,6 +2439,11 @@ components:
           $ref: '#/components/schemas/User'
         analysis:
           $ref: '#/components/schemas/Analysis'
+        changeRequest:
+          description: 실물 검수로 생성된 고객 변경 요청입니다. 아직 생성되지 않았으면 null입니다.
+          oneOf:
+          - $ref: '#/components/schemas/ApplicationChangeRequest'
+          - type: 'null'
         sourceImages:
           type: array
           items:

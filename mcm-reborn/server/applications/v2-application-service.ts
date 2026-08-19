@@ -595,8 +595,14 @@ export async function getApplicationForOperator(
     throw new NotFoundError("Application");
   }
   const row = data as unknown as ApplicationRow;
-  const [{ product, recommendation }, customer, analysis, sourceImages,
-    inspectionAvailable] = await Promise.all([
+  const [
+    { product, recommendation },
+    customer,
+    analysis,
+    sourceImages,
+    inspectionAvailable,
+    changeRequestResult,
+  ] = await Promise.all([
     readProductContext(row),
     readCustomer(user, row.customer_id),
     getAnalysisById(row.analysis_id, {
@@ -606,12 +612,22 @@ export async function getApplicationForOperator(
     }),
     readSourceImages(row.analysis_id),
     isInspectionAvailable(row),
+    userClient
+      .from("application_change_requests")
+      .select(CHANGE_REQUEST_SELECT)
+      .eq("application_id", applicationId)
+      .maybeSingle(),
   ]);
+  assertDatabaseRead(changeRequestResult.error, "operator change request");
+  const changeRequest = changeRequestResult.data
+    ? changeRequestResponse(changeRequestResult.data as unknown as ChangeRequestRow)
+    : null;
 
   return {
     body: {
       analysis,
       application: applicationDetail(row, product, recommendation),
+      changeRequest,
       customer,
       inspectionAvailable,
       sourceImages,
@@ -1176,17 +1192,27 @@ async function operatorApplicationSummary(
   operator: AuthenticatedUser,
   row: ApplicationRow,
 ): Promise<JsonRecord> {
-  const [{ product, recommendation }, customer, inspectionAvailable] =
+  const userClient = createUserSupabaseClient(operator.accessToken);
+  const [{ product, recommendation }, customer, inspectionAvailable, changeRequestResult] =
     await Promise.all([
       readProductContext(row),
       readCustomer(operator, row.customer_id),
       isInspectionAvailable(row),
+      userClient
+        .from("application_change_requests")
+        .select("status")
+        .eq("application_id", row.id)
+        .maybeSingle(),
     ]);
+  assertDatabaseRead(changeRequestResult.error, "operator change request summary");
+  const displayedStatus = changeRequestResult.data?.status === "PENDING"
+    ? "CHANGE_APPROVAL_REQUIRED"
+    : effectiveStatus(row);
   return {
     applicationNumber: row.application_number,
     createdAt: row.created_at,
     customer,
-    effectiveStatus: effectiveStatus(row),
+    effectiveStatus: displayedStatus,
     id: row.id,
     inspectionAvailable,
     product: productCard(product, recommendation),

@@ -519,6 +519,10 @@
   gap: var(--space-17);
 }
 
+.infoGridSingle {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .infoCard {
   min-width: 0;
 }

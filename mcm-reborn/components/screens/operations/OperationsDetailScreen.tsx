@@ -75,7 +75,7 @@ export function OperationsDetailScreen({
         );
         if (!cancelled) {
           setLiveDetail(response);
-          setLiveStatus(readOperationStatus(response.application.effectiveStatus));
+          setLiveStatus(displayOperationStatus(response));
           setLiveError(false);
         }
       } catch {
@@ -177,6 +177,15 @@ export function OperationsDetailScreen({
         productId: liveApplication.product.id,
       }
     : null;
+  const pendingChangeRequest =
+    liveDetail.changeRequest?.status === "PENDING"
+      ? liveDetail.changeRequest
+      : null;
+  const inspectionDisplayTerms =
+    pendingChangeRequest?.proposedTerms ??
+    (viewStatus === "CHANGE_APPROVAL_REQUIRED"
+      ? inspectionProposedTerms
+      : liveTerms);
   const inspectionTargetStatus =
     inspectionOutcome === "CHANGE_REQUIRED"
       ? "CHANGE_APPROVAL_REQUIRED"
@@ -273,9 +282,7 @@ export function OperationsDetailScreen({
         const latest = await operatorFetch<OperatorApplicationDetail>(
           `/api/v2/admin/applications/${applicationId}`,
         );
-        const latestStatus = readOperationStatus(
-          latest.application.effectiveStatus,
-        );
+        const latestStatus = displayOperationStatus(latest);
         setLiveDetail(latest);
         setLiveStatus(latestStatus);
         if (latestStatus !== viewStatus) {
@@ -328,6 +335,70 @@ export function OperationsDetailScreen({
 
       <div className={styles.detailGrid}>
         <div className={styles.detailMain}>
+          <Card className={styles.infoCard} tone="outline">
+            <h2>실물 검수 결과</h2>
+            <p className={styles.inspectionReason}>
+              {viewStatus === "CHANGE_APPROVAL_REQUIRED"
+                ? "장인이 실물 검수를 완료했고 변경된 제작 조건을 고객에게 보냈습니다."
+                : confirmedInspection
+                  ? "장인 실물 검수 결과가 신청 정보에 반영되었습니다."
+                  : "제품 입고 후 장인이 원단 상태와 실제 제작 범위를 확인합니다."}
+            </p>
+            <KeyValueList
+              className={styles.compactKeyValues}
+              dividers
+              items={[
+                {
+                  label: "검수 결과",
+                  value:
+                    viewStatus === "CHANGE_APPROVAL_REQUIRED"
+                      ? "조건 변경 · 고객 승인 대기"
+                      : confirmedInspection
+                        ? "검수 완료 · 제작 준비"
+                        : viewStatus === "EXPERT_INSPECTION"
+                          ? "장인 실물 검수 진행 중"
+                          : "제품 입고 후 진행",
+                },
+                {
+                  label: "검수일",
+                  value:
+                    viewStatus === "CHANGE_APPROVAL_REQUIRED" || confirmedInspection
+                      ? liveApplication.inspectionCompletedAt ?? "확인 중"
+                      : "미정",
+                },
+                {
+                  label:
+                    viewStatus === "CHANGE_APPROVAL_REQUIRED"
+                      ? "변경 제작비"
+                      : confirmedInspection
+                        ? "확정 제작비"
+                        : "현재 예상 제작비",
+                  value:
+                    inspectionDisplayTerms?.amount.amount === undefined
+                      ? "-"
+                      : formatKrw(inspectionDisplayTerms.amount.amount),
+                },
+                ...(viewStatus === "CHANGE_APPROVAL_REQUIRED" &&
+                inspectionDisplayTerms
+                  ? [
+                      {
+                        label: "변경 제작 기간",
+                        value: inspectionDisplayTerms.estimatedDuration,
+                      },
+                      {
+                        label: "변경 재사용률",
+                        value: `${inspectionDisplayTerms.estimatedReusableMaterialRate}%`,
+                      },
+                    ]
+                  : []),
+              ]}
+            />
+            {pendingChangeRequest ? (
+              <p className={styles.inspectionReason}>
+                고객 승인 전에는 제작을 시작할 수 없습니다. 고객 화면에서 변경 조건을 승인하면 다음 단계가 자동으로 열립니다.
+              </p>
+            ) : null}
+          </Card>
           <Card className={styles.productCard} tone="outline">
             <div className={styles.detailProductImage}>
               {productImage ? (
@@ -370,7 +441,7 @@ export function OperationsDetailScreen({
             </div>
           </Card>
 
-          <div className={styles.infoGrid}>
+          <div className={`${styles.infoGrid} ${styles.infoGridSingle}`}>
             <Card className={styles.infoCard} tone="outline">
               <h2>고객 및 수거 정보</h2>
               <KeyValueList
@@ -397,40 +468,6 @@ export function OperationsDetailScreen({
               />
             </Card>
 
-            <Card className={styles.infoCard} tone="outline">
-              <h2>실물 검수 기준</h2>
-              <p className={styles.inspectionReason}>
-                {confirmedInspection
-                  ? "장인 실물 검수 결과가 신청 정보에 반영되었습니다."
-                  : "제품 입고 후 장인이 원단 상태와 실제 제작 범위를 확인합니다."}
-              </p>
-              <KeyValueList
-                className={styles.compactKeyValues}
-                dividers
-                items={[
-                  {
-                    label: "검수 결과",
-                    value: confirmedInspection
-                      ? "조건 변경 · 고객 승인 완료"
-                      : viewStatus === "EXPERT_INSPECTION"
-                        ? "장인 실물 검수 진행 중"
-                        : "제품 입고 후 진행",
-                  },
-                  {
-                    label: "검수일",
-                    value: confirmedInspection
-                      ? liveApplication.inspectionCompletedAt ?? "확인 중"
-                      : "미정",
-                  },
-                  {
-                    label: confirmedInspection
-                      ? "확정 제작비"
-                      : "현재 예상 제작비",
-                    value: displayedPriceKrw === null ? "-" : formatKrw(displayedPriceKrw),
-                  },
-                ]}
-              />
-            </Card>
           </div>
         </div>
 
@@ -639,4 +676,12 @@ function readAddress(value: unknown): string | null {
 
 function formatKrw(amount: number) {
   return `${amount.toLocaleString("ko-KR")}원`;
+}
+
+function displayOperationStatus(
+  detail: OperatorApplicationDetail,
+): OperationStatus {
+  return detail.changeRequest?.status === "PENDING"
+    ? "CHANGE_APPROVAL_REQUIRED"
+    : readOperationStatus(detail.application.effectiveStatus);
 }

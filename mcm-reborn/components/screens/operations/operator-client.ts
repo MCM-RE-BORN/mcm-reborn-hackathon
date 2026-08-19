@@ -67,9 +67,22 @@ export type OperatorApplication = OperatorApplicationSummary & {
   statusOverride?: string | null;
 };
 
+export type OperatorChangeRequest = {
+  applicationId: string;
+  createdAt: string;
+  id: string;
+  inspectionId: string;
+  previousTerms: OperatorTerms;
+  proposedTerms: OperatorTerms;
+  reason: string;
+  respondedAt: string | null;
+  status: "PENDING" | "APPROVED" | "REJECTED";
+};
+
 export type OperatorApplicationDetail = {
   analysis: Record<string, unknown>;
   application: OperatorApplication;
+  changeRequest: OperatorChangeRequest | null;
   customer: OperatorApplicationSummary["customer"];
   inspectionAvailable: boolean;
   sourceImages: Array<{
