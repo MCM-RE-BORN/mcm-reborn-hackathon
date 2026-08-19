@@ -601,7 +601,7 @@
   position: absolute;
   /* The source clip contains a tall exported mobile frame before the hero
      content. Crop the full lead-in so the motion starts at the mask top. */
-  top: -11rem;
+  top: -14rem;
   left: var(--space-0);
   display: block;
   width: 100%;
