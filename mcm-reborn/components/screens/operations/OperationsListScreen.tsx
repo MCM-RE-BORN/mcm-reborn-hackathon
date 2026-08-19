@@ -12,6 +12,7 @@ import {
 } from "./operations-data";
 import {
   operatorFetch,
+  readOperatorImageUrl,
   type OperatorApplicationSummary,
   type OperatorApplicationPage,
 } from "./operator-client";
@@ -137,7 +138,7 @@ export function OperationsListScreen({
                   const stage = OPERATION_STAGE_PRESENTATION[applicationStatus];
                   const confirmed = hasConfirmedInspection(applicationStatus);
                   const displayedPriceKrw = application.product.mockPrice.amount;
-                  const image = application.product.listImage;
+                  const image = readOperatorImageUrl(application.product.listImage);
                   const date = formatApplicationDate(application.createdAt);
                   const applicationId = application.id;
 
@@ -146,12 +147,13 @@ export function OperationsListScreen({
                       <td>
                         <div className={styles.productCell}>
                           <span className={styles.productThumb}>
-                            <Image
-                              alt=""
-                              fill
-                              sizes="56px"
-                              src={image}
-                            />
+                            {image ? (
+                              <Image alt="" fill sizes="56px" src={image} />
+                            ) : (
+                              <span aria-hidden="true" className={styles.imagePlaceholder}>
+                                MCM
+                              </span>
+                            )}
                           </span>
                           <div>
                             <strong>{application.product.name}</strong>

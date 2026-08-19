@@ -21,7 +21,7 @@ export type OperatorMoney = {
 export type OperatorProduct = {
   estimatedDuration: string;
   id: string;
-  listImage: string;
+  listImage: unknown;
   mockPrice: OperatorMoney;
   name: string;
   recommendation?: {
@@ -227,6 +227,15 @@ export async function operatorFetch<T>(
   }
 
   return payload as T;
+}
+
+export function readOperatorImageUrl(value: unknown): string | null {
+  if (typeof value === "string" && value.trim()) {
+    return value;
+  }
+  const record = readRecord(value);
+  const url = record?.url;
+  return typeof url === "string" && url.trim() ? url : null;
 }
 
 function loginOperator(): Promise<OperatorSession> {

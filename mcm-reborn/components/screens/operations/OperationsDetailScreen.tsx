@@ -18,6 +18,7 @@ import {
 } from "./operations-data";
 import {
   operatorFetch,
+  readOperatorImageUrl,
   type InspectionResponse,
   type LifecycleCommandResponse,
   type OperatorApplicationDetail,
@@ -136,7 +137,7 @@ export function OperationsDetailScreen({
   const displayedDuration = liveTerms?.estimatedDuration ?? "-";
   const displayedReuseRate = liveTerms?.estimatedReusableMaterialRate ?? null;
   const productName = liveApplication.product.name;
-  const productImage = liveApplication.product.listImage;
+  const productImage = readOperatorImageUrl(liveApplication.product.listImage);
   const applicationNumber = liveApplication.applicationNumber;
   const customerName = liveDetail.customer.displayName;
   const customerEmail = liveDetail.customer.email;
@@ -244,13 +245,19 @@ export function OperationsDetailScreen({
         <div className={styles.detailMain}>
           <Card className={styles.productCard} tone="outline">
             <div className={styles.detailProductImage}>
-              <Image
-                alt={`${productName} 제품 이미지`}
-                fill
-                priority
-                sizes="(min-width: 900px) 220px, 42vw"
-                src={productImage}
-              />
+              {productImage ? (
+                <Image
+                  alt={`${productName} 제품 이미지`}
+                  fill
+                  priority
+                  sizes="(min-width: 900px) 220px, 42vw"
+                  src={productImage}
+                />
+              ) : (
+                <span aria-hidden="true" className={styles.imagePlaceholder}>
+                  MCM
+                </span>
+              )}
             </div>
             <div className={styles.detailProductCopy}>
               <p>제작 제품</p>
