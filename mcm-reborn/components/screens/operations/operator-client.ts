@@ -145,6 +145,54 @@ export async function getOperatorSession(): Promise<OperatorSession> {
   }
 }
 
+export async function loginOperatorCredentials(
+  email: string,
+  password: string,
+): Promise<OperatorSession> {
+  const response = await fetch("/api/v2/auth/login", {
+    body: JSON.stringify({ email, password }),
+    cache: "no-store",
+    headers: { "Content-Type": "application/json" },
+    method: "POST",
+  });
+  const payload = await response.json().catch(() => null);
+  if (!response.ok) {
+    const message =
+      readString(readRecord(payload)?.error, "message") ??
+      "운영자 로그인에 실패했습니다.";
+    throw new OperatorApiError(message, response.status);
+  }
+
+  const session = payload?.session;
+  const user = payload?.user;
+  if (
+    !session ||
+    typeof session.accessToken !== "string" ||
+    typeof session.expiresAt !== "string" ||
+    !user ||
+    user.role !== "OPERATOR" ||
+    typeof user.id !== "string" ||
+    typeof user.email !== "string" ||
+    typeof user.displayName !== "string"
+  ) {
+    throw new OperatorApiError("운영자 계정 권한을 확인할 수 없습니다.", 403);
+  }
+
+  const result: OperatorSession = {
+    accessToken: session.accessToken,
+    expiresAt: session.expiresAt,
+    user: {
+      displayName: user.displayName,
+      email: user.email,
+      id: user.id,
+      role: "OPERATOR",
+    },
+  };
+  window.sessionStorage.setItem(OPERATOR_SESSION_KEY, JSON.stringify(result));
+  sessionPromise = null;
+  return result;
+}
+
 export async function operatorFetch<T>(
   input: string,
   init: RequestInit = {},

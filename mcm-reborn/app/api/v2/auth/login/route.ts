@@ -46,8 +46,12 @@ export async function POST(request: Request): Promise<NextResponse> {
     if (profileError) {
       throw new ServiceUnavailableError("Supabase profile storage is unavailable");
     }
-    if (!profile || profile.role !== "CUSTOMER" || !profile.display_name.trim()) {
-      throw new ForbiddenError("고객 계정 프로필을 확인할 수 없습니다.");
+    if (
+      !profile ||
+      !["CUSTOMER", "OPERATOR"].includes(profile.role) ||
+      !profile.display_name.trim()
+    ) {
+      throw new ForbiddenError("계정 프로필을 확인할 수 없습니다.");
     }
 
     const expiresAtSeconds =

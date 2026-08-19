@@ -16,6 +16,7 @@ import {
   type OperatorApplicationPage,
 } from "./operator-client";
 import { OperationsShell } from "./OperationsShell";
+import { OperatorLoginPanel } from "./OperatorLoginPanel";
 import styles from "./operations.module.css";
 
 type OperationsListScreenProps = {
@@ -29,6 +30,7 @@ export function OperationsListScreen({
     OperatorApplicationSummary[] | null
   >(null);
   const [connectionError, setConnectionError] = useState(false);
+  const [reloadToken, setReloadToken] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -50,7 +52,7 @@ export function OperationsListScreen({
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [reloadToken]);
 
   const usingLiveData = liveApplications !== null;
   const applications = liveApplications ?? [];
@@ -71,13 +73,19 @@ export function OperationsListScreen({
         </div>
       </header>
 
-      <aside className={styles.fixtureNotice} aria-label="데모 데이터 안내">
-        <strong>{usingLiveData ? "Supabase v2 연결" : "데모 화면"}</strong>
+      <aside className={styles.fixtureNotice} aria-label="운영 API 연결 상태">
+        <strong>
+          {usingLiveData
+            ? "Supabase v2 연결"
+            : connectionError
+              ? "운영자 로그인 필요"
+              : "Supabase v2 연결 중"}
+        </strong>
         <span>
           {usingLiveData
             ? "운영자 인증으로 실제 신청 목록을 조회하고 있습니다."
             : connectionError
-              ? "운영자 인증 또는 API 조회에 실패했습니다. 다시 시도해 주세요."
+              ? "운영자 계정으로 로그인하면 실제 신청 목록을 조회할 수 있습니다."
               : "운영 API에서 신청 목록을 불러오고 있습니다."}
         </span>
       </aside>
@@ -89,15 +97,23 @@ export function OperationsListScreen({
         </div>
 
         {visibleApplications.length === 0 ? (
-          <Card className={styles.emptyState} tone="outline">
-            <strong>표시할 신청이 없습니다.</strong>
-            <p>
-              {connectionError
-                ? "운영자 인증을 확인한 뒤 목록을 새로고침해 주세요."
-                : "새 신청이 접수되면 이 목록에서 확인할 수 있습니다."}
-            </p>
-            <Link href="/operations">목록 새로고침</Link>
-          </Card>
+          <>
+            {connectionError ? (
+              <OperatorLoginPanel
+                onAuthenticated={() => {
+                  setConnectionError(false);
+                  setLiveApplications(null);
+                  setReloadToken((value) => value + 1);
+                }}
+              />
+            ) : (
+              <Card className={styles.emptyState} tone="outline">
+                <strong>표시할 신청이 없습니다.</strong>
+                <p>새 신청이 접수되면 이 목록에서 확인할 수 있습니다.</p>
+                <Link href="/operations">목록 새로고침</Link>
+              </Card>
+            )}
+          </>
         ) : (
           <div className={styles.tableFrame}>
             <table className={styles.applicationTable}>

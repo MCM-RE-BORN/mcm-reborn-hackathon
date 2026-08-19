@@ -22,6 +22,7 @@ import {
   type LifecycleCommandResponse,
   type OperatorApplicationDetail,
 } from "./operator-client";
+import { OperatorLoginPanel } from "./OperatorLoginPanel";
 import { OperationsShell } from "./OperationsShell";
 import styles from "./operations.module.css";
 
@@ -48,6 +49,7 @@ export function OperationsDetailScreen({
   >(null);
   const [liveStatus, setLiveStatus] = useState<OperationStatus | null>(null);
   const [liveError, setLiveError] = useState(false);
+  const [reloadToken, setReloadToken] = useState(0);
   const [actionError, setActionError] = useState(false);
   const [isActionPending, setIsActionPending] = useState(false);
 
@@ -75,7 +77,7 @@ export function OperationsDetailScreen({
     return () => {
       cancelled = true;
     };
-  }, [applicationId, found]);
+  }, [applicationId, found, reloadToken]);
 
   if (!found) {
     return (
@@ -104,9 +106,18 @@ export function OperationsDetailScreen({
               : "Supabase에서 최신 신청 정보를 확인하고 있습니다."}
           </p>
           {liveError ? (
-            <ButtonLink href={`/operations/${applicationId}`} size="medium">
-              다시 시도
-            </ButtonLink>
+            <>
+              <OperatorLoginPanel
+                onAuthenticated={() => {
+                  setLiveError(false);
+                  setLiveDetail(null);
+                  setReloadToken((value) => value + 1);
+                }}
+              />
+              <ButtonLink href={`/operations/${applicationId}`} size="medium">
+                다시 시도
+              </ButtonLink>
+            </>
           ) : null}
         </Card>
       </OperationsShell>
