@@ -85,7 +85,7 @@ export function ProductCapturePhotos({
           const isCompleted = isCaptureSlotCompleted(
             captures,
             capturedSlotSet,
-            slot.id,
+            slot,
           );
           // 이전 세션에서 등록만 되고 이번 세션에 미리보기가 없는 슬롯
           const isLegacyFallback = isCompleted && !sessionCapture;
