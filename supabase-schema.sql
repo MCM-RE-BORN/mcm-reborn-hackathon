@@ -633,6 +633,18 @@ begin
     raise exception 'invalid application status transition: % -> %', old.persisted_status, new.persisted_status;
   end if;
 
+  if old.persisted_status = 'CHANGE_APPROVAL_REQUIRED'
+     and new.persisted_status = 'PRODUCTION_READY'
+     and not exists (
+       select 1
+       from public.application_change_requests acr
+       where acr.application_id = new.id
+         and acr.status = 'APPROVED'
+     ) then
+    raise exception 'PRODUCTION_READY requires customer approval of changed terms'
+      using errcode = '23514';
+  end if;
+
   if new.persisted_status = 'IN_PRODUCTION' then
     select exists (
       select 1
@@ -999,6 +1011,18 @@ begin
 
   if p_target_status = 'CANCELED' and current_status <> 'PRODUCTION_UNAVAILABLE' then
     raise exception 'CANCELED lifecycle command requires PRODUCTION_UNAVAILABLE status'
+      using errcode = '23514';
+  end if;
+
+  if current_status = 'CHANGE_APPROVAL_REQUIRED'
+     and p_target_status = 'PRODUCTION_READY'
+     and not exists (
+       select 1
+       from public.application_change_requests acr
+       where acr.application_id = p_application_id
+         and acr.status = 'APPROVED'
+     ) then
+    raise exception 'PRODUCTION_READY requires customer approval of changed terms'
       using errcode = '23514';
   end if;
 

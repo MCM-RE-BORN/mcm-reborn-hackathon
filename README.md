@@ -53,7 +53,7 @@
 ## 빠른 시작 순서
 
 1. 저장소 루트에서 `npm --prefix mcm-reborn ci`를 실행해 기존 Next.js 애플리케이션 의존성을 설치합니다.
-2. 신규·빈 v2 staging이면 `supabase-schema.sql`만 실행합니다. 호환되는 기존 v2 데모 DB이면 migration 001→005를 적용합니다. 005는 배송 시작 RPC의 모호한 충돌 대상을 수정합니다.
+2. 신규·빈 v2 staging이면 `supabase-schema.sql`만 실행합니다. 호환되는 기존 v2 데모 DB이면 migration 001→006을 적용합니다. 005는 배송 시작 RPC의 모호한 충돌 대상을, 006은 고객 결정 전 제작 진행 우회를 수정합니다.
 3. Supabase Auth에 고객·운영자 데모 사용자를 생성하고 `profiles`에 역할을 저장합니다.
 4. SQL이 생성한 `source-products` private bucket과 Storage 정책을 확인합니다.
 5. 현재 정적 제품 이미지를 확인합니다. 향후 권리와 파일 무결성을 확인한 GLB·poster를 추가할 때만 Product3D readiness를 활성화합니다.

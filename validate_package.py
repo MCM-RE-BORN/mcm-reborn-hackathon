@@ -1098,6 +1098,7 @@ def validate_sql(sql: str) -> None:
             'unavailable cancellation command guard': "current_status <> 'PRODUCTION_UNAVAILABLE'",
             'shipping command payload guard': 'shipping fields are accepted only for SHIPPED',
             'unambiguous shipment conflict target': 'on conflict on constraint mock_shipments_application_id_key do update set',
+            'customer decision gate': 'PRODUCTION_READY requires customer approval of changed terms',
             'delivered shipment guard': 'DELIVERED requires an existing SHIPPED shipment',
             'existing shipment response lookup': 'if changed_shipment_id is null then',
             'immutable changed terms': 'customer decision cannot alter proposed terms',
@@ -1494,6 +1495,38 @@ def validate_shipment_conflict_hotfix(up_migration: str, rollback: str) -> None:
         fail('Shipment conflict hotfix must not use CASCADE')
 
 
+def validate_customer_decision_gate_migration(
+    up_migration: str,
+    rollback: str,
+) -> None:
+    require_fragments(
+        up_migration,
+        '202608190006 customer decision gate',
+        {
+            'transaction start': 'begin;',
+            'transaction commit': 'commit;',
+            'transition function': "public.enforce_application_transition()",
+            'lifecycle function': 'public.advance_application_lifecycle(uuid,public.application_status,text,text,text,text)',
+            'approval status check': "acr.status = 'APPROVED'",
+            'approval gate error': 'PRODUCTION_READY requires customer approval of changed terms',
+            'transition shape guard': 'enforce_application_transition has an unknown v2 shape',
+            'lifecycle shape guard': 'advance_application_lifecycle has an unknown v2 shape',
+        },
+    )
+    require_fragments(
+        rollback,
+        '202608190006 customer decision gate rollback',
+        {
+            'transaction start': 'begin;',
+            'transaction commit': 'commit;',
+            'rollback warning': 'reopens the operator bypass',
+            'approval gate error': 'PRODUCTION_READY requires customer approval of changed terms',
+        },
+    )
+    if re.search(r'\bcascade\b', up_migration + rollback, flags=re.IGNORECASE):
+        fail('Customer decision gate migration must not use CASCADE')
+
+
 def validate_capture_ui(
     capture_config: str,
     capture_photos: str,
@@ -1726,6 +1759,8 @@ def validate_guide(guide: str) -> None:
         'supabase/rollbacks/202608180004_backend_v2_runtime.sql',
         'supabase/migrations/202608190005_shipment_conflict_hotfix.sql',
         'supabase/rollbacks/202608190005_shipment_conflict_hotfix.sql',
+        'supabase/migrations/202608190006_customer_decision_gate.sql',
+        'supabase/rollbacks/202608190006_customer_decision_gate.sql',
         '정면·후면·상단·하단·좌측면·우측면·일련번호 7개',
     ):
         if fragment not in current_guidance:
@@ -1740,15 +1775,18 @@ def validate_runtime_migration_docs(
 ) -> None:
     migration_name = '202608180004_backend_v2_runtime.sql'
     hotfix_name = '202608190005_shipment_conflict_hotfix.sql'
+    decision_gate_name = '202608190006_customer_decision_gate.sql'
     require_fragments(
         supabase_readme,
         'supabase/README.md',
         {
             'forward runtime migration': f'migrations/{migration_name}',
             'runtime rollback': f'rollbacks/{migration_name}',
-            'forward order': '202608180001` → `202608180002`\n→ `202608180003` → `202608180004` → `202608190005',
+            'forward order': '202608180001` → `202608180002`\n→ `202608180003` → `202608180004` → `202608190005` → `202608190006',
             'shipment hotfix': f'migrations/{hotfix_name}',
             'shipment hotfix rollback': f'rollbacks/{hotfix_name}',
+            'customer decision gate': f'migrations/{decision_gate_name}',
+            'customer decision gate rollback': f'rollbacks/{decision_gate_name}',
             'product model alignment': 'complete Product3D',
             'payment conflict': 'non-`PENDING_PAYMENT`',
             'customer ownership': '`auth.uid()`, application ownership',
@@ -1769,10 +1807,11 @@ def validate_runtime_migration_docs(
         'SETUP_GUIDE.md',
         {
             'forward runtime migration': f'supabase/migrations/{migration_name}',
-            'forward order': '001→002→003→004→005',
-            'reverse order': '005 → 004 → 003 → 002 → 001',
+            'forward order': '001→002→003→004→005→006',
+            'reverse order': '006 → 005 → 004 → 003 → 002 → 001',
             'runtime rollback behavior': '004 rollback',
             'shipment hotfix': f'supabase/migrations/{hotfix_name}',
+            'customer decision gate': f'supabase/migrations/{decision_gate_name}',
         },
     )
     require_fragments(
@@ -1783,6 +1822,8 @@ def validate_runtime_migration_docs(
             'runtime rollback': f'supabase/rollbacks/{migration_name}',
             'shipment hotfix': f'supabase/migrations/{hotfix_name}',
             'shipment hotfix rollback': f'supabase/rollbacks/{hotfix_name}',
+            'customer decision gate': f'supabase/migrations/{decision_gate_name}',
+            'customer decision gate rollback': f'supabase/rollbacks/{decision_gate_name}',
         },
     )
     require_fragments(
@@ -1791,6 +1832,7 @@ def validate_runtime_migration_docs(
         {
             'runtime migration ownership': migration_name,
             'shipment hotfix ownership': hotfix_name,
+            'customer decision gate ownership': decision_gate_name,
         },
     )
 
@@ -1850,6 +1892,12 @@ def main() -> None:
     ).read_text(encoding='utf-8')
     shipment_hotfix_rollback = (
         ROOT / 'supabase' / 'rollbacks' / '202608190005_shipment_conflict_hotfix.sql'
+    ).read_text(encoding='utf-8')
+    decision_gate_migration = (
+        ROOT / 'supabase' / 'migrations' / '202608190006_customer_decision_gate.sql'
+    ).read_text(encoding='utf-8')
+    decision_gate_rollback = (
+        ROOT / 'supabase' / 'rollbacks' / '202608190006_customer_decision_gate.sql'
     ).read_text(encoding='utf-8')
     guide = (ROOT / 'MCM_REBORN_API_GUIDE.md').read_text(encoding='utf-8')
     supabase_readme = (ROOT / 'supabase' / 'README.md').read_text(encoding='utf-8')
@@ -1919,6 +1967,10 @@ def main() -> None:
     validate_shipment_conflict_hotfix(
         shipment_hotfix,
         shipment_hotfix_rollback,
+    )
+    validate_customer_decision_gate_migration(
+        decision_gate_migration,
+        decision_gate_rollback,
     )
     validate_capture_ui(
         capture_config,

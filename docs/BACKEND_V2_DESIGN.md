@@ -175,7 +175,7 @@ PRODUCTION_READY → IN_PRODUCTION → QUALITY_CHECK
 
 ### 신규·빈 staging
 
-루트 `supabase-schema.sql`을 한 번 적용한다. 이 파일이 최종 v2 bootstrap이므로 migration 001~005를 다시 실행하지 않는다.
+루트 `supabase-schema.sql`을 한 번 적용한다. 이 파일이 최종 v2 bootstrap이므로 migration 001~006을 다시 실행하지 않는다.
 
 ### 호환되는 기존 v2 데모 DB
 
@@ -187,9 +187,10 @@ PRODUCTION_READY → IN_PRODUCTION → QUALITY_CHECK
 → 202608180003_capture_seven_views.sql
 → 202608180004_backend_v2_runtime.sql
 → 202608190005_shipment_conflict_hotfix.sql
+→ 202608190006_customer_decision_gate.sql
 ```
 
-004는 Product3D readiness, 결제 zero-row abort, 고객 변경 결정 보안, 이벤트 server-only insert, Storage metadata binding, LIVE 동의 증적, 신청/terms/제품 옵션 제약을 보완한다. 005는 배송 lifecycle RPC의 모호한 `application_id` 충돌 대상을 명명 제약조건으로 교체한다. 롤백은 쓰기를 중지한 뒤 `005 → 004 → 003 → 002 → 001` 역순으로 수행한다. 005 rollback은 같은 결함을 다시 만들므로 앱도 함께 되돌릴 때만 사용하고, migration 이후 데이터나 보호 정의가 바뀌었으면 나머지 rollback은 덮어쓰지 않고 중단한다.
+004는 Product3D readiness, 결제 zero-row abort, 고객 변경 결정 보안, 이벤트 server-only insert, Storage metadata binding, LIVE 동의 증적, 신청/terms/제품 옵션 제약을 보완한다. 005는 배송 lifecycle RPC의 모호한 `application_id` 충돌 대상을 명명 제약조건으로 교체한다. 006은 변경 조건 고객 승인 전 `PRODUCTION_READY` 우회를 막는다. 롤백은 쓰기를 중지한 뒤 `006 → 005 → 004 → 003 → 002 → 001` 역순으로 수행한다. 006·005 rollback은 각각 고객 승인 우회·배송 시작 결함을 다시 만들므로 앱도 함께 되돌릴 때만 사용하고, migration 이후 데이터나 보호 정의가 바뀌었으면 나머지 rollback은 덮어쓰지 않고 중단한다.
 
 ### 지원하지 않는 경로
 
@@ -200,7 +201,7 @@ PRODUCTION_READY → IN_PRODUCTION → QUALITY_CHECK
 다음 항목이 모두 확인돼야 “Supabase/OpenAI 연동 완료”라고 말할 수 있다.
 
 - 실제 staging 환경변수와 CUSTOMER·OPERATOR Auth/profile 준비
-- bootstrap 또는 호환 v2 migration 001→005 실제 적용·롤백 기록
+- bootstrap 또는 호환 v2 migration 001→006 실제 적용·롤백 기록
 - `health.status=ok`
 - Customer 간 격리, Operator 권한, private Storage와 signed upload 검증
 - 7장 분석→신청→Mock 결제→수거→검수→변경 승인→제작→배송→완료→보증서 전체 호출

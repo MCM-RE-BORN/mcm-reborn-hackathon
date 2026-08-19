@@ -3,8 +3,16 @@
 ## Migration order for an existing v2 database
 
 Apply the forward migrations in filename order: `202608180001` → `202608180002`
-→ `202608180003` → `202608180004` → `202608190005`. A fresh, empty database uses the root
+→ `202608180003` → `202608180004` → `202608190005` → `202608190006`. A fresh, empty database uses the root
 `supabase-schema.sql` bootstrap only and must not replay these migrations.
+
+## 202608190006 customer decision gate
+
+`migrations/202608190006_customer_decision_gate.sql` repairs an existing v2
+database so an operator cannot move `CHANGE_APPROVAL_REQUIRED` to
+`PRODUCTION_READY` before the customer has approved the changed terms. The
+transition trigger and lifecycle RPC are both guarded; the customer decision
+trigger remains the only path that promotes an approved change request.
 
 ## 202608190005 shipment conflict hotfix
 
@@ -122,6 +130,9 @@ the release is accepted.
 Rollback in reverse order. Run
 `rollbacks/202608190005_shipment_conflict_hotfix.sql` before 004 only when the
 application is also rolled back; it intentionally restores the affected RPC.
+Run `rollbacks/202608190006_customer_decision_gate.sql` first only when the
+application is also rolled back; it intentionally restores the customer-
+approval bypass.
 Then run
 `rollbacks/202608180004_backend_v2_runtime.sql` before the 003, 002, or 001
 rollback. It restores the exact product JSON and trigger definitions captured
