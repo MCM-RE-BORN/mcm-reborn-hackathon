@@ -189,7 +189,9 @@ export function SignupScreen({ state }: AuthScreenProps) {
   const showForm = state === "normal" || hasError;
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    router.push("/home");
+    // 회원가입은 현재 데모 폼이며 실제 Auth 세션을 만들지 않으므로,
+    // 인증되지 않은 사용자를 홈으로 보내지 않고 로그인 화면으로 돌려보낸다.
+    router.replace("/login");
   };
 
   return (
