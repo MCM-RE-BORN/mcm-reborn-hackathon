@@ -217,7 +217,7 @@ export function OrderDetailsScreen({
   const hasPendingChange = changeRequest?.status === "PENDING";
   const certificateHref =
     effectiveStatus === "COMPLETED"
-      ? `/certificates/demo?applicationId=${applicationId}`
+      ? `/certificates/demo?applicationId=${applicationId}&state=issued`
       : "/certificates/demo?state=locked";
   const timelineDescription = useMemo(
     () => timeline?.steps.find((step) => step.status === effectiveStatus)?.description,
@@ -368,7 +368,7 @@ export function OrderDetailsScreen({
             />
           </Section>
 
-          {hasPendingChange && changeRequest ? (
+          {changeRequest ? (
             <>
               <SectionBand />
               <Section description={changeRequest.reason} title="실물 검수 결과">
@@ -394,26 +394,44 @@ export function OrderDetailsScreen({
                     />
                   </article>
                 </div>
-                <p className={styles.decisionNotice}>
-                  승인하면 변경된 조건으로 제작이 시작됩니다. 거절하면 신청이 취소됩니다.
-                </p>
-                <div className={styles.decisionActions}>
-                  <Button
-                    disabled={decisionPending}
-                    fullWidth
-                    onClick={() => void decideChange("approve")}
-                  >
-                    {decisionPending ? "처리 중..." : "변경 조건 승인"}
-                  </Button>
-                  <Button
-                    disabled={decisionPending}
-                    fullWidth
-                    onClick={() => void decideChange("reject")}
-                    variant="danger"
-                  >
-                    변경 조건 거절
-                  </Button>
-                </div>
+                {hasPendingChange ? (
+                  <>
+                    <p className={styles.decisionNotice}>
+                      승인하면 변경된 조건으로 제작이 시작됩니다. 거절하면 신청이 취소됩니다.
+                    </p>
+                    <div className={styles.decisionActions}>
+                      <Button
+                        disabled={decisionPending}
+                        fullWidth
+                        onClick={() => void decideChange("approve")}
+                      >
+                        {decisionPending ? "처리 중..." : "변경 조건 승인"}
+                      </Button>
+                      <Button
+                        disabled={decisionPending}
+                        fullWidth
+                        onClick={() => void decideChange("reject")}
+                        variant="danger"
+                      >
+                        변경 조건 거절
+                      </Button>
+                    </div>
+                  </>
+                ) : (
+                  <StatusPanel
+                    description={
+                      changeRequest.respondedAt
+                        ? `고객 결정일 ${formatApiDate(changeRequest.respondedAt)}`
+                        : "고객 결정이 저장되었습니다."
+                    }
+                    title={
+                      changeRequest.status === "APPROVED"
+                        ? "변경 조건이 승인되어 제작을 진행했어요"
+                        : "변경 조건이 승인되지 않아 신청이 취소되었어요"
+                    }
+                    tone={changeRequest.status === "APPROVED" ? "success" : "empty"}
+                  />
+                )}
               </Section>
             </>
           ) : null}

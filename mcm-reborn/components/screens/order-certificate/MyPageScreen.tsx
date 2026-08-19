@@ -84,7 +84,7 @@ export function MyPageScreen({ state }: MyPageScreenProps) {
   const phone = readJsonString(address, "phone");
   const certificateHref =
     latestApplication?.effectiveStatus === "COMPLETED"
-      ? `/certificates/demo?applicationId=${latestApplication.id}`
+      ? `/certificates/demo?applicationId=${latestApplication.id}&state=issued`
       : "/certificates/demo?state=locked";
 
   return (
