@@ -18,6 +18,7 @@ import {
 } from "./operations-data";
 import {
   operatorFetch,
+  OperatorApiError,
   readOperatorImageUrl,
   type InspectionResponse,
   type LifecycleCommandResponse,
@@ -51,7 +52,7 @@ export function OperationsDetailScreen({
   const [liveStatus, setLiveStatus] = useState<OperationStatus | null>(null);
   const [liveError, setLiveError] = useState(false);
   const [reloadToken, setReloadToken] = useState(0);
-  const [actionError, setActionError] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [isActionPending, setIsActionPending] = useState(false);
 
   useEffect(() => {
@@ -151,7 +152,7 @@ export function OperationsDetailScreen({
       return;
     }
 
-    setActionError(false);
+    setActionError(null);
     setIsActionPending(true);
     try {
       if (transition.mode === "inspection-api") {
@@ -203,8 +204,17 @@ export function OperationsDetailScreen({
         setLiveStatus(nextStatus);
         router.replace(operationDetailHref(nextStatus, applicationId));
       }
-    } catch {
-      setActionError(true);
+    } catch (error) {
+      if (error instanceof OperatorApiError && error.status === 401) {
+        setLiveDetail(null);
+        setLiveError(true);
+        return;
+      }
+      setActionError(
+        error instanceof OperatorApiError
+          ? error.message
+          : "운영 API에 연결하지 못했습니다. 잠시 후 다시 시도해 주세요.",
+      );
     } finally {
       setIsActionPending(false);
     }
@@ -411,7 +421,7 @@ export function OperationsDetailScreen({
                 </small>
                 {actionError ? (
                   <p role="alert" className={styles.actionError}>
-                    운영 API에 연결하지 못했습니다. 잠시 후 다시 시도해 주세요.
+                    {actionError}
                   </p>
                 ) : null}
               </>

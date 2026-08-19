@@ -206,7 +206,7 @@ export async function operatorFetch<T>(
     headers.set("Content-Type", "application/json");
   }
   if (init.method && init.method.toUpperCase() !== "GET") {
-    headers.set("Idempotency-Key", `operations-${crypto.randomUUID()}`);
+    headers.set("Idempotency-Key", createIdempotencyKey("operations"));
   }
 
   const response = await fetch(input, {
@@ -227,6 +227,22 @@ export async function operatorFetch<T>(
   }
 
   return payload as T;
+}
+
+function createIdempotencyKey(prefix: string) {
+  if (typeof globalThis.crypto?.randomUUID === "function") {
+    return `${prefix}-${globalThis.crypto.randomUUID()}`;
+  }
+
+  const random = new Uint32Array(4);
+  if (typeof globalThis.crypto?.getRandomValues === "function") {
+    globalThis.crypto.getRandomValues(random);
+    return `${prefix}-${Date.now()}-${Array.from(random)
+      .map((value) => value.toString(16))
+      .join("")}`;
+  }
+
+  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
 export function readOperatorImageUrl(value: unknown): string | null {
