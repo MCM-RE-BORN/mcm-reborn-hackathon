@@ -2,6 +2,9 @@ import "server-only";
 
 import { createHash, randomUUID } from "node:crypto";
 
+import { AppError } from "@/contracts/errors";
+import { authenticate, requireRole } from "@/server/auth/middleware";
+
 type JsonPrimitive = boolean | number | string | null;
 export type JsonValue =
   | JsonPrimitive
@@ -14,10 +17,6 @@ type SupabaseConfig = {
   publishableKey: string;
   serviceRoleKey: string;
   url: string;
-};
-
-type AuthenticatedUser = {
-  id: string;
 };
 
 type StoredIdempotencyRow = {
@@ -183,9 +182,12 @@ export async function executeIdempotentOperatorCommand<TBody>({
 
   try {
     const config = readSupabaseConfig();
-    const accessToken = readBearerToken(request);
-    const user = await authenticateUser(config, accessToken);
-    await authorizeOperator(config, accessToken, user.id);
+    // Reuse the same authenticated profile and role boundary as the operator
+    // list/detail routes. Keeping a second raw Auth/PostgREST path here caused
+    // mutations to fail before idempotency reservation even while reads worked.
+    const user = await authenticate(request);
+    requireRole(user, ["OPERATOR"]);
+    const accessToken = user.accessToken;
     const idempotencyKey = readIdempotencyKey(request);
     const storageKey = namespaceIdempotencyKey(
       user.id,
@@ -324,6 +326,20 @@ function normalizeProblem(error: unknown): ApiProblem {
     return error;
   }
 
+  if (error instanceof AppError) {
+    const message = error.statusCode === 401
+      ? "운영자 로그인이 만료되었거나 올바르지 않습니다."
+      : error.statusCode === 403
+        ? "운영자 권한이 필요합니다."
+        : error.statusCode === 503
+          ? "Supabase 서비스에 연결할 수 없습니다."
+          : error.message;
+
+    return new ApiProblem(error.statusCode, error.code, message, {
+      retryable: error.statusCode >= 500,
+    });
+  }
+
   return new ApiProblem(
     502,
     "UPSTREAM_FAILURE",
@@ -348,20 +364,6 @@ function jsonResult(status: number, body: JsonValue): Response {
     headers: { "Cache-Control": "no-store" },
     status,
   });
-}
-
-function readBearerToken(request: Request): string {
-  const authorization = request.headers.get("authorization")?.trim();
-  const match = authorization?.match(/^Bearer\s+([^\s]+)$/i);
-  if (!match) {
-    throw new ApiProblem(
-      401,
-      "UNAUTHORIZED",
-      "Bearer 인증 토큰이 필요합니다.",
-    );
-  }
-
-  return match[1];
 }
 
 function readIdempotencyKey(request: Request): string {
@@ -467,77 +469,6 @@ async function readJsonBody(request: Request): Promise<unknown> {
       400,
       "INVALID_REQUEST",
       "요청 본문이 올바른 JSON이 아닙니다.",
-    );
-  }
-}
-
-async function authenticateUser(
-  config: SupabaseConfig,
-  accessToken: string,
-): Promise<AuthenticatedUser> {
-  const response = await supabaseFetch(
-    config,
-    "/auth/v1/user",
-    accessToken,
-    { method: "GET" },
-  );
-  const payload = await readUpstreamJson(response);
-
-  if (!response.ok) {
-    // GoTrue can report a malformed, revoked, or expired access token as 400
-    // as well as 401/403. Treat every authentication rejection uniformly so
-    // the console clears its stale session and returns to the login form.
-    if (
-      response.status === 400 ||
-      response.status === 401 ||
-      response.status === 403
-    ) {
-      throw new ApiProblem(
-        401,
-        "UNAUTHORIZED",
-        "인증 토큰이 만료되었거나 올바르지 않습니다.",
-      );
-    }
-    throw mapSupabaseFailure(response.status, payload);
-  }
-
-  if (!isRecord(payload) || typeof payload.id !== "string") {
-    throw upstreamInvalidResponse();
-  }
-
-  return { id: payload.id };
-}
-
-async function authorizeOperator(
-  config: SupabaseConfig,
-  accessToken: string,
-  userId: string,
-): Promise<void> {
-  const query = new URLSearchParams({
-    id: postgrestEquals(userId),
-    limit: "1",
-    role: "eq.OPERATOR",
-    select: "id",
-  });
-  const response = await supabaseFetch(
-    config,
-    `/rest/v1/profiles?${query.toString()}`,
-    accessToken,
-    { method: "GET" },
-  );
-  const payload = await readUpstreamJson(response);
-
-  if (!response.ok) {
-    throw mapSupabaseFailure(response.status, payload);
-  }
-  if (!Array.isArray(payload)) {
-    throw upstreamInvalidResponse();
-  }
-  if (payload.length !== 1) {
-    throw new ApiProblem(
-      403,
-      "FORBIDDEN",
-      "운영자 권한이 필요합니다.",
     );
   }
 }
