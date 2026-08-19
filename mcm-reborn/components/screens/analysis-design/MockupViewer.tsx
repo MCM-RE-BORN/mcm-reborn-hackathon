@@ -1,13 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import styles from "./analysis-design.module.css";
 
 const MODEL_SRC = "/assets/models/reborn-passport-wallet.glb";
+const PROMPT_RESET_DELAY_MS = 5_000;
+
+type ModelViewerHandle = HTMLElement & {
+  resetInteractionPrompt: () => void;
+};
 
 export function MockupViewer() {
   const [viewerReady, setViewerReady] = useState(false);
   const [modelFailed, setModelFailed] = useState(false);
+  const viewerRef = useRef<ModelViewerHandle | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -24,6 +30,28 @@ export function MockupViewer() {
       active = false;
     };
   }, []);
+
+  useEffect(() => {
+    const viewer = viewerRef.current;
+    if (!viewerReady || !viewer) return;
+
+    let resetTimer: ReturnType<typeof setTimeout> | undefined;
+    const handleCameraChange = (event: Event) => {
+      const source = (event as CustomEvent<{ source?: string }>).detail?.source;
+      if (source !== "user-interaction") return;
+
+      if (resetTimer) clearTimeout(resetTimer);
+      resetTimer = setTimeout(() => {
+        viewer.resetInteractionPrompt();
+      }, PROMPT_RESET_DELAY_MS);
+    };
+
+    viewer.addEventListener("camera-change", handleCameraChange);
+    return () => {
+      viewer.removeEventListener("camera-change", handleCameraChange);
+      if (resetTimer) clearTimeout(resetTimer);
+    };
+  }, [viewerReady]);
 
   return (
     <section
@@ -49,6 +77,7 @@ export function MockupViewer() {
           interaction-prompt-threshold="800"
           loading="eager"
           onError={() => setModelFailed(true)}
+          ref={viewerRef}
           rotation-per-second="18deg"
           shadow-intensity="1"
           src={MODEL_SRC}
