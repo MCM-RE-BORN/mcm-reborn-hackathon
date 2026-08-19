@@ -467,17 +467,12 @@
 
 .mockupStage {
   display: grid;
-  min-height: calc(
-    100dvh - var(--space-25) - var(--layout-sticky-action-height) -
-      var(--safe-area-top) - var(--safe-area-bottom)
-  );
-  align-items: center;
 }
 
 .modelViewerFrame {
   position: relative;
   width: 100%;
-  min-height: min(30rem, 60dvh);
+  aspect-ratio: 1;
   overflow: hidden;
   background: var(--color-surface);
 }

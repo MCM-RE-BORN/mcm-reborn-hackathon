@@ -117,7 +117,7 @@ API 계약 v2.0.0(OpenAPI 3.1.0)의 `Analysis`는 `estimatedReusableAreaCm2`를 
 
 | 추적 단계 | Canonical 연결 |
 |---|---|
-| Lane A 제출 | `SUB-RB-20260817-0001`: MCM 비세토스 모노그램 백팩(2019, 5년 이상) → RE:BORN 여권지갑 |
+| Lane A 제출 | `SUB-RB-20260817-0001`: MCM 모노그램 백팩(2019, 5년 이상) → RE:BORN 여권지갑 |
 | 주문 전 예상 | 재활용률 72%, 정품 사전 점검 예상 91%(주문 적합 참고 신호), 180,000원, 무료 수거 |
 | Lane B 주문 | `RB-20260817-0001`: 수거·입고 뒤 전문가 실물 검수 `CHANGE_REQUIRED` |
 | 변경 승인 | 실물 검수 Fixture의 68%, 195,000원, 4~5주를 고객이 승인한 뒤 `PRODUCTION_READY`. v2 DB는 확정 재활용률·면적과 변경안을 저장하지만 실제 평면 스캔 polygon·결 방향·재단안 같은 Lane B 측정 revision은 미구현 |

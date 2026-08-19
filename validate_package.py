@@ -902,7 +902,7 @@ def validate_mock(mock: dict[str, Any], version: str) -> tuple[int, int, int]:
             fail(f'primaryScenario.{key} must be {expected}')
     if primary.get('source') != {
         'brand': 'MCM',
-        'name': 'MCM 비세토스 모노그램 백팩',
+        'name': 'MCM 모노그램 백팩',
         'category': 'BACKPACK',
         'images': [
             {'slot': 'FRONT', 'purpose': 'SOURCE_FRONT', 'url': '/assets/mvp-beta/source-backpack-front.webp'},
@@ -914,7 +914,7 @@ def validate_mock(mock: dict[str, Any], version: str) -> tuple[int, int, int]:
             {'slot': 'SERIAL_NUMBER', 'purpose': 'ENGRAVING', 'url': '/assets/mvp-beta/source-backpack-engraving.webp'},
         ],
     }:
-        fail('Primary source must be the canonical MCM Visetos monogram backpack')
+        fail('Primary source must be the canonical MCM monogram backpack')
     initial = primary.get('initialEstimate', {})
     if (
         initial.get('estimatedReusableMaterialRate') != 72

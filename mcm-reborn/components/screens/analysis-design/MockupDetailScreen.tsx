@@ -151,6 +151,16 @@ export function MockupDetailScreen({ analysisId, productId, state }: MockupDetai
             <MockupViewer />
           </div>
 
+          <aside className={styles.contractNotice}>
+            <strong>목업 이용 안내</strong>
+            <p>
+              이 목업은 고객이 등록한 원제품 사진을 바탕으로 만든 예상
+              이미지입니다. 주문 후 장인이 실물을 확인하면 소재 배치·재단
+              범위·세부 마감이 달라질 수 있으며 변경 조건은 제작 전에 고객에게
+              안내합니다.
+            </p>
+          </aside>
+
           <section className={styles.productStory}>
             <header className={styles.productDetailHeader}>
               <h1>{product.name}</h1>
@@ -160,19 +170,6 @@ export function MockupDetailScreen({ analysisId, productId, state }: MockupDetai
             </header>
 
             <p className={styles.productDescription}>{product.description}</p>
-
-            <figure className={styles.productStoryFigure}>
-              <Image
-                alt="RE:BORN 여권지갑을 펼친 내부 구성"
-                height={770}
-                sizes="(max-width: 402px) calc(100vw - 40px), 350px"
-                src="/assets/mvp-beta/passport-wallet/open-inside.jpg"
-                width={750}
-              />
-              <figcaption>
-                여권과 카드, 지퍼 포켓을 한 번에 정리할 수 있는 내부 구성입니다.
-              </figcaption>
-            </figure>
 
             <section aria-labelledby="mockup-gallery-title">
               <h2
@@ -196,14 +193,18 @@ export function MockupDetailScreen({ analysisId, productId, state }: MockupDetai
               </div>
             </section>
 
-            <aside className={styles.contractNotice}>
-              <strong>목업 이용 안내</strong>
-              <p>
-                이 목업은 사진 기반 예상 이미지입니다. 주문 후 장인이 실물을
-                확인하면 패턴 위치·재단 범위·세부 마감이 달라질 수 있으며 변경
-                조건은 제작 전에 고객에게 안내합니다.
-              </p>
-            </aside>
+            <figure className={styles.productStoryFigure}>
+              <Image
+                alt="RE:BORN 여권지갑을 펼친 내부 구성"
+                height={770}
+                sizes="(max-width: 402px) calc(100vw - 40px), 350px"
+                src="/assets/mvp-beta/passport-wallet/open-inside.jpg"
+                width={750}
+              />
+              <figcaption>
+                여권과 카드, 지퍼 포켓을 한 번에 정리할 수 있는 내부 구성입니다.
+              </figcaption>
+            </figure>
 
             <aside className={styles.engravingNotice} id="engraving-note">
               <strong>각인 옵션 안내</strong>

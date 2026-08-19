@@ -3,8 +3,14 @@
 ## Migration order for an existing v2 database
 
 Apply the forward migrations in filename order: `202608180001` → `202608180002`
-→ `202608180003` → `202608180004` → `202608190005` → `202608190006`. A fresh, empty database uses the root
+→ `202608180003` → `202608180004` → `202608190005` → `202608190006`
+→ `202608200007`. A fresh, empty database uses the root
 `supabase-schema.sql` bootstrap only and must not replay these migrations.
+
+## 202608200007 generic source-pattern copy
+
+`migrations/202608200007_generic_source_pattern_copy.sql` removes product
+copy that assumed every customer source item uses one specific pattern.
 
 ## 202608190006 customer decision gate
 

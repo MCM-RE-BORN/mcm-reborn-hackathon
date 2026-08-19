@@ -5,7 +5,7 @@ export const DEMO_SCENARIO = {
     status: "AI_COMPLETED",
   },
   sourceProduct: {
-    name: "MCM 비세토스 모노그램 백팩",
+    name: "MCM 모노그램 백팩",
     image: "/assets/mvp-beta/source-backpack-front.webp",
     images: {
       front: "/assets/mvp-beta/source-backpack-front.webp",

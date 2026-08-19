@@ -23,7 +23,7 @@
     "productId": "10000000-0000-4000-8000-000000000001",
     "source": {
       "brand": "MCM",
-      "name": "MCM 비세토스 모노그램 백팩",
+      "name": "MCM 모노그램 백팩",
       "category": "BACKPACK",
       "images": [
         { "slot": "FRONT", "purpose": "SOURCE_FRONT", "url": "/assets/mvp-beta/source-backpack-front.webp" },
@@ -80,7 +80,7 @@
       "code": "REBORN_PASSPORT_WALLET",
       "name": "RE:BORN 여권지갑",
       "category": "PASSPORT_WALLET",
-      "description": "MCM 비세토스 패턴을 살린 여권지갑입니다.",
+      "description": "고객 원제품의 패턴과 소재를 살린 여권지갑입니다.",
       "requiredAreaCm2": 850,
       "mockPrice": { "amount": 180000, "currency": "KRW" },
       "estimatedDuration": "3~4주",

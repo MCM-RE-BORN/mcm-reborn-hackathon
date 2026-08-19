@@ -320,7 +320,7 @@ Supabase RPC `submit_physical_inspection`은 같은 트랜잭션에서 만든 `c
 | 주문번호 | `RB-20260817-0001` |
 | 시나리오 키 | `MCM_BACKPACK_CHANGE_APPROVED_20260817` |
 | 접수번호 | `SUB-RB-20260817-0001` |
-| 원본 | MCM 비세토스 모노그램 백팩, 2019년, 5년 이상 |
+| 원본 | MCM 모노그램 백팩, 2019년, 5년 이상 |
 | AI 예상 재활용률 | 72% |
 | 예상 신뢰도 | 87% |
 | 주문 가능성 사전 신호 | 91%, `ORDER_ELIGIBLE` |

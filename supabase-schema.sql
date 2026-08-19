@@ -1373,7 +1373,7 @@ insert into public.products (
 ) values
 (
   '10000000-0000-4000-8000-000000000001', 'REBORN_PASSPORT_WALLET', 'RE:BORN 여권지갑',
-  'PASSPORT_WALLET', 'MCM 비세토스 패턴을 살린 여권지갑입니다.', 850, 180000, '3~4주',
+  'PASSPORT_WALLET', '고객 원제품의 패턴과 소재를 살린 여권지갑입니다.', 850, 180000, '3~4주',
   '{"widthMm":110,"heightMm":145,"depthMm":12}'::jsonb,
   '{"url":"/assets/mvp-beta/recommendation-passport-wallet.png","alt":"RE:BORN 여권지갑","width":250,"height":271,"aspectRatio":"250:271"}'::jsonb,
   '{"format":"GLB","url":"/assets/models/passport-wallet.glb","posterUrl":"/assets/products/passport-wallet/poster.webp","environmentImageUrl":"/assets/3d/studio.hdr","cameraOrbit":"0deg 75deg 105%","cameraTarget":"0m 0m 0m","fieldOfView":"30deg","autoRotate":true,"availableVariants":[{"key":"COGNAC_GOLD","label":"코냑·골드"}]}'::jsonb,
