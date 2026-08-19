@@ -22,7 +22,7 @@
 
 ## 앱 소유 영역
 
-`mcm-reborn/`은 Next.js `16.3.0`, React `19.2.8` 실행 앱의 루트다. 고객 데모 화면, 실제 브라우저 카메라, 중앙 Fixture 여정, `/operations` PC Fixture 콘솔과 OpenAPI 25개 API operation을 구현하는 23개 v2 Route Handler 파일이 있다. 화면은 아직 API에 연결되지 않았고 실제 Supabase/OpenAI 런타임도 검증되지 않았으므로, 코드 범위와 외부 통합 완료를 구분한다. 상세 구조는 [`BACKEND_V2_DESIGN.md`](./BACKEND_V2_DESIGN.md)를 따른다.
+`mcm-reborn/`은 Next.js `16.3.0`, React `19.2.8` 실행 앱의 루트다. 고객 데모 화면, 실제 브라우저 카메라, v2 API 응답 기반 고객 여정, `/operations` PC 운영 콘솔과 OpenAPI 25개 API operation을 구현하는 23개 v2 Route Handler 파일이 있다. 실제 CUSTOMER/OPERATOR 전체 원격 여정과 OpenAI LIVE 검증은 별도 staging 게이트로 구분한다. 상세 구조는 [`BACKEND_V2_DESIGN.md`](./BACKEND_V2_DESIGN.md)를 따른다.
 
 | 현재 경로 | 책임과 구현 상태 |
 |---|---|

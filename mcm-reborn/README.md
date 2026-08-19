@@ -1,6 +1,6 @@
 # MCM RE:BORN Web
 
-이 디렉터리는 MCM RE:BORN 데모 MVP의 Next.js 16 애플리케이션이다. 고객 데모 화면·브라우저 카메라·중앙 Fixture 여정과 OpenAPI 25개 API operation을 구현하는 23개 v2 Route Handler 파일·서비스를 포함한다. 화면은 아직 v2 API를 호출하지 않고, 실제 Supabase 프로젝트·migration·OpenAI LIVE 호출도 검증되지 않았다. 코드 구현, UI 통합, 외부 런타임 연결 완료를 구분하며 API 의미와 MVP 범위는 저장소 루트의 계약을 따른다.
+이 디렉터리는 MCM RE:BORN 데모 MVP의 Next.js 16 애플리케이션이다. 고객 화면·브라우저 카메라·신청·보증서와 OpenAPI 25개 API operation을 구현하는 23개 v2 Route Handler 파일·서비스를 포함한다. 고객·운영 화면은 Supabase v2 API 응답을 사용하고, 인증 실패·빈 결과는 상태 화면으로 표시한다. 실제 CUSTOMER/OPERATOR 자격증명을 사용한 전체 원격 여정과 OpenAI LIVE 호출은 별도 staging 검증 대상이며 API 의미와 MVP 범위는 저장소 루트의 계약을 따른다.
 
 ## 작업 전 확인
 

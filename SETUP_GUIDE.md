@@ -2,7 +2,7 @@
 
 이 문서는 API 계약 `v2.0.0`의 23개 Route Handler 파일·25개 operation을 로컬 또는 staging Supabase 프로젝트에 연결하는 절차다. 실행 앱은 저장소의 `mcm-reborn/`에 있고 HTTP 기준은 루트 `openapi.yaml`, 신규 DB 기준은 `supabase-schema.sql`이다.
 
-> 2026-08-18 현재 이 작업 환경에는 `mcm-reborn/.env.local`과 실제 Supabase 환경변수가 없다. 따라서 저장소에는 연동 코드와 SQL 계약만 준비되어 있으며, 실제 Supabase 프로젝트 연결·migration 적용·Auth 로그인·Storage 업로드 성공은 아직 검증되지 않았다.
+> 2026-08-19 현재 `mcm-reborn/.env.local`에 Supabase 환경변수가 설정되어 `/api/v2/health` 연결은 확인됐다. 비밀값과 실제 계정 자격증명은 저장소에 기록하지 않으며, 전체 7장 업로드·신청·운영 전이·보증서 원격 여정은 staging에서 별도로 검증해야 한다.
 
 ## 1. 사전 준비
 

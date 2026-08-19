@@ -28,6 +28,7 @@
 | DEC-022 | 2026-08-18 | 승인 | 분석 입력을 정면·후면·상단·하단·좌측면·우측면의 6면 사진과 일련번호 사진, 총 7개 필수 슬롯으로 확장한다. | 최신 사용자 요구가 DEC-020의 4슬롯 규칙을 대체한다. Storage 목적 enum은 늘리지 않고 프런트 슬롯 ID와 분석 자산 배열 순서로 구도를 관리한다. |
 | DEC-023 | 2026-08-18 | 승인 | PC용 최소 통합 운영 콘솔을 `/operations` 목록과 `/operations/[applicationId]` 상세로 제공하고 단계별 관리자·장인 담당을 표시하며 준비된 신청을 다음 허용 단계로 넘길 수 있게 한다. | 데모에서는 중앙 Fixture와 현행 v2 상태 전이를 사용한다. `feature-backend`의 v1 API·주문 전 승인 흐름은 현 계약과 충돌하므로 직접 병합하지 않으며, 별도 장인 인증·배정·실데이터 연동은 후속 범위다. |
 | DEC-024 | 2026-08-18 | 승인 | `origin/feature-backend`의 v1 Route Handler를 제거하고 23개 Route Handler 파일로 OpenAPI v2의 25개 operation을 구현한다. 고객·운영 UI는 당분간 Fixture를 유지하고 후속 작업에서 v2 API에 연결한다. 이벤트는 인증 사용자만 받고, `LIVE`는 공식 OpenAI JavaScript SDK의 Chat Completions Structured Outputs와 명시적 배포 opt-in·privacy notice·요청별 동의 증적을 사용하며 장애 시 Fixture로 폴백한다. | DB 적용은 신규·빈 v2 staging의 최종 bootstrap 또는 호환 기존 v2 데모 DB의 migration 001→004만 지원한다. v1 DB in-place 변환은 실제 백업 없이는 추정하지 않는다. 코드 구현은 실제 Supabase 프로젝트·migration·Auth/RLS/Storage/RPC나 OpenAI 호출 검증을 뜻하지 않는다. |
+| DEC-025 | 2026-08-19 | 승인 | 고객·운영 브라우저 화면의 업무 데이터는 v2 API를 단일 데이터 소스로 사용한다. 신청 목록·상세·완료·마이페이지·보증서·분석·추천·주문·운영 콘솔은 인증 세션의 Supabase 응답을 렌더링하고, 빈 결과·인증 실패·API 오류를 중앙 Fixture로 대체하지 않는다. | `DEMO_FIXTURE`는 서버 분석 모드와 계약 예시로만 유지한다. 실제 CUSTOMER/OPERATOR 자격증명으로 전체 원격 여정을 검증하는 작업은 staging 게이트로 남긴다. |
 
 ## 대체 관계
 
@@ -40,6 +41,7 @@
 - `DEC-017`의 Figma 전체 시각 기준은 유지한다. 홈·하단 내비게이션·신청 내역의 구체적인 노드와 탐색 구조는 **2026-08-18 기준 `DEC-019`가 대체·구체화**한다.
 - `DEC-004`의 사용자에게 보이는 분석 모드는 `DEMO_FIXTURE`, `SEEDED_ESTIMATE`, `LIVE`로 유지한다. `hybrid`는 별도 공개 enum이 아니라 `DEC-024`의 `LIVE` 내부 장애 폴백 동작으로 구체화한다.
 - `DEC-018`의 “lifecycle command만 실행 경로”라는 당시 구현 상태는 historical이다. v2 서버 범위와 외부 연결 경계는 `DEC-024`가 대체한다.
+- `DEC-024`의 “고객·운영 UI는 Fixture를 유지하고 후속 연결” 부분은 **2026-08-19 기준 `DEC-025`로 대체**되었다. v1 제거·v2 계약·LIVE 동의 원칙은 유지한다.
 - 기존 행은 결정 당시 기록으로 보존한다. 현재 구현과 체크리스트에는 `DEC-010`~`DEC-024`를 적용한다.
 
 ## 새 결정 형식

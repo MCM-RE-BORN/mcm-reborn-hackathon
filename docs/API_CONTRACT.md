@@ -11,7 +11,7 @@
 - 현재 계약 버전은 `openapi.yaml`의 `info.version`, 기준 브랜치는 `develop`을 따른다.
 - 현행 제품 계약은 **API 계약 v2.0.0**이고, `openapi.yaml`은 **OpenAPI 3.1.0** 형식이다. 제품 계약 버전과 명세 형식 버전을 혼용하지 않는다.
 
-현재 실행 앱에는 `openapi.yaml`의 25개 API operation을 구현하는 23개 `/api/v2` Route Handler 파일이 있다. 다만 고객·운영 콘솔 화면은 중앙 Fixture를 사용하며 아직 이 API에 연결되지 않았고, 실제 Supabase 프로젝트·환경변수·migration·OpenAI LIVE 호출도 검증되지 않았다. 따라서 Route Handler 구현, UI 통합, 외부 런타임 연결 완료를 구분한다. 상세 구조는 [`BACKEND_V2_DESIGN.md`](./BACKEND_V2_DESIGN.md)를 따른다.
+현재 실행 앱에는 `openapi.yaml`의 25개 API operation을 구현하는 23개 `/api/v2` Route Handler 파일이 있고, 고객·운영 콘솔 화면도 로그인 세션을 통해 이 API를 호출한다. API가 비어 있으면 빈 상태를, 인증·네트워크 오류면 오류 상태를 표시하며 중앙 Fixture로 조용히 대체하지 않는다. 실제 CUSTOMER/OPERATOR 자격증명을 사용한 전체 원격 여정과 OpenAI LIVE 호출은 별도 staging 검증으로 구분한다. 상세 구조는 [`BACKEND_V2_DESIGN.md`](./BACKEND_V2_DESIGN.md)를 따른다.
 
 파일이 서로 다르면 조용히 UI만 우회하지 않는다. Canonical 흐름을 기준으로 차이, 소비자와 데이터 영향, 호환 가능한 선택지와 롤백을 기록하고 OpenAPI·Mock·DB·클라이언트·문서를 같은 변경 단위에서 정합화한다.
 
@@ -72,7 +72,7 @@ REVIEW_REQUIRED → AWAIT_MANUAL_REVIEW → application creation blocked
 
 호환되는 기존 v2 데모 DB에는 fresh bootstrap 파일을 재적용하지 않는다. `202608180001_lifecycle_integrity.sql`, `202608180002_capture_four_views.sql` 적용 뒤 `supabase/migrations/202608180003_capture_seven_views.sql`로 분석 전이의 정확히 7장 조건을 활성화하고, 마지막으로 `supabase/migrations/202608180004_backend_v2_runtime.sql`을 적용해 Product3D readiness·Mock 결제 상태 guard·고객 변경안 결정·이벤트·Storage metadata binding·외부 AI 동의 증적·신청/옵션 제약을 런타임 계약과 맞춘다. 사진을 합성하는 backfill은 하지 않으므로 진행 중인 4장 분석은 나머지 구도와 일련번호 사진을 보완한 뒤에만 계속할 수 있다. 롤백은 `supabase/rollbacks/202608180004_backend_v2_runtime.sql`부터 역순의 대응 파일을 사용하며 OpenAPI·DB 중 한쪽만 되돌리지 않는다. `origin/feature-backend` v1 DB는 이 migration 체인의 입력으로 지원하지 않는다.
 
-관리자·장인 콘솔의 현재 화면 전환은 중앙 Fixture를 사용한다. 서버 쓰기를 연결할 때는 별도 장인 역할 enum을 추가하지 않고 기존 `OPERATOR` 권한 아래에서 현행 v2 lifecycle command를 호출한다. `feature-backend`의 `/api/v1` 목록·상세·`PENDING_APPROVAL → APPROVED` 계약은 이 문서의 상태 모델과 호환되지 않으므로 직접 소비하지 않는다.
+관리자·장인 콘솔은 `OPERATOR` 권한으로 실제 신청 목록·상세를 조회하고 현행 v2 lifecycle command와 inspection API를 호출한다. 별도 장인 역할 enum은 추가하지 않는다. `feature-backend`의 `/api/v1` 목록·상세·`PENDING_APPROVAL → APPROVED` 계약은 이 문서의 상태 모델과 호환되지 않으므로 직접 소비하지 않는다.
 
 ## 변경 게이트
 

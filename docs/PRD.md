@@ -2,7 +2,7 @@
 
 > 2026-08-17 현재 기준. 이전의 “1~4장·6MB·WebP, 주문 전 수동 검토 차단, 운영자 선승인” 범위는 **superseded/historical**이다. 제품·시나리오 값은 [`MVP_DEMO_CANONICAL.md`](./MVP_DEMO_CANONICAL.md)를 따른다.
 
-이 문서는 최종 PRD와 유저플로우를 반영한 제품 완료 기준이다. 2026-08-18 구현은 실제 브라우저 카메라와 Fixture 기반 고객 여정, 그리고 OpenAPI 25개 API operation을 구현하는 23개 v2 Route Handler 파일·Supabase 계약을 제공한다. 화면은 아직 v2 API에 연결되지 않았고 실제 Supabase 프로젝트·migration·OpenAI LIVE·결제사·물류사 연동도 검증되지 않았다. 따라서 UI의 자연스러운 데모 완료와 백엔드 코드 구현, 외부 런타임 연결 완료를 구분해 평가한다.
+이 문서는 최종 PRD와 유저플로우를 반영한 제품 완료 기준이다. 2026-08-19 구현은 실제 브라우저 카메라와 v2 API 기반 고객·운영 여정, OpenAPI 25개 API operation을 구현하는 23개 v2 Route Handler 파일·Supabase 계약을 제공한다. 분석 결과는 서버 `DEMO_FIXTURE` 모드에서 재현 가능하게 생성할 수 있으며 신청·마이페이지·보증서·운영 데이터는 API 응답을 사용한다. 실제 CUSTOMER/OPERATOR 전체 원격 여정과 OpenAI LIVE·결제사·물류사 연동은 staging 검증 대상으로 구분한다.
 
 ## 제품 정의
 

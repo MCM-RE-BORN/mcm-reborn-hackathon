@@ -2,7 +2,7 @@
 
 > 2026-08-17 현재 흐름. 이전의 `REVIEW_REQUIRED` 주문 차단과 `PENDING_APPROVAL → APPROVED` 운영자 선승인 흐름은 **superseded/historical**이다. 제품 의미와 중앙 시나리오는 [`MVP_DEMO_CANONICAL.md`](./MVP_DEMO_CANONICAL.md), 정확한 요청·응답은 `openapi.yaml`을 따른다.
 
-현행 웹 진입은 서비스 소개 `/` 또는 `/intro`에서 시작하고 홈은 `/home`이다. 아래 고객 식별자와 화면 상태는 현재 앱에서 Fixture로 시연되며 아직 v2 API에 연결되지 않았다. 별도 서버 경계에는 OpenAPI 25개 API operation을 구현하는 23개 Route Handler 파일과 DB 계약이 있지만, 실제 Supabase 프로젝트·환경변수·migration·OpenAI LIVE 호출은 검증되지 않았다.
+현행 웹 진입은 서비스 소개 `/` 또는 `/intro`에서 시작하고 홈은 `/home`이다. 고객 식별자·신청·분석·보증서 화면은 인증 세션으로 v2 API를 호출하며, API가 반환한 상태·빈 결과·오류를 그대로 표시한다. 분석 서버가 `DEMO_FIXTURE` 모드일 때만 재현 가능한 예상치를 사용한다. 실제 CUSTOMER/OPERATOR 자격증명으로 전체 원격 여정을 완주하는 검증은 staging에서 진행한다.
 
 공통 하단 내비게이션은 `신청 내역`(`/orders`)·`홈`(`/home`)·`마이페이지`(`/mypage`) 3개다. 사용자 표기는 `진행조회`가 아니라 `신청 내역`이며, `/orders` 목록에서 상품을 선택하면 `/orders/demo` 상세가 열린다.
 
@@ -71,7 +71,7 @@ PENDING_PAYMENT → ORDER_PLACED → PICKUP_SCHEDULED → PICKUP_IN_PROGRESS
 
 - `OPERATOR`는 PC `/operations`에서 신청 목록을 확인하고 상품을 선택해 `/operations/[applicationId]` 상세로 이동한다.
 - 관리자 보기에서는 수거·배송 등 운영 단계를, 장인 보기에서는 실물 검수·제작·품질 단계를 확인하고 준비된 다음 단계 버튼을 누른다.
-- 현재 버튼은 중앙 Fixture의 화면 상태만 진행한다. 후속 UI→API 통합에서는 구현된 v2 lifecycle command의 인접 전이·운영자 권한·멱등성 규칙을 그대로 사용한다.
+- 고객 화면의 주문·조회 버튼은 v2 API를 호출해 DB 상태와 신청 식별자를 갱신·조회한다. 운영 콘솔의 다음 단계 버튼은 구현된 v2 lifecycle command의 인접 전이·운영자 권한·멱등성 규칙을 그대로 사용한다.
 - 고객 골든 패스에 주문 전 선승인 동작을 추가하지 않는다. 공식 장인 실물 검수는 `PRODUCT_RECEIVED` 이후에만 나타난다.
 - 골든 시나리오는 `InspectionResult = CHANGE_REQUIRED`, `ChangeDecision = APPROVED`다.
 - 실제 장인 계정, 검수 입력 도구, 생산 배정과 외부 운영 데이터 연동은 MVP 범위 밖이다.

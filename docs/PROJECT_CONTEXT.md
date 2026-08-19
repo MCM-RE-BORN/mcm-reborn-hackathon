@@ -17,13 +17,13 @@ MCM RE:BORN은 사용자가 보유한 MCM 가방을 모바일로 촬영하고, �
 | 구분 | MVP 역할 |
 |---|---|
 | `CUSTOMER` | 촬영·업로드, 사진 기반 AI 예상 분석, 추천·목업 확인, Mock 주문·결제, 변경 조건 승인, 진행·보증서 조회 |
-| `OPERATOR` | 계약상 주문 상태 조회와 guarded lifecycle command를 수행한다. PC `/operations` 통합 콘솔에서 단계별 관리자·장인 담당과 Fixture 목록·상세·다음 단계 진행을 시연하며 주문 전 승인 게이트는 수행하지 않음 |
+| `OPERATOR` | 계약상 주문 상태 조회와 guarded lifecycle command를 수행한다. PC `/operations` 통합 콘솔에서 실제 신청 목록·상세를 조회하고 단계별 관리자·장인 담당과 다음 단계 진행을 처리하며 주문 전 승인 게이트는 수행하지 않음 |
 | 공식 장인 검수 | 별도 인증 역할이 아닌 운영 콘솔의 데모 보기와 Mock 공정. 주문·수거 후 `EXPERT_INSPECTION`에서 실물 조건을 점검 |
 | 채널 | 웹만 지원 |
 
 ## MVP 시스템 경계
 
-- 계약의 분석 모드는 `LIVE`, `SEEDED_ESTIMATE`, `DEMO_FIXTURE`다. 현재 브라우저 데모는 중앙 시나리오의 `DEMO_FIXTURE` 예상치를 사용하며 live 분석 API를 호출하지 않는다.
+- 계약의 분석 모드는 `LIVE`, `SEEDED_ESTIMATE`, `DEMO_FIXTURE`다. 현재 브라우저 분석 화면은 v2 분석 API를 호출하고, 서버의 `DEMO_FIXTURE` 모드에서는 중앙 시나리오의 재현 가능한 예상치를 반환한다.
 - 중앙 시나리오는 원제품 `MCM 비세토스 모노그램 백팩(2019, 5년 이상)`, 희망 제품 `RE:BORN 여권지갑`, 접수 `SUB-RB-20260817-0001`, 주문 `RB-20260817-0001`을 사용한다.
 - AI 사전 분석은 예상 재활용률 72%, 정품 사전 적합도 예상 91%를 표시한다. 91%는 주문 적합 신호이며 정품 확정이 아니다.
 - API 계약상 사진 품질이 분석 기준에 못 미치면 폴백 성공으로 바꾸지 않는다. 구현된 `POST /api/v2/analyses`는 `422 IMAGE_QUALITY_INSUFFICIENT`와 이미지별 재촬영 안내를 반환하고 성공 분석을 만들지 않는다.
@@ -33,14 +33,14 @@ MCM RE:BORN은 사용자가 보유한 MCM 가방을 모바일로 촬영하고, �
 - 결제, 물류, ESG 산식과 보증서는 데모용 Mock이며 실제 상거래·법적 증빙이 아니다.
 - canonical Mock 배송은 주문 `RB-20260817-0001`의 운송장 `DEMO-RB-20260817-0001`, 상태 `DELIVERED`다.
 - 핵심 추천·주문·보증서 시나리오는 `RE:BORN 여권지갑`으로 통일한다. 다른 후보는 비교용 Fixture로 표시할 수 있다.
-- Supabase Auth·RLS는 v2 Route Handler의 계약 경계다. 25개 OpenAPI operation은 23개 Route Handler 파일로 구현됐지만, 현재 고객·운영 콘솔 화면은 중앙 Fixture를 사용하며 이 API에 아직 연결되지 않았다. 실제 Supabase 환경변수·프로젝트·migration 적용과 원격 Auth/RLS/Storage/RPC 동작도 검증되지 않았다.
+- Supabase Auth·RLS는 v2 Route Handler의 계약 경계다. 25개 OpenAPI operation은 23개 Route Handler 파일로 구현됐고, 고객·운영 콘솔은 로그인 세션으로 신청·분석·제품·보증서 API를 호출한다. API가 비어 있거나 인증되지 않으면 빈 상태·로그인·오류 화면을 표시하며 중앙 Fixture로 대체하지 않는다. 실제 CUSTOMER/OPERATOR 자격증명을 사용한 전체 원격 여정은 staging 검증 대상이다.
 - 저장소 루트에는 OpenAPI·Mock·DB·구현 예시가 있고, 실제 웹 앱 루트는 `mcm-reborn/`이다.
 - 앱 구현 상태는 코드와 검증 결과로 판단한다. 과거 문서의 “Next.js 기본 scaffold만 존재” 설명은 historical이다.
-- 현재 웹 라우트에서 `/`와 `/intro`는 서비스 소개를, `/home`은 홈을 렌더한다. 공통 하단 내비게이션의 `/orders`는 신청 목록이고 `/orders/demo`는 선택한 신청 상세다. PC `/operations`와 `/operations/[applicationId]`는 Fixture 기반 최소 운영 콘솔이다. 별도로 `mcm-reborn/app/api/v2/`의 23개 Route Handler 파일이 OpenAPI 25개 operation을 구현하며, UI→API 연결은 후속 통합 작업이다.
+- 현재 웹 라우트에서 `/`와 `/intro`는 서비스 소개를, `/home`은 홈을 렌더한다. 공통 하단 내비게이션의 `/orders`는 Supabase 신청 목록이고 `/orders/demo`는 선택한 신청 상세다. PC `/operations`와 `/operations/[applicationId]`는 OPERATOR 인증으로 실제 신청 목록·상세와 단계 진행 API를 사용하는 운영 콘솔이다. 별도로 `mcm-reborn/app/api/v2/`의 23개 Route Handler 파일이 OpenAPI 25개 operation을 구현한다.
 
 ## 기술 경계
 
-- 실행 앱은 `mcm-reborn/`의 Next.js `16.3.0`, React `19.2.8`, TypeScript strict 구성이다. 서버 코드는 Supabase Auth·Postgres·private Storage를 사용하는 v2 경로를 제공하지만, 실제 Supabase 프로젝트 연결은 미확인이고 브라우저 고객 여정은 Fixture 중심이다.
+- 실행 앱은 `mcm-reborn/`의 Next.js `16.3.0`, React `19.2.8`, TypeScript strict 구성이다. 서버와 브라우저 고객·운영 화면은 Supabase Auth·Postgres·private Storage를 사용하는 v2 경로를 사용하며, 실제 고객 자격증명으로 전체 여정을 검증하는 작업은 남아 있다.
 - 앱은 ESLint `9`, Tailwind CSS `4`를 사용한다. 패키지와 프레임워크 버전은 `mcm-reborn/package.json`과 lockfile을 확인한다.
 - `LIVE` 분석 구현은 서버 전용 키와 공식 OpenAI JavaScript SDK의 Chat Completions Structured Outputs(`chat.completions.parse` + Zod)를 사용한다. 배포 opt-in, 고정된 privacy notice와 요청별 외부 처리 동의가 모두 있어야 하며, 제공자 장애에는 검증된 Fixture로 폴백한다. 실제 OpenAI 호출은 아직 검증되지 않았다.
 - 입력과 AI 응답은 Zod로 검증한다. 현재 목업은 정적 다각도 이미지와 데모 인터랙션이며 `@google/model-viewer` 런타임을 사용하지 않는다. DB의 Product3D 계약은 보존하지만 실제 GLB/poster가 준비되기 전에는 `model_3d_ready=false`로 API 노출을 막는다.

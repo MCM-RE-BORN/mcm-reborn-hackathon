@@ -26,7 +26,7 @@
 
 전문가 점검은 반드시 `ORDER_PLACED → PRODUCT_RECEIVED` 뒤에 수행한다. 주문 전 고객 사진 분석에는 장인 승인 상태를 만들지 않는다.
 
-현재 앱은 Lane A의 완성형 제조 AI 엔진이 아니다. 브라우저 화면은 실제 촬영과 중앙 Fixture 결과를 연결한 데모이고 v2 API에는 아직 연결되지 않았다. 서버에는 7장 분석 Route Handler, 품질 오류, 세 분석 모드와 주문·실물 검수 영속 모델이 구현됐지만, 실제 Supabase/OpenAI 연결과 품질 모델 실행은 미검증이다. provenance hash·`ABSTAIN`·geometry revision·Lane B 재단 데이터는 아직 구현하지 않았다.
+현재 앱은 Lane A의 완성형 제조 AI 엔진이 아니다. 브라우저 화면은 실제 촬영을 v2 분석·제품·신청 API에 연결하고, 서버 `DEMO_FIXTURE` 모드에서는 재현 가능한 예상치를 표시한다. 서버에는 7장 분석 Route Handler, 품질 오류, 세 분석 모드와 주문·실물 검수 영속 모델이 구현됐지만, 실제 CUSTOMER/OPERATOR 전체 여정과 OpenAI LIVE 품질 모델 실행은 staging 검증 대상이다. provenance hash·`ABSTAIN`·geometry revision·Lane B 재단 데이터는 아직 구현하지 않았다.
 
 ## 2. 현재 구현 / 설계 채택 / 보류
 
@@ -37,7 +37,7 @@
 | 브라우저 촬영 | 후면 카메라 우선, 촬영 미리보기·재촬영·파일 선택 폴백. Blob과 입력은 클라이언트 세션 메모리이며 영속 provenance 저장은 없음 |
 | 기본 입력 검증 | 사진 장수·MIME·용량과 카메라 오류를 클라이언트에서 확인. 흔들림·초점·노출·반사 같은 이미지 품질 판정은 하지 않음 |
 | 중앙 Fixture 예상 | 같은 시나리오에서 72%·91%와 `estimateMeta.mode/confidencePercent/notice`를 일관되게 표시하고 v2 분석 서비스도 같은 루트 Fixture를 소비. estimator/ruleset 버전·입력 digest·seed 기록은 없음 |
-| 데모 trace | 화면 Fixture가 접수·주문·보증서 ID와 변경 전후 값을 공유. v2 DB에는 분석·신청·상태·검수·변경안·보증서와 멱등성 구조가 있으나 UI 미연결, 원격 DB 미검증, 제조 geometry revision은 없음 |
+| 데모 trace | 화면이 v2 API의 분석·신청·상태·검수·변경안·보증서 ID를 사용한다. `DEMO_FIXTURE`는 서버 분석 결과에 한정되며, 원격 전체 여정과 제조 geometry revision은 검증·구현 대상 |
 | 품질 오류 계약 | `POST /api/v2/analyses`가 `422 IMAGE_QUALITY_INSUFFICIENT`와 이미지별 재촬영 안내를 구현. 실제 이미지 품질 모델의 staging 실행은 미검증 |
 
 ### 설계 원칙으로 채택 — 구현 예정
@@ -48,7 +48,7 @@
 | 촬영 품질 gate | **계획:** 흔들림·초점·노출·반사·잘림·누락을 판정하고 품질 실패를 분석 성공으로 폴백하지 않음 |
 | 결정론적 예상 | **부분 구현:** 모드·신뢰도·고지는 계약/Fixture에 있음. scenario/model/ruleset 버전, 입력 digest와 seed는 향후 호환 필드로 추가 |
 | 예상/실측 분리 | **부분 구현:** 중앙 Fixture에 주문 전 72%와 실물 검수 후 68%가 분리됨. 범용 `EstimateRun`·measurement revision 영속 모델은 계획 |
-| 동일 주문 trace | **부분 구현:** 데모 ID와 화면 값, v2 DB의 신청·상태 이력·검수·변경안·보증서·멱등 쓰기 구조가 연결됨. UI→API 연결, 원격 DB 검증과 제조 revision audit는 남음 |
+| 동일 주문 trace | **부분 구현:** UI가 v2 DB의 신청·상태 이력·검수·변경안·보증서·멱등 쓰기 구조를 조회·호출한다. 원격 전체 여정과 제조 revision audit는 남음 |
 | 제조 추적 원칙 | **계획:** 원본 패널↔안전 마스크↔2D 패턴↔재단안↔3D UV를 versioned ID로 연결 |
 | `ABSTAIN` | **계획:** 현재 v2 enum/응답에는 독립된 `ABSTAIN` 결과가 없음. 추가 촬영·정보 보완 계약과 함께 additive change로 설계 |
 | 피드백 데이터 | **계획:** 장인 수정 전후, 승인 사유, 실제 해체 면적·손실·제작 결과를 권리·보관 정책과 함께 축적 |
@@ -205,7 +205,7 @@ Order → PhysicalInspection → SourcePanelRevision[]
 ### Stage D — 현재 Demo / Lane A
 
 - 구현됨: 실제 모바일 촬영, 기본 파일 검증, 중앙 Fixture 예상, 정적 추천·목업, Mock 주문·결제 화면, 별도 v2 7장 분석·주문·검수·변경 승인·lifecycle·보증서 Route Handler와 DB 계약.
-- 미구현 또는 미연결: UI→v2 API 연결, 실제 Supabase/OpenAI 검증, 영속 content hash, 독립 EstimateRun, `ABSTAIN`, 제조 geometry revision/audit 저장.
+- 미구현 또는 미연결: 실제 Supabase 전체 여정/OpenAI LIVE 검증, 영속 content hash, 독립 EstimateRun, `ABSTAIN`, 제조 geometry revision/audit 저장.
 - 시나리오: 72%·91% 예상 → 주문 후 `CHANGE_REQUIRED` → 승인 → 68% 보증서 trace.
 - 제외: 실제 polygon/nesting/UV 생성과 제조 가능 확정.
 - Stage D 완료 목표: 같은 입력·버전 결과 일치 100%, 영속 end-to-end trace 100%, 품질 실패 분석 생성 0건, 확정 오인 카피 0건, 골든/복구 경로 통과. 현재 데모 통과 결과를 이 엔진 Gate 달성으로 간주하지 않는다.

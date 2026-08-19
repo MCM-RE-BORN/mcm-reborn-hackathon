@@ -13,16 +13,16 @@
 | 구분 | 현재 상태 |
 |---|---|
 | v2 코드·계약 | 23개 Route Handler 파일·25개 API operation, 인증·검증·서비스, bootstrap과 migration/rollback 구현 |
-| 고객·운영 콘솔 UI | 중앙 Fixture로 시연하며 v2 API에는 아직 연결하지 않음 |
-| 외부 런타임 | 실제 Supabase 프로젝트·환경변수·migration 적용과 OpenAI LIVE 호출은 미연결·미검증 |
+| 고객·운영 콘솔 UI | 고객·운영 API를 호출해 Supabase 결과를 렌더링하며, 인증 실패·빈 결과는 상태 화면으로 표시 |
+| 외부 런타임 | 로컬 Supabase health 연결은 확인했으며, 실제 고객 계정의 전체 7장→주문→배송 여정은 staging 검증 필요 |
 
-따라서 이 브랜치는 **v2 적용 가능한 코드 기준**이지, 실제 Supabase/OpenAI 통합 완료나 운영 준비 완료를 뜻하지 않는다. `GET /api/v2/health`가 로컬에서 `degraded`를 반환하는 것은 외부 설정이 없는 현재 환경에서 의도된 동작이다.
+따라서 이 브랜치는 **v2 API와 브라우저 고객·운영 화면이 연결된 코드 기준**이지, 운영 준비 완료를 뜻하지 않는다. Supabase 설정이 없거나 고객 인증이 실패하면 화면은 임의 Fixture로 대체하지 않고 로그인·오류·빈 상태를 표시한다.
 
 ## 2. 전체 구조
 
 ```mermaid
 flowchart LR
-  UI["현재 고객·운영 UI\n중앙 Fixture"]
+  UI["고객·운영 UI\nv2 API 응답"]
   API["Next.js /api/v2\n23 files / 25 operations"]
   AUTH["Supabase Auth\nCUSTOMER / OPERATOR"]
   DB["Postgres + RLS\nRPC / trigger / history"]
@@ -30,7 +30,7 @@ flowchart LR
   FIXTURE["DEMO_FIXTURE /\nSEEDED_ESTIMATE"]
   LIVE["OpenAI LIVE\nStructured Outputs"]
 
-  UI -. "후속 API 연결" .-> API
+  UI --> API
   API --> AUTH
   API --> DB
   API --> STORAGE
@@ -91,7 +91,7 @@ flowchart LR
 4. 분석 요청의 명시적 외부 AI 처리 동의와 동일한 privacy notice version
 5. 외부 전송 전 동의 증적 저장, 분석 완료 후 생성된 `analysis_id` 연결
 
-동의 증적은 고객이 읽을 수 있고 서버만 쓸 수 있는 `analysis_external_ai_consents`에 보존한다. `analysis_id` 연결은 같은 고객의 `COMPLETED` 분석에 `NULL → UUID`로 한 번만 허용하고, 연결된 분석 삭제로 증적이 사라지지 않도록 FK는 `ON DELETE RESTRICT`다. 현재 브라우저 데모는 `DEMO_FIXTURE`를 사용하므로 외부 이미지 전송이 필요 없다. 실제 LIVE 호출과 동의 증적의 원격 DB 동작은 staging에서 별도 검증해야 한다.
+동의 증적은 고객이 읽을 수 있고 서버만 쓸 수 있는 `analysis_external_ai_consents`에 보존한다. `analysis_id` 연결은 같은 고객의 `COMPLETED` 분석에 `NULL → UUID`로 한 번만 허용하고, 연결된 분석 삭제로 증적이 사라지지 않도록 FK는 `ON DELETE RESTRICT`다. 브라우저 고객 흐름은 캡처·분석·추천·신청·조회 단계에서 v2 API를 호출하며, `AI_MODE=DEMO_FIXTURE`에서는 분석 결과만 서버 Fixture에서 생성한다. 실제 LIVE 호출과 동의 증적의 원격 DB 동작은 staging에서 별도 검증해야 한다.
 
 ## 6. 추천·제품 계약
 
@@ -206,4 +206,4 @@ PRODUCTION_READY → IN_PRODUCTION → QUALITY_CHECK
 - 동일·충돌 멱등 요청과 RPC 원자성 검증
 - `LIVE` opt-in·notice·요청 동의·증적 저장과 OpenAI 성공/장애 폴백 검증
 
-현재 작업 환경에는 실제 Supabase URL/key, `.env.local`, CLI link, migration 적용 로그와 OpenAI 호출 증거가 없다. 자동 API 통합 테스트와 disposable Supabase runtime도 없다. lint·typecheck·build·정적 계약 검증 성공은 이 원격 통합 검증을 대신하지 않는다.
+현재 작업 환경에는 유효한 `.env.local`과 Supabase health 연결이 있으나, 저장소에 비밀값·CLI 링크·migration 적용 로그를 남기지 않는다. 실제 CUSTOMER/OPERATOR 자격증명으로 7장 분석→신청→결제→운영 전이→보증서까지 호출하는 통합 검증과 OpenAI LIVE 호출 증거는 아직 없다. lint·typecheck·build·정적 계약 검증 성공은 이 원격 통합 검증을 대신하지 않는다.
