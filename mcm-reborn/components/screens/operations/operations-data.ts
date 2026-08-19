@@ -6,8 +6,18 @@ import {
 
 export const OPERATION_STATUSES = [
   "PENDING_PAYMENT",
-  ...APPLICATION_LIFECYCLE_SEQUENCE,
+  "ORDER_PLACED",
+  "PICKUP_SCHEDULED",
+  "PICKUP_IN_PROGRESS",
+  "PRODUCT_RECEIVED",
+  "EXPERT_INSPECTION",
   "CHANGE_APPROVAL_REQUIRED",
+  "PRODUCTION_READY",
+  "IN_PRODUCTION",
+  "QUALITY_CHECK",
+  "SHIPPED",
+  "DELIVERED",
+  "COMPLETED",
   "PRODUCTION_UNAVAILABLE",
   "CANCELED",
 ] as const;
@@ -17,7 +27,7 @@ export type OperationStatus = (typeof OPERATION_STATUSES)[number];
 type StagePresentation = {
   description: string;
   label: string;
-  owner: "관리자" | "장인";
+  owner: "관리자" | "장인" | "고객";
 };
 
 export const OPERATION_STAGE_PRESENTATION: Record<
@@ -87,7 +97,7 @@ export const OPERATION_STAGE_PRESENTATION: Record<
   CHANGE_APPROVAL_REQUIRED: {
     description: "실물 검수로 변경된 조건에 대한 고객 승인을 기다립니다.",
     label: "고객 승인 대기",
-    owner: "관리자",
+    owner: "고객",
   },
   PRODUCTION_UNAVAILABLE: {
     description: "실물 검수 결과 제작을 진행할 수 없습니다.",

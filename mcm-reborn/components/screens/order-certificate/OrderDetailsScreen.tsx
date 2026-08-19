@@ -108,6 +108,10 @@ export function OrderDetailsScreen({
   const [shipment, setShipment] = useState<CustomerShipment | null>(null);
   const [changeRequest, setChangeRequest] =
     useState<CustomerChangeRequest | null>(null);
+  const [changeRequestResolved, setChangeRequestResolved] = useState(false);
+  const [localEffectiveStatus, setLocalEffectiveStatus] = useState<string | null>(
+    null,
+  );
   const [requestError, setRequestError] = useState(false);
   const [decisionPending, setDecisionPending] = useState(false);
 
@@ -118,6 +122,14 @@ export function OrderDetailsScreen({
     let cancelled = false;
     async function loadApplication() {
       try {
+        setApplication(null);
+        setTimeline(null);
+        setAnalysis(null);
+        setShipment(null);
+        setChangeRequest(null);
+        setChangeRequestResolved(false);
+        setLocalEffectiveStatus(null);
+        setRequestError(false);
         const detail = await customerFetch<CustomerApplicationDetail>(
           `/api/v2/applications/${applicationId}`,
         );
@@ -149,12 +161,14 @@ export function OrderDetailsScreen({
         if (shipmentResult.status === "fulfilled") {
           setShipment(shipmentResult.value);
         }
-        if (changeResult.status === "fulfilled") {
-          setChangeRequest(changeResult.value);
-        }
+        setChangeRequest(
+          changeResult.status === "fulfilled" ? changeResult.value : null,
+        );
+        setChangeRequestResolved(true);
       } catch {
         if (!cancelled) {
           setRequestError(true);
+          setChangeRequestResolved(true);
         }
       }
     }
@@ -170,7 +184,13 @@ export function OrderDetailsScreen({
     }
     setDecisionPending(true);
     try {
-      await customerFetch(
+      const response = await customerFetch<{
+        applicationId: string;
+        applicationStatus: string;
+        changeRequestId: string;
+        decision: "APPROVED" | "REJECTED";
+        respondedAt: string;
+      }>(
         `/api/v2/applications/${applicationId}/change-request/${decision}`,
         {
           body:
@@ -180,14 +200,64 @@ export function OrderDetailsScreen({
           method: "POST",
         },
       );
-      window.location.reload();
+      const nextStatus = response.applicationStatus;
+      const nextChangeStatus =
+        response.decision === "APPROVED" ? "APPROVED" : "REJECTED";
+      setLocalEffectiveStatus(nextStatus);
+      setChangeRequest((current) =>
+        current
+          ? {
+              ...current,
+              respondedAt: response.respondedAt,
+              status: nextChangeStatus,
+            }
+          : current,
+      );
+      setApplication((current) =>
+        current
+          ? {
+              ...current,
+              effectiveStatus: nextStatus,
+              finalTerms:
+                response.decision === "APPROVED"
+                  ? changeRequest?.proposedTerms ?? current.finalTerms
+                  : current.finalTerms,
+              persistedStatus: nextStatus,
+              status: nextStatus,
+            }
+          : current,
+      );
+      setTimeline((current) =>
+        current
+          ? {
+              ...current,
+              effectiveStatus: nextStatus,
+              refreshedAt: new Date().toISOString(),
+              steps: current.steps.map((step) =>
+                step.status === nextStatus
+                  ? { ...step, state: "CURRENT" as const }
+                  : step.status === "CHANGE_APPROVAL_REQUIRED"
+                    ? { ...step, state: "COMPLETED" as const }
+                    : step,
+              ),
+            }
+          : current,
+      );
+      setDecisionPending(false);
     } catch {
       setRequestError(true);
       setDecisionPending(false);
     }
   }
 
-  const effectiveStatus = timeline?.effectiveStatus ?? application?.effectiveStatus;
+  const hasPendingChange =
+    changeRequestResolved && changeRequest?.status === "PENDING";
+  // A pending inspection change is authoritative for the customer-facing
+  // journey. This also repairs older rows where an operator advanced the
+  // application before the customer's decision was recorded.
+  const effectiveStatus = hasPendingChange
+    ? "CHANGE_APPROVAL_REQUIRED"
+    : localEffectiveStatus ?? timeline?.effectiveStatus ?? application?.effectiveStatus;
   const stage = effectiveStatus
     ? applicationStatusToOrderStage(effectiveStatus)
     : null;
@@ -214,7 +284,6 @@ export function OrderDetailsScreen({
   ]
     .filter(Boolean)
     .join(" ");
-  const hasPendingChange = changeRequest?.status === "PENDING";
   const certificateHref =
     effectiveStatus === "COMPLETED"
       ? `/certificates/demo?applicationId=${applicationId}&state=issued`
@@ -251,7 +320,7 @@ export function OrderDetailsScreen({
             subject="신청 상세"
           />
         </div>
-      ) : !application || !stage || !stageCopy ? (
+      ) : !application || !changeRequestResolved || !stage || !stageCopy ? (
         <div className={styles.stateInset}>
           <StatusPanel
             description="Supabase에서 신청 상태와 분석 결과를 불러오고 있습니다."

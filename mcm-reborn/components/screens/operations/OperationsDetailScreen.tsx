@@ -68,25 +68,35 @@ export function OperationsDetailScreen({
     }
 
     let cancelled = false;
-    operatorFetch<OperatorApplicationDetail>(
-      `/api/v2/admin/applications/${applicationId}`,
-    )
-      .then((response) => {
+    async function loadDetail() {
+      try {
+        const response = await operatorFetch<OperatorApplicationDetail>(
+          `/api/v2/admin/applications/${applicationId}`,
+        );
         if (!cancelled) {
           setLiveDetail(response);
           setLiveStatus(readOperationStatus(response.application.effectiveStatus));
+          setLiveError(false);
         }
-      })
-      .catch(() => {
+      } catch {
         if (!cancelled) {
           setLiveError(true);
         }
-      });
+      }
+    }
+    void loadDetail();
+    const pollId =
+      liveStatus === "CHANGE_APPROVAL_REQUIRED"
+        ? window.setInterval(() => void loadDetail(), 2500)
+        : null;
 
     return () => {
       cancelled = true;
+      if (pollId !== null) {
+        window.clearInterval(pollId);
+      }
     };
-  }, [applicationId, found, reloadToken]);
+  }, [applicationId, found, liveStatus, reloadToken]);
 
   if (!found) {
     return (
@@ -567,6 +577,12 @@ export function OperationsDetailScreen({
                   </p>
                 ) : null}
               </>
+            ) : viewStatus === "CHANGE_APPROVAL_REQUIRED" ? (
+              <div className={styles.completeState}>
+                <span aria-hidden="true">…</span>
+                <strong>고객의 변경 조건 승인을 기다리고 있습니다.</strong>
+                <p>고객이 승인하면 제작 시작 단계가 자동으로 열립니다.</p>
+              </div>
             ) : (
               <div className={styles.completeState}>
                 <span aria-hidden="true">✓</span>
