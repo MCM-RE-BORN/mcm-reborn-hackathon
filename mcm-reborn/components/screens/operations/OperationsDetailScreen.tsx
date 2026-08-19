@@ -33,6 +33,11 @@ type OperationsDetailScreenProps = {
   found: boolean;
 };
 
+type InspectionOutcome =
+  | "NO_CHANGE"
+  | "CHANGE_REQUIRED"
+  | "PRODUCTION_UNAVAILABLE";
+
 const TIMELINE_STATUSES = [
   "ORDER_PLACED",
   "PRODUCT_RECEIVED",
@@ -54,6 +59,8 @@ export function OperationsDetailScreen({
   const [reloadToken, setReloadToken] = useState(0);
   const [actionError, setActionError] = useState<string | null>(null);
   const [isActionPending, setIsActionPending] = useState(false);
+  const [inspectionOutcome, setInspectionOutcome] =
+    useState<InspectionOutcome>("CHANGE_REQUIRED");
 
   useEffect(() => {
     if (!found) {
@@ -146,6 +153,30 @@ export function OperationsDetailScreen({
   const pickupDate = readString(liveApplication.pickupSchedule, "requestedDate");
   const pickupTime = readString(liveApplication.pickupSchedule, "timeWindow");
   const sourceCategory = readNestedString(liveDetail.analysis, "sourceProduct", "category") ?? "-";
+  const inspectionProposedTerms = liveApplication.initialTerms
+    ? {
+        amount: {
+          amount: liveApplication.initialTerms.amount.amount + 15_000,
+          currency: "KRW",
+        },
+        estimatedDuration: "4~5주",
+        estimatedReusableMaterialRate: Math.max(
+          0,
+          liveApplication.initialTerms.estimatedReusableMaterialRate - 4,
+        ),
+        productId: liveApplication.product.id,
+      }
+    : null;
+  const inspectionTargetStatus =
+    inspectionOutcome === "CHANGE_REQUIRED"
+      ? "CHANGE_APPROVAL_REQUIRED"
+      : inspectionOutcome === "PRODUCTION_UNAVAILABLE"
+        ? "PRODUCTION_UNAVAILABLE"
+        : "PRODUCTION_READY";
+  const displayedTargetStatus =
+    transition?.mode === "inspection-api"
+      ? inspectionTargetStatus
+      : transition?.targetStatus;
 
   async function handleAdvance() {
     if (!transition || isActionPending || !liveDetail) {
@@ -169,9 +200,17 @@ export function OperationsDetailScreen({
             body: JSON.stringify({
               confirmedReusableAreaCm2: confirmedArea,
               confirmedReusableMaterialRate: displayedReuseRate,
-              outcome: "NO_CHANGE",
-              reason: "장인 실물 검수를 완료했습니다. 제작을 진행합니다.",
-              proposedTerms: null,
+              outcome: inspectionOutcome,
+              reason:
+                inspectionOutcome === "CHANGE_REQUIRED"
+                  ? "장인 실물 검수 결과 제작 조건 변경이 필요합니다. 고객 승인을 요청합니다."
+                  : inspectionOutcome === "PRODUCTION_UNAVAILABLE"
+                    ? "장인 실물 검수 결과 현재 조건으로 제작을 진행할 수 없습니다."
+                    : "장인 실물 검수를 완료했습니다. 기존 조건으로 제작을 진행합니다.",
+              proposedTerms:
+                inspectionOutcome === "CHANGE_REQUIRED"
+                  ? inspectionProposedTerms
+                  : null,
             }),
             headers: {
               "Idempotency-Key": `operations-v2-${applicationId}-inspection-${viewStatus}`,
@@ -429,16 +468,93 @@ export function OperationsDetailScreen({
               <>
                 <span>다음 단계</span>
                 <strong>
-                  {OPERATION_STAGE_PRESENTATION[transition.targetStatus].label}
+                  {displayedTargetStatus
+                    ? OPERATION_STAGE_PRESENTATION[displayedTargetStatus].label
+                    : "확인 필요"}
                 </strong>
-                <p>{transition.note}</p>
+                <p>
+                  {transition.mode === "inspection-api"
+                    ? inspectionOutcome === "CHANGE_REQUIRED"
+                      ? "검수 결과와 변경 조건을 고객에게 보내 승인받습니다."
+                      : inspectionOutcome === "PRODUCTION_UNAVAILABLE"
+                        ? "제작 불가 사유를 기록하고 고객에게 안내합니다."
+                        : transition.note
+                    : transition.note}
+                </p>
+                {transition.mode === "inspection-api" ? (
+                  <fieldset className={styles.inspectionChoice}>
+                    <legend>실물 검수 결과를 선택하세요</legend>
+                    <label>
+                      <input
+                        checked={inspectionOutcome === "CHANGE_REQUIRED"}
+                        name="inspection-outcome"
+                        onChange={() => setInspectionOutcome("CHANGE_REQUIRED")}
+                        type="radio"
+                      />
+                      <span>
+                        <strong>조건 변경 필요</strong>
+                        <small>고객 승인 후 제작을 시작합니다.</small>
+                      </span>
+                    </label>
+                    <label>
+                      <input
+                        checked={inspectionOutcome === "NO_CHANGE"}
+                        name="inspection-outcome"
+                        onChange={() => setInspectionOutcome("NO_CHANGE")}
+                        type="radio"
+                      />
+                      <span>
+                        <strong>변경 없음</strong>
+                        <small>기존 예상 조건으로 제작 준비를 진행합니다.</small>
+                      </span>
+                    </label>
+                    <label>
+                      <input
+                        checked={inspectionOutcome === "PRODUCTION_UNAVAILABLE"}
+                        name="inspection-outcome"
+                        onChange={() =>
+                          setInspectionOutcome("PRODUCTION_UNAVAILABLE")
+                        }
+                        type="radio"
+                      />
+                      <span>
+                        <strong>제작 불가</strong>
+                        <small>사유를 기록하고 취소·환불 절차로 전환합니다.</small>
+                      </span>
+                    </label>
+                    {inspectionOutcome === "CHANGE_REQUIRED" &&
+                    inspectionProposedTerms ? (
+                      <KeyValueList
+                        className={styles.inspectionProposedTerms}
+                        items={[
+                          {
+                            label: "변경 제작비",
+                            value: `${inspectionProposedTerms.amount.amount.toLocaleString("ko-KR")}원`,
+                          },
+                          {
+                            label: "변경 제작 기간",
+                            value: inspectionProposedTerms.estimatedDuration,
+                          },
+                          {
+                            label: "변경 재사용률",
+                            value: `${inspectionProposedTerms.estimatedReusableMaterialRate}%`,
+                          },
+                        ]}
+                      />
+                    ) : null}
+                  </fieldset>
+                ) : null}
                 <Button
                   fullWidth
                   size="large"
                   disabled={isActionPending}
                   onClick={handleAdvance}
                 >
-                  {isActionPending ? "처리 중..." : transition.label}
+                  {isActionPending
+                    ? "처리 중..."
+                    : transition.mode === "inspection-api"
+                      ? "실물 검수 저장"
+                      : transition.label}
                 </Button>
                 <small>
                   {transition.mode === "inspection-api"
