@@ -8,6 +8,11 @@ export const RECOMMENDATION_CATEGORIES = [
 export type RecommendationCategory =
   (typeof RECOMMENDATION_CATEGORIES)[number]["id"];
 
+// The seeded passport-wallet row is the canonical demo destination for every
+// visual candidate. The API id is preferred when it is available.
+export const DEMO_PASSPORT_PRODUCT_ID =
+  "10000000-0000-4000-8000-000000000001";
+
 type RecommendationProduct = {
   detailHref?: string;
   id: string;
@@ -85,6 +90,11 @@ export const RECOMMENDATION_PRODUCTS: Record<
       image: "/assets/mvp-beta/recommendation-zip-wallet.png",
       name: "비세토스 지퍼 지갑",
     },
+    {
+      id: "studded-wallet",
+      image: "/assets/mvp-beta/recommendation-studded-wallet.png",
+      name: "비세토스 스터드 지갑",
+    },
   ],
   pouch: [
     {
@@ -97,12 +107,32 @@ export const RECOMMENDATION_PRODUCTS: Record<
       image: "/assets/mvp-beta/recommendation-crossbody-wallet.png",
       name: "비세토스 크로스바디 파우치",
     },
+    {
+      id: "travel-mini-pouch",
+      image: "/assets/mvp-beta/figma-travel-mini-pouch.png",
+      name: "미니 Ottomar 비세토스 파우치",
+    },
+    {
+      id: "travel-toiletry-pouch",
+      image: "/assets/mvp-beta/figma-travel-toiletry-bag.png",
+      name: "Ottomar 비세토스 토일레트리 파우치",
+    },
   ],
   keyring: [
     {
       id: "keyring",
       image: "/assets/mvp-beta/recommendation-keyring-v2.webp",
       name: "비세토스 키링",
+    },
+    {
+      id: "tag-keyring",
+      image: "/assets/mvp-beta/recommendation-luggage-name-tag-v2.webp",
+      name: "비세토스 태그 키링",
+    },
+    {
+      id: "chain-keyring",
+      image: "/assets/mvp-beta/recommendation-chain-wallet.png",
+      name: "비세토스 체인 키링",
     },
   ],
 };

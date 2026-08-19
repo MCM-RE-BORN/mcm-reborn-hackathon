@@ -326,10 +326,37 @@
   background: var(--color-transparent);
 }
 
-.productCardSelectable:focus-visible .productImage,
-.productCardSelectable:hover .productImage {
+.productCardCandidate {
+  position: relative;
+  color: inherit;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.productCardCandidate:focus-visible {
   outline: var(--border-focus) solid var(--color-ink);
-  outline-offset: var(--space-2);
+  outline-offset: var(--space-3);
+}
+
+.productCardCandidate:hover .productImage,
+.productCardCandidate:focus-visible .productImage {
+  box-shadow: 0 0.5rem 1.25rem rgb(17 17 17 / 12%);
+}
+
+.productCardCandidate:hover .productImage img,
+.productCardCandidate:focus-visible .productImage img {
+  transform: scale(1.04);
+}
+
+.productCardCandidate:hover .productName,
+.productCardCandidate:focus-visible .productName {
+  text-decoration: underline;
+  text-underline-offset: var(--space-2);
+}
+
+.productCardCandidate:hover .productHoverLabel,
+.productCardCandidate:focus-visible .productHoverLabel {
+  opacity: 1;
 }
 
 .productImage {
@@ -343,6 +370,25 @@
 
 .productImage img {
   object-fit: contain;
+  transition: transform 180ms ease;
+}
+
+.productHoverLabel {
+  position: absolute;
+  right: var(--space-5);
+  bottom: var(--space-5);
+  left: var(--space-5);
+  z-index: 1;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-control);
+  background: rgb(17 17 17 / 84%);
+  color: var(--color-canvas);
+  font-size: var(--font-size-caption);
+  line-height: var(--line-height-tight);
+  opacity: 0;
+  pointer-events: none;
+  text-align: center;
+  transition: opacity 180ms ease;
 }
 
 .recommendationBadge {
@@ -638,6 +684,11 @@
   .recommendationHeader::after,
   .recommendationTrackAnimated {
     animation: none;
+  }
+
+  .productCardCandidate .productImage img,
+  .productCardCandidate .productHoverLabel {
+    transition: none;
   }
 
   .recommendationHeader::after {

@@ -9,13 +9,14 @@ import { StatusPanel } from "@/components/ui/StatusPanel";
 import { DemoStatePanel } from "./DemoStatePanel";
 import {
   RECOMMENDATION_CATEGORIES,
+  RECOMMENDATION_PRODUCTS,
+  DEMO_PASSPORT_PRODUCT_ID,
   type RecommendationCategory,
 } from "./recommendation-catalog";
 import styles from "./analysis-design.module.css";
 import type { DemoState } from "./types";
 import {
   customerFetch,
-  readImageUrl,
   type CustomerProduct,
 } from "../order-certificate/customer-client";
 
@@ -92,9 +93,17 @@ export function RecommendationScreen({
   }, [analysisId, state]);
 
   const visibleProducts = useMemo(
-    () => (products ?? []).filter((product) => matchesCategory(product, category)),
-    [category, products],
+    () => RECOMMENDATION_PRODUCTS[category],
+    [category],
   );
+
+  const passportProductId =
+    products?.find((product) => product.code === "REBORN_PASSPORT_WALLET")?.id ??
+    DEMO_PASSPORT_PRODUCT_ID;
+
+  const passportMockupHref = analysisId
+    ? `/submissions/demo/designs/passport-wallet?analysisId=${encodeURIComponent(analysisId)}&productId=${encodeURIComponent(passportProductId)}`
+    : "/submissions/demo/designs/passport-wallet";
 
   if (state !== "normal") {
     return (
@@ -158,8 +167,6 @@ export function RecommendationScreen({
             className={styles.recommendationTrack}
           >
             {visibleProducts.map((item, index) => {
-              const image = readImageUrl(item.listImage);
-              const selectable = item.code === "REBORN_PASSPORT_WALLET";
               const cardContent = (
                 <>
                   <span className={styles.productImage}>
@@ -168,25 +175,24 @@ export function RecommendationScreen({
                       fill
                       loading={index < 4 ? "eager" : "lazy"}
                       sizes="(max-width: 402px) 42vw, 168px"
-                      src={image}
+                      src={item.image}
                     />
+                    <span aria-hidden="true" className={styles.productHoverLabel}>
+                      여권지갑 목업 보기
+                    </span>
                   </span>
                   <span className={styles.productName}>{item.name}</span>
                 </>
               );
               return (
                 <li key={item.id}>
-                  {selectable ? (
-                    <Link
-                      aria-label={`${item.name} 선택하고 3D 목업 확인하기`}
-                      className={`${styles.productCard} ${styles.productCardSelectable}`}
-                      href={`/submissions/demo/designs/passport-wallet?analysisId=${analysisId}&productId=${item.id}`}
-                    >
-                      {cardContent}
-                    </Link>
-                  ) : (
-                    <article className={styles.productCard}>{cardContent}</article>
-                  )}
+                  <Link
+                    aria-label={`${item.name} 선택하고 여권지갑 목업 확인하기`}
+                    className={`${styles.productCard} ${styles.productCardCandidate}`}
+                    href={passportMockupHref}
+                  >
+                    {cardContent}
+                  </Link>
                 </li>
               );
             })}
@@ -199,17 +205,4 @@ export function RecommendationScreen({
       </div>
     </AppShell>
   );
-}
-
-function matchesCategory(product: CustomerProduct, category: RecommendationCategory) {
-  if (category === "travel") {
-    return product.code === "REBORN_PASSPORT_WALLET";
-  }
-  if (category === "wallet") {
-    return product.code === "REBORN_CARD_WALLET";
-  }
-  if (category === "keyring") {
-    return product.code === "REBORN_KEYRING";
-  }
-  return product.code === "REBORN_NAME_TAG";
 }
