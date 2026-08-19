@@ -556,6 +556,10 @@
   background: var(--color-surface);
 }
 
+.productStoryImage {
+  position: relative;
+}
+
 .productStoryFigure figcaption {
   color: var(--color-muted);
   font-size: var(--font-size-label);
@@ -586,7 +590,8 @@
   object-fit: contain;
 }
 
-.galleryItem figcaption {
+.galleryItem figcaption,
+.productStoryTag {
   position: absolute;
   right: var(--space-5);
   bottom: var(--space-5);

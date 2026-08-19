@@ -193,13 +193,16 @@ export function MockupDetailScreen({ analysisId, productId, state }: MockupDetai
             </section>
 
             <figure className={styles.productStoryFigure}>
-              <Image
-                alt="RE:BORN 여권지갑을 펼친 내부 구성"
-                height={770}
-                sizes="(max-width: 402px) calc(100vw - 40px), 350px"
-                src="/assets/mvp-beta/passport-wallet/open-inside.jpg"
-                width={750}
-              />
+              <div className={styles.productStoryImage}>
+                <Image
+                  alt="RE:BORN 여권지갑을 펼친 내부 구성"
+                  height={770}
+                  sizes="(max-width: 402px) calc(100vw - 40px), 350px"
+                  src="/assets/mvp-beta/passport-wallet/open-inside.jpg"
+                  width={750}
+                />
+                <span className={styles.productStoryTag}>내부 구성</span>
+              </div>
               <figcaption>
                 여권과 카드, 지퍼 포켓을 한 번에 정리할 수 있는 내부 구성입니다.
               </figcaption>
