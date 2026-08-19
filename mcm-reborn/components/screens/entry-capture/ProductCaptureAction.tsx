@@ -10,7 +10,11 @@ import {
   type CaptureSlotId,
 } from "./capture-config";
 import { captureCount } from "./capture-progress";
-import { useCaptureSession } from "./CaptureSessionProvider";
+import {
+  DESIRED_USE_OPTIONS,
+  USE_DURATION_OPTIONS,
+  useCaptureSession,
+} from "./CaptureSessionProvider";
 import { customerFetch } from "../order-certificate/customer-client";
 
 type ProductCaptureActionProps = {
@@ -26,11 +30,15 @@ export function ProductCaptureAction({
   const [submitError, setSubmitError] = useState<string | null>(null);
   const completedCount = captureCount(captures, capturedSlots);
   const remainingCount = Math.max(MIN_REQUIRED_CAPTURES - completedCount, 0);
+  const normalizedUseDuration =
+    productDetails.useDuration.trim() || USE_DURATION_OPTIONS[0];
+  const normalizedDesiredUse =
+    productDetails.desiredUse.trim() || DESIRED_USE_OPTIONS[0];
   const hasRequiredDetails = Boolean(
     productDetails.category &&
       productDetails.purchaseYear.trim() &&
-      productDetails.useDuration.trim() &&
-      productDetails.desiredUse.trim(),
+      normalizedUseDuration &&
+      normalizedDesiredUse,
   );
 
   async function submitAnalysis() {
@@ -83,12 +91,12 @@ export function ProductCaptureAction({
         body: JSON.stringify({
           category: productDetails.category,
           conditionNote: productDetails.conditionNote || undefined,
-          desiredUse: productDetails.desiredUse,
+          desiredUse: normalizedDesiredUse,
           imageAssetIds: presignedAssets.map((asset) => asset.assetId),
           locale: "ko-KR",
           purchaseYear: Number(productDetails.purchaseYear),
           serialNumber: productDetails.serialNumber || undefined,
-          useDuration: productDetails.useDuration,
+          useDuration: normalizedUseDuration,
         }),
         method: "POST",
       });
