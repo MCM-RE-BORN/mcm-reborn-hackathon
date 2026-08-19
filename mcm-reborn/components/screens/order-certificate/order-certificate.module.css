@@ -344,7 +344,8 @@
   justify-content: space-between;
 }
 
-.ordersListHeader h2 {
+.ordersListHeader h2,
+.ordersListHeader h3 {
   font-size: var(--font-size-control);
   font-weight: var(--font-weight-semibold);
   line-height: var(--line-height-tight);
@@ -358,6 +359,37 @@
 .ordersList {
   display: grid;
   gap: var(--space-9);
+}
+
+.orderHistoryTabs {
+  display: grid;
+  min-height: var(--control-height-lg);
+  grid-template-columns: repeat(2, minmax(var(--space-0), 1fr));
+  padding: var(--space-1);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+}
+
+.orderHistoryTabs a {
+  display: flex;
+  min-height: var(--touch-target-min);
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  border-radius: calc(var(--radius-control) - var(--space-1));
+  color: var(--color-muted);
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-semibold);
+}
+
+.orderHistoryTabs a span {
+  font-size: var(--font-size-label);
+}
+
+.orderHistoryTabs .orderHistoryTabActive {
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  box-shadow: 0 var(--border-hairline) var(--space-3) rgb(0 0 0 / 8%);
 }
 
 .ordersListCard {
@@ -452,6 +484,30 @@
   background: var(--color-surface);
   font-size: var(--font-size-body);
   font-weight: var(--font-weight-semibold);
+}
+
+.ordersListCardActions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(var(--space-0), 1fr));
+  gap: var(--space-5);
+}
+
+.ordersListCardActions > :only-child {
+  grid-column: 1 / -1;
+}
+
+.ordersListCertificateAction {
+  display: inline-flex;
+  min-height: var(--control-height-sm);
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-5) var(--space-7);
+  border: var(--border-hairline) solid var(--color-ink);
+  border-radius: var(--radius-control);
+  color: var(--color-ink);
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-semibold);
+  text-align: center;
 }
 
 .ordersListCardAction img {

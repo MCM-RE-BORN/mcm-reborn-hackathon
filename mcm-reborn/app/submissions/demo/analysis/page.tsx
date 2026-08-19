@@ -13,7 +13,11 @@ type AnalysisPageProps = {
 export default async function AnalysisPage({
   searchParams,
 }: AnalysisPageProps) {
-  const { state } = await searchParams;
+  const query = await searchParams;
+  const { state } = query;
+  const analysisId = Array.isArray(query.analysisId)
+    ? query.analysisId[0]
+    : query.analysisId;
 
-  return <AnalysisResultScreen state={readDemoState(state)} />;
+  return <AnalysisResultScreen analysisId={analysisId} state={readDemoState(state)} />;
 }

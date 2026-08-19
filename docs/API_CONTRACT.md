@@ -11,7 +11,7 @@
 - 현재 계약 버전은 `openapi.yaml`의 `info.version`, 기준 브랜치는 `develop`을 따른다.
 - 현행 제품 계약은 **API 계약 v2.0.0**이고, `openapi.yaml`은 **OpenAPI 3.1.0** 형식이다. 제품 계약 버전과 명세 형식 버전을 혼용하지 않는다.
 
-현재 실행 앱에는 운영자용 `POST /api/v2/admin/applications/{applicationId}/lifecycle-commands` Route Handler만 구현되어 있다. 이 경로는 Supabase 환경변수·인증 사용자·migration이 준비된 환경에서 동작한다. 실물 검수를 포함한 나머지 OpenAPI 경로는 아직 Route Handler가 없으므로 아래 계약 전체가 현재 브라우저 앱에서 실행된다는 뜻은 아니다.
+현재 실행 앱에는 `openapi.yaml`의 25개 API operation을 구현하는 23개 `/api/v2` Route Handler 파일이 있고, 고객·운영 콘솔 화면도 로그인 세션을 통해 이 API를 호출한다. API가 비어 있으면 빈 상태를, 인증·네트워크 오류면 오류 상태를 표시하며 중앙 Fixture로 조용히 대체하지 않는다. 실제 CUSTOMER/OPERATOR 자격증명을 사용한 전체 원격 여정과 OpenAI LIVE 호출은 별도 staging 검증으로 구분한다. 상세 구조는 [`BACKEND_V2_DESIGN.md`](./BACKEND_V2_DESIGN.md)를 따른다.
 
 파일이 서로 다르면 조용히 UI만 우회하지 않는다. Canonical 흐름을 기준으로 차이, 소비자와 데이터 영향, 호환 가능한 선택지와 롤백을 기록하고 OpenAPI·Mock·DB·클라이언트·문서를 같은 변경 단위에서 정합화한다.
 
@@ -27,10 +27,12 @@
 
 ## 현재 MVP 불변조건
 
-- 분석 업로드는 좌측면·우측면·하단·후면 4슬롯이 모두 필수다. 허용 형식은 JPG/JPEG·PNG, 파일당 최대 10MB다. Presign은 점진 업로드를 위해 한 번에 1~4개를 허용하고, 최종 `POST /analyses`는 네 자산 ID를 슬롯 순서대로 받는다.
+- 분석 업로드는 정면·후면·상단·하단·좌측면·우측면 6면과 일련번호 사진, 총 7슬롯이 모두 필수다. 허용 형식은 JPG/JPEG·PNG, 파일당 최대 10MB다. Presign은 점진 업로드를 위해 한 번에 1~4개를 허용하므로 7장은 여러 요청으로 올릴 수 있고, 최종 `POST /analyses`는 일곱 자산 ID를 이 슬롯 순서대로 받는다.
+- private Storage INSERT는 같은 사용자·경로의 `PENDING` `media_assets` metadata가 먼저 존재해야 한다. 고객 삭제는 소유 `PENDING` 자산이면서 분석에 연결되지 않은 경우만 허용한다.
 - `POST /analyses`의 사진 품질 미달은 `422 IMAGE_QUALITY_INSUFFICIENT`다. `details.imageQuality.status`는 `RECAPTURE_REQUIRED`이며 각 문제에는 `assetId`, 문제 코드와 `guidanceKo`가 있다.
 - 사진 품질 미달은 AI 제공자 장애가 아니므로 hybrid 폴백으로 성공 처리하지 않고 성공 분석도 생성하지 않는다.
 - AI 분석 결과는 실제 모델, 중앙 Fixture 또는 재현 가능한 예상치일 수 있으며 분석 모드를 식별할 수 있어야 한다.
+- `LIVE` 외부 이미지 처리는 배포 opt-in·고정 privacy notice·요청별 명시 동의와 증적 저장이 모두 필요하다. OpenAI 제공자 장애는 `DEMO_FIXTURE`로 폴백할 수 있지만 이미지 품질 실패는 폴백하지 않는다.
 - 정품 사전 적합도는 주문 참고용 예상 신호다. 정품·가품 확정값으로 표시하지 않는다.
 - UI의 `AI_COMPLETED`는 API `AnalysisStatus=COMPLETED`와 `authenticityPrecheck.status=ORDER_ELIGIBLE`의 조합이며, `AI_INELIGIBLE`은 같은 API 완료 상태와 `INELIGIBLE` 판정의 조합이다. 두 UI 상태를 별도 API enum으로 추가하지 않는다.
 - 골든 시나리오의 예상 재활용률은 72%, 정품 사전 적합도 예상은 91%이며 주문 적합 경로로 진행한다.
@@ -44,6 +46,7 @@
 - canonical 배송 Fixture는 주문 `RB-20260817-0001`의 운송장 `DEMO-RB-20260817-0001`, 상태 `DELIVERED`다.
 - `COMPLETED` 뒤에만 보증서 `ESG-RB-20260817-0001`을 발급하며 최종 재활용률 68%, 예상 탄소 절감량 3.43kg CO2e를 사용한다.
 - 접수 `SUB-RB-20260817-0001`, 주문과 보증서는 서로 다른 식별자지만 동일 중앙 시나리오와 변경 이력을 가리킨다.
+- `POST /events`는 Bearer 인증 필수다. 허용된 이벤트·metadata만 받고 연결 리소스 가시성·사용자별 rate limit을 확인하며, `anon`/`authenticated`의 직접 DB INSERT는 허용하지 않는다.
 
 Canonical 주문 전이는 다음과 같다.
 
@@ -67,7 +70,9 @@ REVIEW_REQUIRED → AWAIT_MANUAL_REVIEW → application creation blocked
 
 계약 버전은 `2.0.0`을 유지한다. 이 변경은 외부에 배포된 v2 서버가 없던 상태에서 승인된 breaking v2 계약의 누락을 완성했으며, lifecycle endpoint와 배송 Fixture는 추가 계약이다. 이후 lifecycle Route Handler가 이 계약의 첫 실행 경로로 추가되었다. `CHANGE_REQUIRED`에서 `proposedTerms`를 필수로 하는 조건은 이미 문서화된 변경안 생성 불변조건을 JSON Schema로 강제하는 보완이다. v2가 외부 소비자에게 배포된 뒤 동일한 필수 조건을 추가한다면 같은 버전을 덮어쓰지 않고 별도 계약 버전으로 올려야 한다.
 
-기존 DB는 fresh bootstrap 파일만 재적용하지 않는다. `supabase/migrations/202608180001_lifecycle_integrity.sql`에서 lifecycle 제약·함수·trigger와 필요한 backfill을 적용한 뒤, `supabase/migrations/202608180002_capture_four_views.sql`로 분석 전이의 정확히 4장 조건을 활성화한다. 사진을 합성하는 backfill은 하지 않으므로 진행 중인 3장 분석은 네 번째 사진 보완 뒤에만 계속할 수 있다. 롤백은 역순의 대응 파일을 사용하며 OpenAPI·DB 중 한쪽만 되돌리지 않는다.
+호환되는 기존 v2 데모 DB에는 fresh bootstrap 파일을 재적용하지 않는다. `202608180001_lifecycle_integrity.sql`, `202608180002_capture_four_views.sql` 적용 뒤 `supabase/migrations/202608180003_capture_seven_views.sql`로 분석 전이의 정확히 7장 조건을 활성화하고, `supabase/migrations/202608180004_backend_v2_runtime.sql`로 Product3D readiness·Mock 결제 상태 guard·고객 변경안 결정·이벤트·Storage metadata binding·외부 AI 동의 증적·신청/옵션 제약을 맞춘다. 이어 `supabase/migrations/202608190005_shipment_conflict_hotfix.sql`로 배송 upsert의 모호한 `application_id` 참조를 명명된 제약조건으로 교체하고, `supabase/migrations/202608190006_customer_decision_gate.sql`로 고객 승인 전 `PRODUCTION_READY` 우회를 차단한다. 사진을 합성하는 backfill은 하지 않으므로 진행 중인 4장 분석은 나머지 구도와 일련번호 사진을 보완한 뒤에만 계속할 수 있다. 롤백은 `supabase/rollbacks/202608190006_customer_decision_gate.sql`부터 `supabase/rollbacks/202608190005_shipment_conflict_hotfix.sql`, `supabase/rollbacks/202608180004_backend_v2_runtime.sql`과 역순의 대응 파일을 사용하며 OpenAPI·DB 중 한쪽만 되돌리지 않는다. `origin/feature-backend` v1 DB는 이 migration 체인의 입력으로 지원하지 않는다.
+
+관리자·장인 콘솔은 `OPERATOR` 권한으로 실제 신청 목록·상세를 조회하고 현행 v2 lifecycle command와 inspection API를 호출한다. 별도 장인 역할 enum은 추가하지 않는다. `feature-backend`의 `/api/v1` 목록·상세·`PENDING_APPROVAL → APPROVED` 계약은 이 문서의 상태 모델과 호환되지 않으므로 직접 소비하지 않는다.
 
 ## 변경 게이트
 

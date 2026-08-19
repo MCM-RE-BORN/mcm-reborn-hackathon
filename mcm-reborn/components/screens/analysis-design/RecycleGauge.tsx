@@ -2,12 +2,12 @@ import Image from "next/image";
 import styles from "./analysis-design.module.css";
 
 type RecycleGaugeProps = {
-  grade: "A" | "C";
-  value: 72 | 18;
+  grade: string;
+  value: number;
 };
 
 export function RecycleGauge({ grade, value }: RecycleGaugeProps) {
-  const isLimited = grade === "C";
+  const isLimited = grade === "C" || grade === "D";
 
   return (
     <figure

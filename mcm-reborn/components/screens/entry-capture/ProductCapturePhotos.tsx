@@ -4,8 +4,12 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRef, useState, type ChangeEvent } from "react";
 import { Button } from "@/components/ui/Button";
-import { DEMO_SCENARIO } from "@/data/demo-scenario";
 import { CAPTURE_SLOTS, type CaptureSlotId } from "./capture-config";
+import {
+  completedCaptureSlotIds,
+  isCaptureSlotCompleted,
+  nextEmptyCaptureSlot,
+} from "./capture-progress";
 import { useCaptureSession } from "./CaptureSessionProvider";
 import styles from "./entry-capture.module.css";
 import { normalizeSelectedImage } from "./image-processing";
@@ -26,13 +30,9 @@ export function ProductCapturePhotos({
   const [albumMessage, setAlbumMessage] = useState<string>();
   const [isProcessing, setIsProcessing] = useState(false);
   const capturedSlotSet = new Set(capturedSlots);
-  const completedSlotIds = CAPTURE_SLOTS.filter(
-    (slot) => captures[slot.id] || capturedSlotSet.has(slot.id),
-  ).map((slot) => slot.id);
+  const completedSlotIds = completedCaptureSlotIds(captures, capturedSlots);
   const completedCount = completedSlotIds.length;
-  const nextAlbumSlot = CAPTURE_SLOTS.find(
-    (slot) => !captures[slot.id] && !capturedSlotSet.has(slot.id),
-  );
+  const nextAlbumSlot = nextEmptyCaptureSlot(captures, capturedSlots);
   const completedQuery = completedSlotIds.length
     ? `&completed=${completedSlotIds.join(",")}`
     : "";
@@ -75,16 +75,20 @@ export function ProductCapturePhotos({
         제품 사진 {completedCount}/{CAPTURE_SLOTS.length}
       </h2>
       <p className={styles.visuallyHidden}>
-        좌측면, 우측면, 하단, 후면을 차례로 등록해주세요. 네 사진이 모두
-        필요합니다.
+        정면, 후면, 상단, 하단, 좌측면, 우측면, 일련번호를 차례로
+        등록해주세요. 일곱 사진이 모두 필요합니다.
       </p>
 
       <div className={styles.captureGrid}>
         {CAPTURE_SLOTS.map((slot) => {
           const sessionCapture = captures[slot.id];
-          const isLegacyFallback =
-            capturedSlotSet.has(slot.id) && !sessionCapture;
-          const isCompleted = Boolean(sessionCapture || isLegacyFallback);
+          const isCompleted = isCaptureSlotCompleted(
+            captures,
+            capturedSlotSet,
+            slot,
+          );
+          // 이전 세션에서 등록만 되고 이번 세션에 미리보기가 없는 슬롯
+          const isLegacyFallback = isCompleted && !sessionCapture;
 
           return (
             <Link
@@ -108,12 +112,17 @@ export function ProductCapturePhotos({
                   unoptimized
                 />
               ) : isLegacyFallback ? (
+                <span aria-hidden="true" className={styles.captureCompletedMark}>
+                  ✓
+                </span>
+              ) : slot.id === "serialNumber" ? (
                 <Image
-                  alt={`${slot.label} MCM 제품 예시 촬영본`}
-                  fill
-                  loading="eager"
-                  sizes="(max-width: 360px) calc(100vw - 40px), (max-width: 402px) calc(100vw - 52px), 350px"
-                  src={DEMO_SCENARIO.sourceProduct.images[slot.id]}
+                  alt=""
+                  aria-hidden="true"
+                  className={styles.captureBarcode}
+                  height={31}
+                  src="/assets/mvp-beta/icon-barcode.svg"
+                  width={50}
                 />
               ) : (
                 <span aria-hidden="true" className={styles.captureAddMark}>
@@ -145,7 +154,7 @@ export function ProductCapturePhotos({
             ? "사진 준비 중"
             : nextAlbumSlot
               ? `앨범에서 ${nextAlbumSlot.label} 선택`
-              : "사진 4장 등록 완료"}
+              : `사진 ${CAPTURE_SLOTS.length}장 등록 완료`}
         </Button>
         <input
           accept="image/jpeg,image/png"
@@ -164,7 +173,8 @@ export function ProductCapturePhotos({
         </p>
       </div>
       <p className={styles.captureRule}>
-        좌측면, 우측면, 하단, 후면 필수 · JPG, PNG 4장 · 파일당 최대 10MB
+        정면, 후면, 상단, 하단, 좌측면, 우측면, 일련번호 필수 · JPG, PNG
+        7장 · 파일당 최대 10MB
       </p>
     </section>
   );

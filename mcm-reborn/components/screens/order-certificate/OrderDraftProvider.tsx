@@ -7,7 +7,6 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { DEMO_SCENARIO } from "@/data/demo-scenario";
 
 export type OrderDraft = {
   address: string;
@@ -29,25 +28,21 @@ export function formatPickupDateLabel(value: string) {
     parsed.getUTCMonth() === month - 1 &&
     parsed.getUTCDate() === day;
 
-  return isValid
-    ? `${year}년 ${month}월 ${day}일`
-    : DEMO_SCENARIO.order.pickupDateLabel;
+  return isValid ? `${year}년 ${month}월 ${day}일` : value || "-";
 }
 
 export function formatPickupTimeLabel(value: string) {
-  return value === DEMO_SCENARIO.order.pickupTime
-    ? DEMO_SCENARIO.order.pickupTimeLabel
-    : value;
+  return value || "-";
 }
 
 const INITIAL_ORDER_DRAFT: OrderDraft = {
-  address: DEMO_SCENARIO.order.customer.address,
-  addressDetail: DEMO_SCENARIO.order.customer.addressDetail,
-  name: DEMO_SCENARIO.order.customer.name,
-  phone: DEMO_SCENARIO.order.customer.phone,
-  pickupDate: DEMO_SCENARIO.order.pickupDate,
-  pickupTime: DEMO_SCENARIO.order.pickupTime,
-  postalCode: DEMO_SCENARIO.order.customer.postalCode,
+  address: "",
+  addressDetail: "",
+  name: "",
+  phone: "",
+  pickupDate: "",
+  pickupTime: "",
+  postalCode: "",
 };
 
 type OrderDraftContextValue = {

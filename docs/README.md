@@ -10,6 +10,7 @@
 | [`PRD.md`](PRD.md) | 2주 해커톤 MVP 요구사항과 제외 범위 |
 | [`USER_FLOW.md`](USER_FLOW.md) | 고객·운영자 정상 및 예외 흐름 |
 | [`API_CONTRACT.md`](API_CONTRACT.md) | OpenAPI·Mock·DB 계약 변경 절차 |
+| [`BACKEND_V2_DESIGN.md`](BACKEND_V2_DESIGN.md) | v2 인증·분석·주문·검수·lifecycle·DB와 실제 연결 경계 요약 |
 | [`COLLABORATION.md`](COLLABORATION.md) | 이슈, 보드, Git, 리뷰, QA 규칙 |
 | [`DECISIONS.md`](DECISIONS.md) | 승인된 제품·기술 결정 기록 |
 | [`DEMO.md`](DEMO.md) | 시연 준비, 정상·예외 시나리오, 복구 절차 |

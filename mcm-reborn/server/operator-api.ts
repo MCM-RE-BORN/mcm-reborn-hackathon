@@ -2,6 +2,10 @@ import "server-only";
 
 import { createHash, randomUUID } from "node:crypto";
 
+import { AppError } from "@/contracts/errors";
+import { authenticate, requireRole } from "@/server/auth/middleware";
+import { isRecord, stableStringify } from "@/server/http/json";
+
 type JsonPrimitive = boolean | number | string | null;
 export type JsonValue =
   | JsonPrimitive
@@ -14,10 +18,6 @@ type SupabaseConfig = {
   publishableKey: string;
   serviceRoleKey: string;
   url: string;
-};
-
-type AuthenticatedUser = {
-  id: string;
 };
 
 type StoredIdempotencyRow = {
@@ -78,6 +78,7 @@ const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const JSON_BODY_LIMIT = 32_768;
 const SUPABASE_TIMEOUT_MS = 10_000;
+const IDEMPOTENCY_STALE_AFTER_MS = 60_000;
 
 export function assertUuid(value: string, fieldName: string): void {
   if (!UUID_PATTERN.test(value)) {
@@ -183,10 +184,18 @@ export async function executeIdempotentOperatorCommand<TBody>({
 
   try {
     const config = readSupabaseConfig();
-    const accessToken = readBearerToken(request);
-    const user = await authenticateUser(config, accessToken);
-    await authorizeOperator(config, accessToken, user.id);
+    // Reuse the same authenticated profile and role boundary as the operator
+    // list/detail routes. Keeping a second raw Auth/PostgREST path here caused
+    // mutations to fail before idempotency reservation even while reads worked.
+    const user = await authenticate(request);
+    requireRole(user, ["OPERATOR"]);
+    const accessToken = user.accessToken;
     const idempotencyKey = readIdempotencyKey(request);
+    const storageKey = namespaceIdempotencyKey(
+      user.id,
+      operation,
+      idempotencyKey,
+    );
     assertUuid(applicationId, "applicationId");
 
     const rawBody = await readJsonBody(request);
@@ -195,7 +204,7 @@ export async function executeIdempotentOperatorCommand<TBody>({
 
     const reservation = await reserveIdempotencyKey(config, {
       applicationId,
-      idempotencyKey,
+      idempotencyKey: storageKey,
       operation,
       requestHash,
       userId: user.id,
@@ -234,12 +243,18 @@ export async function executeIdempotentOperatorCommand<TBody>({
       };
     }
 
-    await cacheIdempotentResponse(
-      config,
-      idempotencyKey,
-      requestHash,
-      result,
-    );
+    try {
+      await cacheIdempotentResponse(
+        config,
+        storageKey,
+        requestHash,
+        result,
+      );
+    } catch {
+      // The domain command may already have committed. Preserve its response
+      // instead of encouraging a duplicate mutation; the reservation TTL is
+      // reclaimed by reserveIdempotencyKey after expiry.
+    }
 
     return jsonResult(result.status, result.body);
   } catch (error) {
@@ -295,8 +310,10 @@ export async function readUserTableRows<T>(
 }
 
 export function postgrestEquals(value: string): string {
-  const escaped = value.replaceAll("\\", "\\\\").replaceAll('"', '\\"');
-  return `eq."${escaped}"`;
+  // URLSearchParams performs the transport escaping. Adding SQL-style quotes
+  // here makes PostgREST compare the literal quote characters, so cache reads
+  // and PATCHes silently match zero rows (notably for v2:<sha256> keys).
+  return `eq.${value}`;
 }
 
 function invalidField(fieldName: string): ApiProblem {
@@ -311,6 +328,20 @@ function invalidField(fieldName: string): ApiProblem {
 function normalizeProblem(error: unknown): ApiProblem {
   if (error instanceof ApiProblem) {
     return error;
+  }
+
+  if (error instanceof AppError) {
+    const message = error.statusCode === 401
+      ? "운영자 로그인이 만료되었거나 올바르지 않습니다."
+      : error.statusCode === 403
+        ? "운영자 권한이 필요합니다."
+        : error.statusCode === 503
+          ? "Supabase 서비스에 연결할 수 없습니다."
+          : error.message;
+
+    return new ApiProblem(error.statusCode, error.code, message, {
+      retryable: error.statusCode >= 500,
+    });
   }
 
   return new ApiProblem(
@@ -337,20 +368,6 @@ function jsonResult(status: number, body: JsonValue): Response {
     headers: { "Cache-Control": "no-store" },
     status,
   });
-}
-
-function readBearerToken(request: Request): string {
-  const authorization = request.headers.get("authorization")?.trim();
-  const match = authorization?.match(/^Bearer\s+([^\s]+)$/i);
-  if (!match) {
-    throw new ApiProblem(
-      401,
-      "UNAUTHORIZED",
-      "Bearer 인증 토큰이 필요합니다.",
-    );
-  }
-
-  return match[1];
 }
 
 function readIdempotencyKey(request: Request): string {
@@ -460,70 +477,6 @@ async function readJsonBody(request: Request): Promise<unknown> {
   }
 }
 
-async function authenticateUser(
-  config: SupabaseConfig,
-  accessToken: string,
-): Promise<AuthenticatedUser> {
-  const response = await supabaseFetch(
-    config,
-    "/auth/v1/user",
-    accessToken,
-    { method: "GET" },
-  );
-  const payload = await readUpstreamJson(response);
-
-  if (!response.ok) {
-    if (response.status === 401 || response.status === 403) {
-      throw new ApiProblem(
-        401,
-        "UNAUTHORIZED",
-        "인증 토큰이 만료되었거나 올바르지 않습니다.",
-      );
-    }
-    throw mapSupabaseFailure(response.status, payload);
-  }
-
-  if (!isRecord(payload) || typeof payload.id !== "string") {
-    throw upstreamInvalidResponse();
-  }
-
-  return { id: payload.id };
-}
-
-async function authorizeOperator(
-  config: SupabaseConfig,
-  accessToken: string,
-  userId: string,
-): Promise<void> {
-  const query = new URLSearchParams({
-    id: postgrestEquals(userId),
-    limit: "1",
-    role: "eq.OPERATOR",
-    select: "id",
-  });
-  const response = await supabaseFetch(
-    config,
-    `/rest/v1/profiles?${query.toString()}`,
-    accessToken,
-    { method: "GET" },
-  );
-  const payload = await readUpstreamJson(response);
-
-  if (!response.ok) {
-    throw mapSupabaseFailure(response.status, payload);
-  }
-  if (!Array.isArray(payload)) {
-    throw upstreamInvalidResponse();
-  }
-  if (payload.length !== 1) {
-    throw new ApiProblem(
-      403,
-      "FORBIDDEN",
-      "운영자 권한이 필요합니다.",
-    );
-  }
-}
-
 async function supabaseFetch(
   config: SupabaseConfig,
   path: string,
@@ -580,9 +533,21 @@ function mapSupabaseFailure(status: number, payload: unknown): ApiProblem {
   const upstreamCode = isRecord(payload) && typeof payload.code === "string"
     ? payload.code
     : null;
+  const upstreamMessage = isRecord(payload) && typeof payload.message === "string"
+    ? payload.message.slice(0, 240)
+    : null;
+  const upstreamDetails: JsonObject = {
+    ...(upstreamCode ? { upstreamCode } : {}),
+    ...(upstreamMessage ? { upstreamMessage } : {}),
+  };
 
   if (upstreamCode === "22023" || upstreamCode === "22P02") {
-    return new ApiProblem(400, "INVALID_REQUEST", "요청 값이 올바르지 않습니다.");
+    return new ApiProblem(
+      400,
+      "INVALID_REQUEST",
+      upstreamMessage ?? "요청 값이 올바르지 않습니다.",
+      upstreamDetails,
+    );
   }
   if (upstreamCode === "42501") {
     return new ApiProblem(403, "FORBIDDEN", "운영자 권한이 필요합니다.");
@@ -607,7 +572,12 @@ function mapSupabaseFailure(status: number, payload: unknown): ApiProblem {
   }
 
   if (status === 400) {
-    return new ApiProblem(400, "INVALID_REQUEST", "요청 값이 올바르지 않습니다.");
+    return new ApiProblem(
+      400,
+      "INVALID_REQUEST",
+      upstreamMessage ?? "요청 값이 올바르지 않습니다.",
+      upstreamDetails,
+    );
   }
   if (status === 401) {
     return new ApiProblem(401, "UNAUTHORIZED", "인증이 필요합니다.");
@@ -644,18 +614,14 @@ function hashRequest<TBody>(
     .digest("hex");
 }
 
-function stableStringify(value: unknown): string {
-  if (Array.isArray(value)) {
-    return `[${value.map(stableStringify).join(",")}]`;
-  }
-  if (value !== null && typeof value === "object") {
-    return `{${Object.entries(value)
-      .sort(([left], [right]) => left.localeCompare(right))
-      .map(([key, nested]) => `${JSON.stringify(key)}:${stableStringify(nested)}`)
-      .join(",")}}`;
-  }
-
-  return JSON.stringify(value);
+function namespaceIdempotencyKey(
+  userId: string,
+  operation: string,
+  externalKey: string,
+): string {
+  return `v2:${createHash("sha256")
+    .update(`${userId}:${operation}:${externalKey}`)
+    .digest("hex")}`;
 }
 
 type ReservationResult =
@@ -672,6 +638,7 @@ async function reserveIdempotencyKey(
     requestHash: string;
     userId: string;
   },
+  allowExpiredReclaim = true,
 ): Promise<ReservationResult> {
   const response = await supabaseFetch(
     config,
@@ -715,6 +682,27 @@ async function reserveIdempotencyKey(
     );
   }
 
+  const expiresAt = Date.parse(existing.expires_at);
+  const createdAt = Date.parse(existing.created_at);
+  if (!Number.isFinite(expiresAt) || !Number.isFinite(createdAt)) {
+    throw upstreamInvalidResponse();
+  }
+  const now = Date.now();
+  const staleInProgress =
+    existing.response_status === null &&
+    now - createdAt >= IDEMPOTENCY_STALE_AFTER_MS;
+  if ((expiresAt <= now || staleInProgress) && allowExpiredReclaim) {
+    const reclaimed = await deleteExpiredIdempotencyRow(
+      config,
+      input.idempotencyKey,
+      existing.expires_at,
+    );
+    if (reclaimed) {
+      return reserveIdempotencyKey(config, input, false);
+    }
+    return { kind: "in-progress" };
+  }
+
   if (
     existing.user_id !== input.userId ||
     existing.operation !== input.operation ||
@@ -726,6 +714,27 @@ async function reserveIdempotencyKey(
       "IDEMPOTENCY_KEY_REUSED",
       "같은 Idempotency-Key를 다른 요청에 사용할 수 없습니다.",
     );
+  }
+
+  // Error responses are not successful idempotent results. Re-evaluate them
+  // against the authoritative DB so a schema/RPC hotfix is not hidden by an
+  // obsolete cached 4xx/5xx response for the full reservation TTL. If an
+  // upstream timeout happened after a commit, the guarded RPC rejects a
+  // duplicate transition and the console re-reads the authoritative status.
+  if (
+    existing.response_status !== null &&
+    existing.response_status >= 400 &&
+    allowExpiredReclaim
+  ) {
+    const reclaimed = await deleteExpiredIdempotencyRow(
+      config,
+      input.idempotencyKey,
+      existing.expires_at,
+    );
+    if (reclaimed) {
+      return reserveIdempotencyKey(config, input, false);
+    }
+    return { kind: "in-progress" };
   }
 
   if (
@@ -740,6 +749,35 @@ async function reserveIdempotencyKey(
   }
 
   return { kind: "in-progress" };
+}
+
+async function deleteExpiredIdempotencyRow(
+  config: SupabaseConfig,
+  idempotencyKey: string,
+  expiresAt: string,
+): Promise<boolean> {
+  const query = new URLSearchParams({
+    expires_at: postgrestEquals(expiresAt),
+    key: postgrestEquals(idempotencyKey),
+    select: "key",
+  });
+  const response = await supabaseFetch(
+    config,
+    `/rest/v1/idempotency_keys?${query.toString()}`,
+    config.serviceRoleKey,
+    {
+      headers: { Prefer: "return=representation" },
+      method: "DELETE",
+    },
+  );
+  const payload = await readUpstreamJson(response);
+  if (!response.ok) {
+    throw mapSupabaseFailure(response.status, payload);
+  }
+  if (!Array.isArray(payload)) {
+    throw upstreamInvalidResponse();
+  }
+  return payload.length === 1;
 }
 
 async function readIdempotencyRow(
@@ -808,10 +846,6 @@ async function cacheIdempotentResponse(
       { retryable: false },
     );
   }
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
 export type { ApiProblem, CommandResult, OperatorCommandContext };

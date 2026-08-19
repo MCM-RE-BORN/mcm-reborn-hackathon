@@ -11,7 +11,15 @@ type MockupPageProps = {
 };
 
 export default async function MockupPage({ searchParams }: MockupPageProps) {
-  const { state } = await searchParams;
+  const { analysisId, productId, state } = await searchParams;
+  const resolvedAnalysisId = Array.isArray(analysisId) ? analysisId[0] : analysisId;
+  const resolvedProductId = Array.isArray(productId) ? productId[0] : productId;
 
-  return <MockupDetailScreen state={readDemoState(state)} />;
+  return (
+    <MockupDetailScreen
+      analysisId={resolvedAnalysisId}
+      productId={resolvedProductId}
+      state={readDemoState(state)}
+    />
+  );
 }

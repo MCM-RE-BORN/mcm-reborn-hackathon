@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import { AppShell } from "@/components/layout/AppShell";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -9,25 +10,53 @@ import { StickyActionBar } from "@/components/layout/StickyActionBar";
 import { Button } from "@/components/ui/Button";
 import { KeyValueList } from "@/components/ui/KeyValueList";
 import { SectionBand } from "@/components/ui/SectionBand";
+import { StatusPanel } from "@/components/ui/StatusPanel";
 import { TextField } from "@/components/ui/TextField";
-import { DEMO_SCENARIO, formatKrw } from "@/data/demo-scenario";
+import { formatKrw } from "@/lib/formatters";
 import type { DemoState } from "./demo-state";
 import { DemoStatePanel } from "./DemoStatePanel";
 import { useOrderDraft } from "./OrderDraftProvider";
+import { customerFetch, type CustomerProductDetail } from "./customer-client";
 import styles from "./order-certificate.module.css";
 
 type OrderNewScreenProps = {
+  analysisId?: string;
+  productId?: string;
   state: Extract<
     DemoState,
     "normal" | "loading" | "empty" | "error" | "permission"
   >;
 };
 
-export function OrderNewScreen({ state }: OrderNewScreenProps) {
+export function OrderNewScreen({ analysisId, productId, state }: OrderNewScreenProps) {
   const router = useRouter();
   const { orderDraft, setOrderDraft } = useOrderDraft();
   const isNormal = state === "normal";
-  const { selectedDesign } = DEMO_SCENARIO;
+  const [product, setProduct] = useState<CustomerProductDetail | null>(null);
+  const [requestError, setRequestError] = useState(false);
+
+  useEffect(() => {
+    if (!analysisId || !productId || !isNormal) {
+      return;
+    }
+    let cancelled = false;
+    customerFetch<CustomerProductDetail>(
+      `/api/v2/products/${productId}?analysisId=${encodeURIComponent(analysisId)}`,
+    )
+      .then((response) => {
+        if (!cancelled) {
+          setProduct(response);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setRequestError(true);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [analysisId, isNormal, productId]);
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -44,7 +73,7 @@ export function OrderNewScreen({ state }: OrderNewScreenProps) {
       pickupTime: readValue("pickupTime"),
       postalCode: readValue("postalCode"),
     });
-    router.push("/checkout");
+    router.push(`/checkout?analysisId=${analysisId ?? ""}&productId=${productId ?? ""}`);
   };
 
   return (
@@ -60,7 +89,7 @@ export function OrderNewScreen({ state }: OrderNewScreenProps) {
       }
       header={
         <PageHeader
-          backHref="/submissions/demo/designs/passport-wallet"
+          backHref={analysisId ? `/submissions/demo/designs?analysisId=${analysisId}` : "/submissions/demo/designs"}
           title="업사이클링 신청"
         />
       }
@@ -74,6 +103,23 @@ export function OrderNewScreen({ state }: OrderNewScreenProps) {
             subject="주문 정보"
           />
         </div>
+      ) : requestError || !analysisId || !productId ? (
+        <div className={styles.stateInset}>
+          <DemoStatePanel
+            emptyDescription="선택한 제품 정보를 불러오지 못했습니다. 추천 디자인에서 다시 선택해 주세요."
+            retryHref="/submissions/demo/designs"
+            state="error"
+            subject="주문 정보"
+          />
+        </div>
+      ) : !product ? (
+        <div className={styles.stateInset}>
+          <StatusPanel
+            description="Supabase에서 선택한 제품의 가격과 제작 조건을 불러오고 있습니다."
+            title="주문 정보를 준비하고 있어요"
+            tone="loading"
+          />
+        </div>
       ) : (
         <>
           <section
@@ -85,14 +131,14 @@ export function OrderNewScreen({ state }: OrderNewScreenProps) {
             </h2>
             <KeyValueList
               items={[
-                { label: "선택 상품", value: selectedDesign.name },
+                { label: "선택 상품", value: product.name },
                 {
                   label: "예상 제작 기간",
-                  value: selectedDesign.initialEstimatedDuration,
+                  value: product.estimatedDuration,
                 },
                 {
                   label: "제작 비용",
-                  value: formatKrw(selectedDesign.initialPriceKrw),
+                  value: formatKrw(product.mockPrice.amount),
                 },
               ]}
             />

@@ -18,7 +18,11 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
   return (
     <html data-scroll-behavior="smooth" lang="ko">
       <head>
@@ -45,7 +49,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           rel="stylesheet"
         />
       </head>
-      <body>
+      {/* Browser extensions such as Grammarly may inject body attributes before hydration. */}
+      <body suppressHydrationWarning>
         <CaptureSessionProvider>
           <OrderDraftProvider>{children}</OrderDraftProvider>
         </CaptureSessionProvider>

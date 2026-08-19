@@ -14,12 +14,20 @@ type SubmissionPageProps = {
 export default async function SubmissionPage({
   searchParams,
 }: SubmissionPageProps) {
-  const { state } = await searchParams;
+  const query = await searchParams;
+  const { state } = query;
+  const analysisId = Array.isArray(query.analysisId)
+    ? query.analysisId[0]
+    : query.analysisId;
   const demoState = readDemoState(state);
 
   if (demoState === "normal") {
-    redirect("/submissions/demo/analysis");
+    redirect(
+      analysisId
+        ? `/submissions/demo/analysis?analysisId=${encodeURIComponent(analysisId)}`
+        : "/submissions/demo/analysis",
+    );
   }
 
-  return <SubmissionStatusScreen state={demoState} />;
+  return <SubmissionStatusScreen analysisId={analysisId} state={demoState} />;
 }

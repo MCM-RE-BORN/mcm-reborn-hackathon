@@ -8,6 +8,11 @@ export const RECOMMENDATION_CATEGORIES = [
 export type RecommendationCategory =
   (typeof RECOMMENDATION_CATEGORIES)[number]["id"];
 
+// The seeded passport-wallet row is the canonical demo destination for every
+// visual candidate. The API id is preferred when it is available.
+export const DEMO_PASSPORT_PRODUCT_ID =
+  "10000000-0000-4000-8000-000000000001";
+
 type RecommendationProduct = {
   detailHref?: string;
   id: string;
@@ -26,83 +31,108 @@ export const RECOMMENDATION_PRODUCTS: Record<
       detailHref: "/submissions/demo/designs/passport-wallet",
       id: "passport-wallet",
       image: "/assets/mvp-beta/figma-travel-passport-wallet.png",
-      name: "Ottomar 비세토스 여권 지갑",
+      name: "RE:BORN 여권 지갑",
     },
     {
       id: "luggage-tag",
       image: "/assets/mvp-beta/figma-travel-luggage-tag.png",
-      name: "Ottomar 비세토스 러기지 택",
+      name: "RE:BORN 러기지 택",
     },
     {
       id: "travel-case-medium",
       image: "/assets/mvp-beta/figma-travel-case-medium.png",
-      name: "M Ottomar 비세토스 트래블 케이스",
+      name: "RE:BORN M 트래블 케이스",
     },
     {
       id: "travel-case-small",
       image: "/assets/mvp-beta/figma-travel-case-small.png",
-      name: "S Ottomar 비세토스 트래블 케이스",
+      name: "RE:BORN S 트래블 케이스",
     },
     {
       id: "toiletry-bag",
       image: "/assets/mvp-beta/figma-travel-toiletry-bag.png",
-      name: "S Ottomar 비세토스 토일레트리 백",
+      name: "RE:BORN S 토일레트리 백",
     },
     {
       id: "travel-mini-pouch",
       image: "/assets/mvp-beta/figma-travel-mini-pouch.png",
-      name: "미니 Ottomar 비세토스 트래블 파우치",
+      name: "RE:BORN 미니 트래블 파우치",
     },
     {
       id: "hat-box",
       image: "/assets/mvp-beta/figma-travel-hat-box.png",
-      name: "미니 비세토스 모자 박스",
+      name: "RE:BORN 미니 모자 박스",
     },
     {
       id: "bottle-holder",
       image: "/assets/mvp-beta/figma-travel-bottle-holder.png",
-      name: "Ottomar 인조 퍼와 비세토스 Mars Dog 보틀 홀더",
+      name: "RE:BORN 인조 퍼와 Mars Dog 보틀 홀더",
     },
   ],
   wallet: [
     {
       id: "card-holder",
       image: "/assets/mvp-beta/recommendation-card-holder.png",
-      name: "비세토스 카드 홀더",
+      name: "RE:BORN 카드 홀더",
     },
     {
       id: "bifold-wallet",
       image: "/assets/mvp-beta/recommendation-bifold-wallet.png",
-      name: "비세토스 바이폴드 지갑",
+      name: "RE:BORN 바이폴드 지갑",
     },
     {
       id: "chain-wallet",
       image: "/assets/mvp-beta/recommendation-chain-wallet.png",
-      name: "비세토스 체인 지갑",
+      name: "RE:BORN 체인 지갑",
     },
     {
       id: "zip-wallet",
       image: "/assets/mvp-beta/recommendation-zip-wallet.png",
-      name: "비세토스 지퍼 지갑",
+      name: "RE:BORN 지퍼 지갑",
+    },
+    {
+      id: "studded-wallet",
+      image: "/assets/mvp-beta/recommendation-studded-wallet.png",
+      name: "RE:BORN 스터드 지갑",
     },
   ],
   pouch: [
     {
       id: "card-pouch",
       image: "/assets/mvp-beta/recommendation-card-pouch.png",
-      name: "비세토스 카드 파우치",
+      name: "RE:BORN 카드 파우치",
     },
     {
       id: "crossbody-wallet",
       image: "/assets/mvp-beta/recommendation-crossbody-wallet.png",
-      name: "비세토스 크로스바디 파우치",
+      name: "RE:BORN 크로스바디 파우치",
+    },
+    {
+      id: "travel-mini-pouch",
+      image: "/assets/mvp-beta/figma-travel-mini-pouch.png",
+      name: "RE:BORN 미니 파우치",
+    },
+    {
+      id: "travel-toiletry-pouch",
+      image: "/assets/mvp-beta/figma-travel-toiletry-bag.png",
+      name: "RE:BORN 토일레트리 파우치",
     },
   ],
   keyring: [
     {
       id: "keyring",
       image: "/assets/mvp-beta/recommendation-keyring-v2.webp",
-      name: "비세토스 키링",
+      name: "RE:BORN 키링",
+    },
+    {
+      id: "tag-keyring",
+      image: "/assets/mvp-beta/recommendation-luggage-name-tag-v2.webp",
+      name: "RE:BORN 태그 키링",
+    },
+    {
+      id: "chain-keyring",
+      image: "/assets/mvp-beta/recommendation-chain-wallet.png",
+      name: "RE:BORN 체인 키링",
     },
   ],
 };

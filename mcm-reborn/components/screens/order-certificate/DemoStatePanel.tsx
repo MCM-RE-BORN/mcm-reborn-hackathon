@@ -76,7 +76,7 @@ export function DemoStatePanel({
             로그인으로 이동
           </ButtonLink>
         ) : state === "locked" ? (
-          <ButtonLink fullWidth href="/orders/demo?stage=pickup">
+          <ButtonLink fullWidth href="/orders">
             신청 내역 확인하기
           </ButtonLink>
         ) : undefined

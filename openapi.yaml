@@ -94,6 +94,8 @@ paths:
                 $ref: '#/components/schemas/User'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /uploads/presign:
     post:
       tags:
@@ -126,11 +128,13 @@ paths:
       - Analyses
       operationId: createAnalysis
       summary: 원제품 이미지 분석 실행
-      description: 'OpenAI Responses API와 Structured Output을 사용합니다.
+      description: 'LIVE 모드는 OpenAI 공식 JavaScript SDK의 Chat Completions Structured Outputs를 사용합니다.
 
         LIVE 제공자 오류 시 준비된 DEMO_FIXTURE 결과를 동일한 예상값 계약으로 반환할 수 있습니다.
 
-        분석 입력은 좌측면, 우측면, 하단, 후면 순서의 서로 다른 사진 4장입니다.
+        LIVE는 서버의 명시적 외부 AI opt-in, 고정된 개인정보 안내 버전, 요청별 사진 처리 동의가 모두 확인된 경우에만 실행합니다.
+
+        분석 입력은 정면, 후면, 상단, 하단, 좌측면, 우측면, 일련번호 순서의 서로 다른 사진 7장입니다.
 
         이미지 품질이 분석에 충분하지 않으면 성공 분석을 생성하지 않고 IMAGE_QUALITY_INSUFFICIENT 오류와 재촬영 안내를 반환합니다.
 
@@ -159,6 +163,8 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '422':
           $ref: '#/components/responses/ImageQualityInsufficient'
         '502':
@@ -173,6 +179,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
     get:
       tags:
       - Analyses
@@ -247,8 +255,8 @@ paths:
       tags:
       - Products
       operationId: getProduct
-      summary: 제품 및 3D 상세 조회
-      description: 모든 활성 제품은 model3d 객체를 반드시 반환합니다.
+      summary: 제품 상세 및 3D 준비 상태 조회
+      description: 3D 자산이 검증된 제품만 has3d=true와 model3d 객체를 반환합니다. 현재 데모 카탈로그는 정적 목업을 사용합니다.
       parameters:
       - name: analysisId
         in: query
@@ -733,7 +741,6 @@ paths:
       summary: KPI 이벤트 기록
       security:
       - bearerAuth: []
-      - {}
       requestBody:
         required: true
         content:
@@ -760,6 +767,12 @@ paths:
                     format: uuid
         '400':
           $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
 components:
   securitySchemes:
     bearerAuth:
@@ -859,6 +872,12 @@ components:
             $ref: '#/components/schemas/ErrorResponse'
     ServiceUnavailable:
       description: 서버 환경설정 누락 또는 연결된 서비스 일시 장애
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    TooManyRequests:
+      description: 사용자별 이벤트 기록 한도 초과
       content:
         application/json:
           schema:
@@ -1313,9 +1332,9 @@ components:
       properties:
         imageAssetIds:
           type: array
-          description: 좌측면, 우측면, 하단, 후면 촬영 자산 ID를 이 순서로 전달합니다. 네 슬롯은 모두 필수입니다.
-          minItems: 4
-          maxItems: 4
+          description: 정면, 후면, 상단, 하단, 좌측면, 우측면, 일련번호 촬영 자산 ID를 이 순서로 전달합니다. 일곱 슬롯은 모두 필수입니다.
+          minItems: 7
+          maxItems: 7
           uniqueItems: true
           items:
             type: string
@@ -1354,6 +1373,15 @@ components:
           - LOW_QUALITY_RECAPTURE
           - INELIGIBLE_PRECHECK
           - null
+        externalAiProcessingConsentAccepted:
+          type: boolean
+          const: true
+          description: AI_MODE=LIVE에서 외부 AI로 사진을 전송하기 전에만 필수입니다.
+        externalAiPrivacyNoticeVersion:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: AI_MODE=LIVE 배포 환경의 EXTERNAL_AI_PRIVACY_NOTICE_VERSION과 일치해야 합니다.
     SourceProduct:
       type: object
       additionalProperties: false
@@ -1712,7 +1740,6 @@ components:
           $ref: '#/components/schemas/ImageAsset'
         has3d:
           type: boolean
-          const: true
         recommendation:
           $ref: '#/components/schemas/RecommendationView'
     ModelFormat:
@@ -1870,7 +1897,6 @@ components:
           $ref: '#/components/schemas/ImageAsset'
         has3d:
           type: boolean
-          const: true
         recommendation:
           $ref: '#/components/schemas/RecommendationView'
         description:
@@ -1878,7 +1904,9 @@ components:
         dimensions:
           $ref: '#/components/schemas/Dimensions'
         model3d:
-          $ref: '#/components/schemas/Product3D'
+          oneOf:
+          - $ref: '#/components/schemas/Product3D'
+          - type: 'null'
         optionGroups:
           type: array
           items:
@@ -1961,12 +1989,7 @@ components:
           type: string
           format: uuid
         selectedOptions:
-          type: object
-          additionalProperties:
-            type:
-            - string
-            - number
-            - boolean
+          $ref: '#/components/schemas/SelectedProductOptions'
         shippingAddress:
           $ref: '#/components/schemas/Address'
         pickupSchedule:
@@ -1992,6 +2015,16 @@ components:
       - COMPLETED
       - PRODUCTION_UNAVAILABLE
       - CANCELED
+    SelectedProductOptions:
+      type: object
+      description: 상품 optionGroups에 정의된 키와 값만 허용하며 필수·SELECT·TEXT 제약을 함께 검증합니다.
+      maxProperties: 16
+      propertyNames:
+        minLength: 1
+        maxLength: 64
+      additionalProperties:
+        type: string
+        maxLength: 200
     ApplicationExceptionStatus:
       type: string
       enum:
@@ -2090,6 +2123,7 @@ components:
       type: object
       required:
       - id
+      - analysisId
       - applicationNumber
       - status
       - amount
@@ -2097,6 +2131,9 @@ components:
       - createdAt
       properties:
         id:
+          type: string
+          format: uuid
+        analysisId:
           type: string
           format: uuid
         applicationNumber:
@@ -2148,8 +2185,7 @@ components:
           type: string
           format: uuid
         selectedOptions:
-          type: object
-          additionalProperties: true
+          $ref: '#/components/schemas/SelectedProductOptions'
         shippingAddress:
           $ref: '#/components/schemas/Address'
         pickupSchedule:
@@ -2407,6 +2443,11 @@ components:
           $ref: '#/components/schemas/User'
         analysis:
           $ref: '#/components/schemas/Analysis'
+        changeRequest:
+          description: 실물 검수로 생성된 고객 변경 요청입니다. 아직 생성되지 않았으면 null입니다.
+          oneOf:
+          - $ref: '#/components/schemas/ApplicationChangeRequest'
+          - type: 'null'
         sourceImages:
           type: array
           items:
@@ -2654,6 +2695,88 @@ components:
     TrackEventRequest:
       type: object
       additionalProperties: false
+      allOf:
+      - if:
+          properties:
+            eventName:
+              const: ANALYSIS_STARTED
+        then:
+          properties:
+            metadata:
+              propertyNames:
+                enum: [mode, screen, source]
+      - if:
+          properties:
+            eventName:
+              const: ANALYSIS_COMPLETED
+        then:
+          properties:
+            metadata:
+              propertyNames:
+                enum: [durationMs, mode, result, screen, source]
+      - if:
+          properties:
+            eventName:
+              const: ANALYSIS_FALLBACK_USED
+        then:
+          properties:
+            metadata:
+              propertyNames:
+                enum: [mode, reasonCode, screen, source]
+      - if:
+          properties:
+            eventName:
+              const: PRODUCT_LIST_VIEWED
+        then:
+          properties:
+            metadata:
+              propertyNames:
+                enum: [category, screen, source]
+      - if:
+          properties:
+            eventName:
+              const: PRODUCT_DETAIL_VIEWED
+        then:
+          properties:
+            metadata:
+              propertyNames:
+                enum: [productCode, screen, source]
+      - if:
+          properties:
+            eventName:
+              enum: [APPLICATION_CREATED, APPLICATION_CHANGE_APPROVED, APPLICATION_CHANGE_REJECTED]
+        then:
+          properties:
+            metadata:
+              propertyNames:
+                enum: [screen, source, status]
+      - if:
+          properties:
+            eventName:
+              const: MOCK_PAYMENT_COMPLETED
+        then:
+          properties:
+            metadata:
+              propertyNames:
+                enum: [amountKrw, screen, source, status]
+      - if:
+          properties:
+            eventName:
+              const: PHYSICAL_INSPECTION_COMPLETED
+        then:
+          properties:
+            metadata:
+              propertyNames:
+                enum: [outcome, screen, source, status]
+      - if:
+          properties:
+            eventName:
+              const: CERTIFICATE_VIEWED
+        then:
+          properties:
+            metadata:
+              propertyNames:
+                enum: [certificateState, screen, source, status]
       required:
       - eventName
       - occurredAt
@@ -2684,7 +2807,15 @@ components:
           format: uuid
         metadata:
           type: object
-          additionalProperties: true
+          description: 개인정보·토큰·이미지 URL을 포함하지 않는 KPI용 제한 메타데이터입니다. 이벤트별 허용 키만 접수합니다.
+          maxProperties: 8
+          additionalProperties:
+            oneOf:
+            - type: string
+              minLength: 1
+              maxLength: 120
+            - type: number
+            - type: boolean
     ImageQualityInsufficientDetails:
       type: object
       additionalProperties: false
