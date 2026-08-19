@@ -15,11 +15,14 @@ type OrdersAliasPageProps = {
 export default async function OrdersAliasPage({
   searchParams,
 }: OrdersAliasPageProps) {
-  const { state } = await searchParams;
+  const { state, view } = await searchParams;
   const resolvedState = resolveDemoState(
     state,
     ["normal", "loading", "empty", "error", "permission"],
   );
+  const resolvedView = (Array.isArray(view) ? view[0] : view) === "analyses"
+    ? "analyses"
+    : "applications";
 
-  return <OrdersListScreen state={resolvedState} />;
+  return <OrdersListScreen state={resolvedState} view={resolvedView} />;
 }

@@ -27,9 +27,10 @@ type OrdersListScreenProps = {
     DemoState,
     "normal" | "loading" | "empty" | "error" | "permission"
   >;
+  view: "analyses" | "applications";
 };
 
-export function OrdersListScreen({ state }: OrdersListScreenProps) {
+export function OrdersListScreen({ state, view }: OrdersListScreenProps) {
   const [applications, setApplications] = useState<
     CustomerApplicationSummary[] | null
   >(null);
@@ -81,7 +82,9 @@ export function OrdersListScreen({ state }: OrdersListScreenProps) {
   return (
     <AppShell
       footer={<BottomNav active="orders" />}
-      header={<PageHeader title="신청 내역" />}
+      header={
+        <PageHeader title={view === "analyses" ? "진단 내역" : "신청 내역"} />
+      }
     >
       {state !== "normal" ? (
         <div className={styles.stateInset}>
@@ -114,67 +117,68 @@ export function OrdersListScreen({ state }: OrdersListScreenProps) {
           aria-labelledby="orders-list-heading"
           className={styles.ordersListLayout}
         >
-          <header className={styles.ordersListHeader}>
-            <h2 id="orders-list-heading">진단 및 신청</h2>
-            <span>{analyses.length + applications.length}건</span>
-          </header>
+          <h2 className={styles.visuallyHidden} id="orders-list-heading">
+            진단 및 신청 내역
+          </h2>
 
-          {applications.length === 0 && analyses.length === 0 ? (
+          <nav aria-label="내역 종류" className={styles.orderHistoryTabs}>
+            <Link
+              aria-current={view === "applications" ? "page" : undefined}
+              className={
+                view === "applications" ? styles.orderHistoryTabActive : ""
+              }
+              href="/orders?view=applications"
+            >
+              신청 내역 <span>{applications.length}</span>
+            </Link>
+            <Link
+              aria-current={view === "analyses" ? "page" : undefined}
+              className={view === "analyses" ? styles.orderHistoryTabActive : ""}
+              href="/orders?view=analyses"
+            >
+              진단 내역 <span>{analyses.length}</span>
+            </Link>
+          </nav>
+
+          {view === "applications" && applications.length === 0 ? (
             <div className={styles.stateInset}>
               <DemoStatePanel
-                emptyDescription="아직 완료된 AI 분석이나 업사이클링 신청이 없습니다."
+                emptyDescription="아직 접수된 업사이클링 신청이 없습니다."
                 retryHref="/products/new"
                 state="empty"
                 subject="신청 내역"
               />
             </div>
+          ) : view === "analyses" && analyses.length === 0 ? (
+            <div className={styles.stateInset}>
+              <DemoStatePanel
+                emptyDescription="아직 완료된 AI 진단 결과가 없습니다."
+                retryHref="/products/new"
+                state="empty"
+                subject="진단 내역"
+              />
+            </div>
+          ) : view === "analyses" ? (
+            <ul className={styles.ordersList}>
+              {analyses.map((analysis) => (
+                <AnalysisListItem
+                  analysis={analysis}
+                  hasApplication={applications.some(
+                    (application) => application.analysisId === analysis.id,
+                  )}
+                  key={analysis.id}
+                />
+              ))}
+            </ul>
           ) : (
-            <>
-              <div className={styles.orderHistorySection}>
-                <header className={styles.ordersListHeader}>
-                  <h3>AI 분석 결과</h3>
-                  <span>{analyses.length}건</span>
-                </header>
-                {analyses.length === 0 ? (
-                  <p className={styles.orderHistoryEmpty}>
-                    완료된 AI 분석 결과가 없습니다.
-                  </p>
-                ) : (
-                  <ul className={styles.ordersList}>
-                    {analyses.map((analysis) => (
-                      <AnalysisListItem
-                        analysis={analysis}
-                        hasApplication={applications.some(
-                          (application) => application.analysisId === analysis.id,
-                        )}
-                        key={analysis.id}
-                      />
-                    ))}
-                  </ul>
-                )}
-              </div>
-
-              <div className={styles.orderHistorySection}>
-                <header className={styles.ordersListHeader}>
-                  <h3>신청 상품</h3>
-                  <span>{applications.length}건</span>
-                </header>
-                {applications.length === 0 ? (
-                  <p className={styles.orderHistoryEmpty}>
-                    아직 접수된 업사이클링 신청이 없습니다.
-                  </p>
-                ) : (
-                  <ul className={styles.ordersList}>
-                    {applications.map((application) => (
-                      <ApplicationListItem
-                        application={application}
-                        key={application.id}
-                      />
-                    ))}
-                  </ul>
-                )}
-              </div>
-            </>
+            <ul className={styles.ordersList}>
+              {applications.map((application) => (
+                <ApplicationListItem
+                  application={application}
+                  key={application.id}
+                />
+              ))}
+            </ul>
           )}
         </section>
       )}
