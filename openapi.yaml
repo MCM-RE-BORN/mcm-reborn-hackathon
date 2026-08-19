@@ -2123,6 +2123,7 @@ components:
       type: object
       required:
       - id
+      - analysisId
       - applicationNumber
       - status
       - amount
@@ -2130,6 +2131,9 @@ components:
       - createdAt
       properties:
         id:
+          type: string
+          format: uuid
+        analysisId:
           type: string
           format: uuid
         applicationNumber:

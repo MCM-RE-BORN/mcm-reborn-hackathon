@@ -15,6 +15,8 @@ import {
   customerFetch,
   formatApiDate,
   readImageUrl,
+  type CustomerAnalysisListItem,
+  type CustomerAnalysisPage,
   type CustomerApplicationPage,
   type CustomerApplicationSummary,
 } from "./customer-client";
@@ -31,6 +33,9 @@ export function OrdersListScreen({ state }: OrdersListScreenProps) {
   const [applications, setApplications] = useState<
     CustomerApplicationSummary[] | null
   >(null);
+  const [analyses, setAnalyses] = useState<CustomerAnalysisListItem[] | null>(
+    null,
+  );
   const [requestError, setRequestError] = useState(false);
 
   useEffect(() => {
@@ -45,11 +50,15 @@ export function OrdersListScreen({ state }: OrdersListScreenProps) {
       const initialLoad = firstLoad;
       firstLoad = false;
       try {
-        const response = await customerFetch<CustomerApplicationPage>(
-          "/api/v2/applications?size=50",
-        );
+        const [applicationResponse, analysisResponse] = await Promise.all([
+          customerFetch<CustomerApplicationPage>(
+            "/api/v2/applications?size=50",
+          ),
+          customerFetch<CustomerAnalysisPage>("/api/v2/analyses?size=50"),
+        ]);
         if (!cancelled) {
-          setApplications(response.items);
+          setApplications(applicationResponse.items);
+          setAnalyses(analysisResponse.items);
           setRequestError(false);
         }
       } catch {
@@ -92,11 +101,11 @@ export function OrdersListScreen({ state }: OrdersListScreenProps) {
             subject="신청 내역"
           />
         </div>
-      ) : applications === null ? (
+      ) : applications === null || analyses === null ? (
         <div className={styles.stateInset}>
           <StatusPanel
-            description="Supabase에서 고객님의 신청 내역을 불러오고 있습니다."
-            title="신청 내역을 확인하고 있어요"
+            description="Supabase에서 고객님의 AI 분석 결과와 신청 내역을 불러오고 있습니다."
+            title="진단 및 신청 내역을 확인하고 있어요"
             tone="permission"
           />
         </div>
@@ -106,32 +115,123 @@ export function OrdersListScreen({ state }: OrdersListScreenProps) {
           className={styles.ordersListLayout}
         >
           <header className={styles.ordersListHeader}>
-            <h2 id="orders-list-heading">신청 상품</h2>
-            <span>{applications.length}건</span>
+            <h2 id="orders-list-heading">진단 및 신청</h2>
+            <span>{analyses.length + applications.length}건</span>
           </header>
 
-          {applications.length === 0 ? (
+          {applications.length === 0 && analyses.length === 0 ? (
             <div className={styles.stateInset}>
               <DemoStatePanel
-                emptyDescription="아직 접수된 업사이클링 신청이 없습니다."
+                emptyDescription="아직 완료된 AI 분석이나 업사이클링 신청이 없습니다."
                 retryHref="/products/new"
                 state="empty"
                 subject="신청 내역"
               />
             </div>
           ) : (
-            <ul className={styles.ordersList}>
-              {applications.map((application) => (
-                <ApplicationListItem
-                  application={application}
-                  key={application.id}
-                />
-              ))}
-            </ul>
+            <>
+              <div className={styles.orderHistorySection}>
+                <header className={styles.ordersListHeader}>
+                  <h3>AI 분석 결과</h3>
+                  <span>{analyses.length}건</span>
+                </header>
+                {analyses.length === 0 ? (
+                  <p className={styles.orderHistoryEmpty}>
+                    완료된 AI 분석 결과가 없습니다.
+                  </p>
+                ) : (
+                  <ul className={styles.ordersList}>
+                    {analyses.map((analysis) => (
+                      <AnalysisListItem
+                        analysis={analysis}
+                        hasApplication={applications.some(
+                          (application) => application.analysisId === analysis.id,
+                        )}
+                        key={analysis.id}
+                      />
+                    ))}
+                  </ul>
+                )}
+              </div>
+
+              <div className={styles.orderHistorySection}>
+                <header className={styles.ordersListHeader}>
+                  <h3>신청 상품</h3>
+                  <span>{applications.length}건</span>
+                </header>
+                {applications.length === 0 ? (
+                  <p className={styles.orderHistoryEmpty}>
+                    아직 접수된 업사이클링 신청이 없습니다.
+                  </p>
+                ) : (
+                  <ul className={styles.ordersList}>
+                    {applications.map((application) => (
+                      <ApplicationListItem
+                        application={application}
+                        key={application.id}
+                      />
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </>
           )}
         </section>
       )}
     </AppShell>
+  );
+}
+
+function AnalysisListItem({
+  analysis,
+  hasApplication,
+}: {
+  analysis: CustomerAnalysisListItem;
+  hasApplication: boolean;
+}) {
+  return (
+    <li>
+      <Link
+        aria-label={`${sourceCategoryLabel(analysis.sourceCategory)} AI 분석 결과 보기`}
+        className={styles.ordersListCard}
+        href={`/submissions/demo/analysis?analysisId=${encodeURIComponent(analysis.id)}`}
+      >
+        <div className={styles.ordersListCardMeta}>
+          <span>{hasApplication ? "신청 완료" : "AI 분석 완료"}</span>
+          <small>{formatApiDate(analysis.createdAt)}</small>
+        </div>
+
+        <div className={styles.ordersListProductRow}>
+          <span className={styles.ordersListThumbnail}>
+            <Image
+              alt="등록한 원제품 대표 이미지"
+              fill
+              sizes="52px"
+              src="/assets/mvp-beta/source-backpack-front.webp"
+            />
+          </span>
+          <span className={styles.ordersListProductCopy}>
+            <strong>{sourceCategoryLabel(analysis.sourceCategory)} AI 분석</strong>
+            <span>상태 등급 {analysis.conditionGrade}</span>
+            <span>예상 재활용 가능률 {analysis.estimatedReusableMaterialRate}%</span>
+          </span>
+          <strong className={styles.ordersListPrice}>
+            {analysis.estimateMeta.confidencePercent}%
+          </strong>
+        </div>
+
+        <span className={styles.ordersListCardAction}>
+          AI 분석 결과 보기
+          <Image
+            alt=""
+            aria-hidden="true"
+            height={10}
+            src="/assets/mvp-beta/icon-chevron-right.svg"
+            width={12}
+          />
+        </span>
+      </Link>
+    </li>
   );
 }
 
@@ -200,4 +300,19 @@ function stageLabel(stage: ReturnType<typeof applicationStatusToOrderStage>) {
     quality: "품질 확인 중",
     shipping: "배송 중",
   }[stage];
+}
+
+function sourceCategoryLabel(category: string) {
+  return {
+    BACKPACK: "백팩",
+    BOSTON_BAG: "보스턴백",
+    BUCKET_BAG: "버킷백",
+    CLUTCH_POUCH: "클러치·파우치",
+    SHOULDER_CROSSBODY: "숄더·크로스백",
+    TOP_HANDLE: "탑핸들백",
+    TOTE_SHOPPER: "토트·쇼퍼백",
+    TRAVEL_LUGGAGE: "트래블·러기지",
+    UNKNOWN_BAG: "가방",
+    WEEKENDER_DUFFLE: "위켄더·더플백",
+  }[category] ?? "가방";
 }

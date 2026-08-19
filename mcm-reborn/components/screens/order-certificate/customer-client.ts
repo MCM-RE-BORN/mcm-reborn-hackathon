@@ -47,6 +47,7 @@ export type CustomerProductDetail = CustomerProduct & {
 };
 
 export type CustomerApplicationSummary = {
+  analysisId: string;
   amount: CustomerMoney;
   applicationNumber: string;
   createdAt: string;
@@ -77,6 +78,27 @@ export type CustomerTerms = {
 
 export type CustomerApplicationPage = {
   items: CustomerApplicationSummary[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+};
+
+export type CustomerAnalysisListItem = {
+  conditionGrade: string;
+  createdAt: string;
+  estimatedReusableMaterialRate: number;
+  estimateMeta: {
+    confidencePercent: number;
+    notice: string;
+  };
+  id: string;
+  modeUsed: string;
+  sourceCategory: string;
+};
+
+export type CustomerAnalysisPage = {
+  items: CustomerAnalysisListItem[];
   page: number;
   size: number;
   totalElements: number;

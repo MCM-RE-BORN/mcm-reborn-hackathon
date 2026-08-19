@@ -1525,6 +1525,7 @@ function applicationSummary(
 ): JsonRecord {
   const terms = readTerms(row.final_terms ?? row.initial_terms);
   return {
+    analysisId: row.analysis_id,
     amount: terms.amount,
     applicationNumber: row.application_number,
     createdAt: row.created_at,

@@ -344,7 +344,8 @@
   justify-content: space-between;
 }
 
-.ordersListHeader h2 {
+.ordersListHeader h2,
+.ordersListHeader h3 {
   font-size: var(--font-size-control);
   font-weight: var(--font-weight-semibold);
   line-height: var(--line-height-tight);
@@ -358,6 +359,25 @@
 .ordersList {
   display: grid;
   gap: var(--space-9);
+}
+
+.orderHistorySection {
+  display: grid;
+  gap: var(--space-9);
+}
+
+.orderHistorySection + .orderHistorySection {
+  padding-top: var(--space-9);
+  border-top: var(--border-thin) solid var(--color-divider);
+}
+
+.orderHistoryEmpty {
+  padding: var(--space-9);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  color: var(--color-muted);
+  font-size: var(--font-size-body);
+  line-height: var(--line-height-reading);
 }
 
 .ordersListCard {
