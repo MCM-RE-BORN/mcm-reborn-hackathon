@@ -1,11 +1,12 @@
 "use client";
 
 import { TextField } from "@/components/ui/TextField";
-import { useCaptureSession } from "./CaptureSessionProvider";
+import {
+  DESIRED_USE_OPTIONS,
+  USE_DURATION_OPTIONS,
+  useCaptureSession,
+} from "./CaptureSessionProvider";
 import styles from "./entry-capture.module.css";
-
-const USE_DURATIONS = ["1년 미만", "1~2년", "3~4년", "5년 이상"];
-const DESIRED_USES = ["여권지갑", "카드지갑", "캐리어 네임택", "키링"];
 
 export function ProductCaptureDetails() {
   const { productDetails, updateProductDetails } = useCaptureSession();
@@ -54,7 +55,7 @@ export function ProductCaptureDetails() {
           required
           value={productDetails.useDuration}
         >
-          {USE_DURATIONS.map((duration) => (
+          {USE_DURATION_OPTIONS.map((duration) => (
             <option key={duration} value={duration}>
               {duration}
             </option>
@@ -74,7 +75,7 @@ export function ProductCaptureDetails() {
           required
           value={productDetails.desiredUse}
         >
-          {DESIRED_USES.map((desiredUse) => (
+          {DESIRED_USE_OPTIONS.map((desiredUse) => (
             <option key={desiredUse} value={desiredUse}>
               {desiredUse}
             </option>

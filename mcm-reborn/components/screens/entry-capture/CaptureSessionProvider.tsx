@@ -29,13 +29,16 @@ export type ProductDetails = {
   useDuration: string;
 };
 
+export const USE_DURATION_OPTIONS = ["1년 미만", "1~2년", "3~4년", "5년 이상"] as const;
+export const DESIRED_USE_OPTIONS = ["여권지갑", "카드지갑", "캐리어 네임택", "키링"] as const;
+
 const INITIAL_PRODUCT_DETAILS: ProductDetails = {
   category: "BACKPACK",
   conditionNote: "",
-  desiredUse: "",
+  desiredUse: DESIRED_USE_OPTIONS[0],
   purchaseYear: "",
   serialNumber: "",
-  useDuration: "",
+  useDuration: USE_DURATION_OPTIONS[0],
 };
 
 type CaptureSessionValue = {
