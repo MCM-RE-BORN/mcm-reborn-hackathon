@@ -724,6 +724,26 @@ async function reserveIdempotencyKey(
     );
   }
 
+  // A cached 4xx response never committed the domain command. Allow the same
+  // operator action to be evaluated again after a server-side validation fix
+  // instead of replaying an obsolete client error for the full 24-hour TTL.
+  if (
+    existing.response_status !== null &&
+    existing.response_status >= 400 &&
+    existing.response_status < 500 &&
+    allowExpiredReclaim
+  ) {
+    const reclaimed = await deleteExpiredIdempotencyRow(
+      config,
+      input.idempotencyKey,
+      existing.expires_at,
+    );
+    if (reclaimed) {
+      return reserveIdempotencyKey(config, input, false);
+    }
+    return { kind: "in-progress" };
+  }
+
   if (
     existing.response_status !== null &&
     existing.response_body !== null
