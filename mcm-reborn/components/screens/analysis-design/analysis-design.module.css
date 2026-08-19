@@ -543,13 +543,6 @@
   text-underline-offset: var(--space-2);
 }
 
-.productDescription {
-  color: var(--color-ink-soft);
-  font-size: var(--font-size-body);
-  font-weight: var(--font-weight-light);
-  line-height: var(--line-height-relaxed);
-}
-
 .productStoryFigure {
   display: grid;
   gap: var(--space-5);

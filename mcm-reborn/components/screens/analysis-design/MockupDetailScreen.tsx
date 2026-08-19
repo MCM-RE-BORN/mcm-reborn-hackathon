@@ -155,7 +155,7 @@ export function MockupDetailScreen({ analysisId, productId, state }: MockupDetai
             <strong>목업 이용 안내</strong>
             <p>
               이 목업은 고객이 등록한 원제품 사진을 바탕으로 만든 예상
-              이미지입니다. 주문 후 장인이 실물을 확인하면 소재 배치·재단
+              3D모델입니다. 주문 후 장인이 실물을 확인하면 소재 배치·재단
               범위·세부 마감이 달라질 수 있으며 변경 조건은 제작 전에 고객에게
               안내합니다.
             </p>
@@ -169,14 +169,12 @@ export function MockupDetailScreen({ analysisId, productId, state }: MockupDetai
               </a>
             </header>
 
-            <p className={styles.productDescription}>{product.description}</p>
-
             <section aria-labelledby="mockup-gallery-title">
               <h2
                 className={styles.productGalleryTitle}
                 id="mockup-gallery-title"
               >
-                다각도 예상 이미지
+                다각도 예시 이미지
               </h2>
               <div className={styles.mockupGallery}>
                 {MOCKUP_GALLERY.map((view) => (
