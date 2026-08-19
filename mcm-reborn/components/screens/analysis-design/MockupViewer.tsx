@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import styles from "./analysis-design.module.css";
 
 const MODEL_SRC = "/assets/models/reborn-passport-wallet.glb";
-const PROMPT_RESET_DELAY_MS = 3_000;
+const PROMPT_RESET_DELAY_MS = 10_000;
 
 type ModelViewerHandle = HTMLElement & {
   resetInteractionPrompt: () => void;
