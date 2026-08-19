@@ -134,13 +134,13 @@ async function executeLifecycleCommand(
 ): Promise<{ body: JsonObject; status: number }> {
   const rpcBody: JsonObject = {
     p_application_id: context.applicationId,
-    p_note: command.note,
     p_target_status: command.targetStatus,
   };
 
-  // The RPC declares defaults for shipping arguments. Omitting them for
-  // pickup/production transitions keeps the request compatible with older
-  // PostgREST schemas while still sending all three values for SHIPPED.
+  // Every parameter other than application and target status has a SQL
+  // default. Leaving nonessential fields out keeps command calls compatible
+  // with a PostgREST schema cache that was built before optional arguments
+  // were added. The UI note is presentation-only for this compact console.
   if (command.targetStatus === "SHIPPED") {
     rpcBody.p_carrier_code = command.carrierCode;
     rpcBody.p_carrier_name = command.carrierName;

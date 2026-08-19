@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { OperatorLogoutButton } from "./OperatorLogoutButton";
 import styles from "./operations.module.css";
 
 type OperationsShellProps = {
@@ -21,6 +22,7 @@ export function OperationsShell({ children }: OperationsShellProps) {
           <div className={styles.consoleMeta}>
             <span>관리자 · 장인 통합</span>
             <strong>V2 OPERATOR</strong>
+            <OperatorLogoutButton />
           </div>
         </div>
       </header>
