@@ -20,7 +20,7 @@ export function OperationsShell({ children }: OperationsShellProps) {
           </Link>
           <div className={styles.consoleMeta}>
             <span>관리자 · 장인 통합</span>
-            <strong>DEMO FIXTURE</strong>
+            <strong>V2 OPERATOR</strong>
           </div>
         </div>
       </header>

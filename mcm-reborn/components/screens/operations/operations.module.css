@@ -156,6 +156,13 @@
   color: var(--color-muted);
 }
 
+.actionError {
+  color: #a12d2d;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  margin: 0.75rem 0 0;
+}
+
 .sectionHeading {
   display: flex;
   align-items: center;

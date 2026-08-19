@@ -5,9 +5,15 @@ import {
 } from "@/data/application-lifecycle";
 import { DEMO_SCENARIO } from "@/data/demo-scenario";
 
-export const OPERATION_STATUSES = APPLICATION_LIFECYCLE_SEQUENCE;
+export const OPERATION_STATUSES = [
+  "PENDING_PAYMENT",
+  ...APPLICATION_LIFECYCLE_SEQUENCE,
+  "CHANGE_APPROVAL_REQUIRED",
+  "PRODUCTION_UNAVAILABLE",
+  "CANCELED",
+] as const;
 
-export type OperationStatus = ApplicationLifecycleStatus;
+export type OperationStatus = (typeof OPERATION_STATUSES)[number];
 
 type StagePresentation = {
   description: string;
@@ -19,6 +25,11 @@ export const OPERATION_STAGE_PRESENTATION: Record<
   OperationStatus,
   StagePresentation
 > = {
+  PENDING_PAYMENT: {
+    description: "결제가 완료되면 수거 일정을 확정할 수 있습니다.",
+    label: "결제 대기",
+    owner: "관리자",
+  },
   ORDER_PLACED: {
     description: "Mock 결제가 완료되어 수거 일정을 확정할 수 있습니다.",
     label: "신청 접수",
@@ -74,11 +85,26 @@ export const OPERATION_STAGE_PRESENTATION: Record<
     label: "완료",
     owner: "관리자",
   },
+  CHANGE_APPROVAL_REQUIRED: {
+    description: "실물 검수로 변경된 조건에 대한 고객 승인을 기다립니다.",
+    label: "고객 승인 대기",
+    owner: "관리자",
+  },
+  PRODUCTION_UNAVAILABLE: {
+    description: "실물 검수 결과 제작을 진행할 수 없습니다.",
+    label: "제작 불가",
+    owner: "장인",
+  },
+  CANCELED: {
+    description: "제작 불가 또는 조건 미승인으로 신청이 취소되었습니다.",
+    label: "취소",
+    owner: "관리자",
+  },
 };
 
 type OperationTransition = {
   label: string;
-  mode: "inspection-fixture" | "lifecycle-command";
+  mode: "inspection-api" | "lifecycle-command";
   note: string;
 };
 
@@ -106,9 +132,9 @@ const NEXT_TRANSITIONS: Partial<
     note: "입고된 원제품의 실물 검수를 시작합니다.",
   },
   EXPERT_INSPECTION: {
-    label: "검수 완료 · 제작 준비",
-    mode: "inspection-fixture",
-    note: "중앙 데모의 변경 조건과 고객 승인 결과를 반영합니다.",
+    label: "실물 검수 저장",
+    mode: "inspection-api",
+    note: "검수 결과를 저장하고 다음 제작 조건을 반영합니다.",
   },
   PRODUCTION_READY: {
     label: "제작 시작",
@@ -135,12 +161,18 @@ const NEXT_TRANSITIONS: Partial<
     mode: "lifecycle-command",
     note: "모든 공정을 완료하고 보증서 발급 조건을 충족합니다.",
   },
+  PRODUCTION_UNAVAILABLE: {
+    label: "제작 불가 취소 처리",
+    mode: "lifecycle-command",
+    note: "제작 불가 신청을 취소하고 환불 접수 상태로 전환합니다.",
+  },
 };
 
 export const OPERATION_APPLICATION = {
   analysis: DEMO_SCENARIO.analysis,
   applicationId: DEMO_SCENARIO.order.id,
   applicationNumber: DEMO_SCENARIO.order.number,
+  certificate: DEMO_SCENARIO.certificate,
   customer: DEMO_SCENARIO.order.customer,
   expertInspection: DEMO_SCENARIO.expertInspection,
   orderedAt: DEMO_SCENARIO.order.orderedAt,
@@ -160,9 +192,16 @@ export function readOperationStatus(
     : "ORDER_PLACED";
 }
 
-export function getNextOperationTransition(status: OperationStatus) {
+export function getNextOperationTransition(
+  status: OperationStatus,
+): (OperationTransition & { targetStatus: OperationStatus }) | null {
   const presentation = NEXT_TRANSITIONS[status];
-  const targetStatus = getNextApplicationLifecycleStatus(status);
+  const targetStatus =
+    status === "PRODUCTION_UNAVAILABLE"
+      ? "CANCELED"
+      : isLinearLifecycleStatus(status)
+        ? getNextApplicationLifecycleStatus(status)
+        : null;
 
   return presentation && targetStatus
     ? { ...presentation, targetStatus }
@@ -170,9 +209,34 @@ export function getNextOperationTransition(status: OperationStatus) {
 }
 
 export function isOperationApplication(applicationId: string) {
-  return applicationId === OPERATION_APPLICATION.applicationId;
+  return (
+    applicationId === OPERATION_APPLICATION.applicationId ||
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+      applicationId,
+    )
+  );
 }
 
-export function operationDetailHref(status: OperationStatus) {
-  return `/operations/${OPERATION_APPLICATION.applicationId}?status=${status}`;
+export function operationDetailHref(
+  status: OperationStatus,
+  applicationId: string = OPERATION_APPLICATION.applicationId,
+) {
+  return `/operations/${applicationId}?status=${status}`;
+}
+
+export function hasConfirmedInspection(status: OperationStatus) {
+  return [
+    "PRODUCTION_READY",
+    "IN_PRODUCTION",
+    "QUALITY_CHECK",
+    "SHIPPED",
+    "DELIVERED",
+    "COMPLETED",
+  ].includes(status);
+}
+
+function isLinearLifecycleStatus(
+  status: OperationStatus,
+): status is ApplicationLifecycleStatus {
+  return (APPLICATION_LIFECYCLE_SEQUENCE as readonly string[]).includes(status);
 }

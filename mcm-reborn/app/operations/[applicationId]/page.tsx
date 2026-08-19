@@ -25,6 +25,7 @@ export default async function OperationDetailPage({
 
   return (
     <OperationsDetailScreen
+      applicationId={applicationId}
       found={isOperationApplication(applicationId)}
       status={readOperationStatus(status)}
     />
