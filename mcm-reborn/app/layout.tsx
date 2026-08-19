@@ -49,7 +49,8 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body>
+      {/* Browser extensions such as Grammarly may inject body attributes before hydration. */}
+      <body suppressHydrationWarning>
         <CaptureSessionProvider>
           <OrderDraftProvider>{children}</OrderDraftProvider>
         </CaptureSessionProvider>
