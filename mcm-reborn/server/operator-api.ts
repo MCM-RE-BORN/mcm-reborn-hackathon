@@ -77,6 +77,7 @@ const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const JSON_BODY_LIMIT = 32_768;
 const SUPABASE_TIMEOUT_MS = 10_000;
+const IDEMPOTENCY_STALE_AFTER_MS = 60_000;
 
 export function assertUuid(value: string, fieldName: string): void {
   if (!UUID_PATTERN.test(value)) {
@@ -308,8 +309,10 @@ export async function readUserTableRows<T>(
 }
 
 export function postgrestEquals(value: string): string {
-  const escaped = value.replaceAll("\\", "\\\\").replaceAll('"', '\\"');
-  return `eq."${escaped}"`;
+  // URLSearchParams performs the transport escaping. Adding SQL-style quotes
+  // here makes PostgREST compare the literal quote characters, so cache reads
+  // and PATCHes silently match zero rows (notably for v2:<sha256> keys).
+  return `eq.${value}`;
 }
 
 function invalidField(fieldName: string): ApiProblem {
@@ -676,10 +679,15 @@ async function reserveIdempotencyKey(
   }
 
   const expiresAt = Date.parse(existing.expires_at);
-  if (!Number.isFinite(expiresAt)) {
+  const createdAt = Date.parse(existing.created_at);
+  if (!Number.isFinite(expiresAt) || !Number.isFinite(createdAt)) {
     throw upstreamInvalidResponse();
   }
-  if (expiresAt <= Date.now() && allowExpiredReclaim) {
+  const now = Date.now();
+  const staleInProgress =
+    existing.response_status === null &&
+    now - createdAt >= IDEMPOTENCY_STALE_AFTER_MS;
+  if ((expiresAt <= now || staleInProgress) && allowExpiredReclaim) {
     const reclaimed = await deleteExpiredIdempotencyRow(
       config,
       input.idempotencyKey,
