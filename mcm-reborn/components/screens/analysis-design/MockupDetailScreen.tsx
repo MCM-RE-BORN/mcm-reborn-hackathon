@@ -128,35 +128,52 @@ export function MockupDetailScreen({ analysisId, productId, state }: MockupDetai
           />
         </div>
       ) : (
-      <article className={styles.mockupContent}>
-        <MockupViewer />
+        <article className={styles.mockupContent}>
+          <div className={styles.mockupStage}>
+            <MockupViewer />
+          </div>
 
-        <header className={styles.productDetailHeader}>
-          <h1>{product.name}</h1>
-          <a className={styles.engravingLink} href="#engraving-note">
-            각인 옵션 안내
-          </a>
-        </header>
+          <section className={styles.productStory}>
+            <header className={styles.productDetailHeader}>
+              <h1>{product.name}</h1>
+              <a className={styles.engravingLink} href="#engraving-note">
+                각인 옵션 안내
+              </a>
+            </header>
 
-        <p className={styles.productDescription}>{product.description}</p>
+            <p className={styles.productDescription}>{product.description}</p>
 
-        <aside className={styles.contractNotice}>
-          <strong>목업 이용 안내</strong>
-          <p>
-            이 목업은 사진 기반 예상 이미지입니다. 주문 후 장인이 실물을
-            확인하면 패턴 위치·재단 범위·세부 마감이 달라질 수 있으며 변경
-            조건은 제작 전에 고객에게 안내합니다.
-          </p>
-        </aside>
+            <figure className={styles.productStoryFigure}>
+              <Image
+                alt="RE:BORN 여권지갑을 펼친 내부 구성"
+                height={770}
+                sizes="(max-width: 402px) calc(100vw - 40px), 350px"
+                src="/assets/mvp-beta/passport-wallet/open-inside.jpg"
+                width={750}
+              />
+              <figcaption>
+                여권과 카드, 지퍼 포켓을 한 번에 정리할 수 있는 내부 구성입니다.
+              </figcaption>
+            </figure>
 
-        <aside className={styles.engravingNotice} id="engraving-note">
-          <strong>각인 옵션 안내</strong>
-          <p>
-            각인 서비스는 제품 상태와 제작 방식에 따라 제공 여부가 달라질 수
-            있습니다. 실물 검수 후 가능한 위치와 크기를 안내합니다.
-          </p>
-        </aside>
-      </article>
+            <aside className={styles.contractNotice}>
+              <strong>목업 이용 안내</strong>
+              <p>
+                이 목업은 사진 기반 예상 이미지입니다. 주문 후 장인이 실물을
+                확인하면 패턴 위치·재단 범위·세부 마감이 달라질 수 있으며 변경
+                조건은 제작 전에 고객에게 안내합니다.
+              </p>
+            </aside>
+
+            <aside className={styles.engravingNotice} id="engraving-note">
+              <strong>각인 옵션 안내</strong>
+              <p>
+                각인 서비스는 제품 상태와 제작 방식에 따라 제공 여부가 달라질 수
+                있습니다. 실물 검수 후 가능한 위치와 크기를 안내합니다.
+              </p>
+            </aside>
+          </section>
+        </article>
       )}
     </AppShell>
   );
