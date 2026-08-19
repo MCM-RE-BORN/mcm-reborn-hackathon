@@ -1,6 +1,7 @@
 "use client";
 
 const OPERATOR_SESSION_KEY = "mcm.reborn.operator.session";
+const OPERATOR_SESSION_EVENT = "mcm.reborn.operator.session-change";
 
 export type OperatorSession = {
   accessToken: string;
@@ -119,8 +120,21 @@ let sessionPromise: Promise<OperatorSession> | null = null;
 export function clearOperatorSession() {
   if (typeof window !== "undefined") {
     window.sessionStorage.removeItem(OPERATOR_SESSION_KEY);
+    window.dispatchEvent(new Event(OPERATOR_SESSION_EVENT));
   }
   sessionPromise = null;
+}
+
+export function hasOperatorSession(): boolean {
+  return typeof window !== "undefined" && readStoredSession() !== null;
+}
+
+export function onOperatorSessionChange(listener: () => void): () => void {
+  if (typeof window === "undefined") {
+    return () => undefined;
+  }
+  window.addEventListener(OPERATOR_SESSION_EVENT, listener);
+  return () => window.removeEventListener(OPERATOR_SESSION_EVENT, listener);
 }
 
 export async function getOperatorSession(): Promise<OperatorSession> {
@@ -188,7 +202,7 @@ export async function loginOperatorCredentials(
       role: "OPERATOR",
     },
   };
-  window.sessionStorage.setItem(OPERATOR_SESSION_KEY, JSON.stringify(result));
+  storeOperatorSession(result);
   sessionPromise = null;
   return result;
 }
@@ -294,9 +308,14 @@ function loginOperator(): Promise<OperatorSession> {
         role: "OPERATOR",
       },
     };
-    window.sessionStorage.setItem(OPERATOR_SESSION_KEY, JSON.stringify(result));
+    storeOperatorSession(result);
     return result;
   });
+}
+
+function storeOperatorSession(session: OperatorSession) {
+  window.sessionStorage.setItem(OPERATOR_SESSION_KEY, JSON.stringify(session));
+  window.dispatchEvent(new Event(OPERATOR_SESSION_EVENT));
 }
 
 function readStoredSession(): OperatorSession | null {

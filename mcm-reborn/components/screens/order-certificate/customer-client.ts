@@ -259,7 +259,13 @@ export async function customerFetch<T>(
   input: string,
   init: RequestInit = {},
 ): Promise<T> {
-  const session = await getCustomerSession();
+  let session: CustomerSession;
+  try {
+    session = await getCustomerSession();
+  } catch (error) {
+    redirectToLoginWhenExpired(error);
+    throw error;
+  }
   const headers = new Headers(init.headers);
   headers.set("Accept", "application/json");
   headers.set("Authorization", `Bearer ${session.accessToken}`);
@@ -279,6 +285,7 @@ export async function customerFetch<T>(
   if (!response.ok) {
     if (response.status === 401) {
       clearCustomerSession();
+      redirectToLogin();
     }
     const errorRecord = readRecord(payload)?.error;
     const message =
@@ -421,12 +428,27 @@ function readStoredSession(): CustomerSession | null {
     }
     if (Date.parse(value.expiresAt) <= Date.now() + 30_000) {
       clearCustomerSession();
-      return null;
+      throw new CustomerApiError(
+        "고객 서비스 세션이 만료되었습니다. 다시 로그인해 주세요.",
+        401,
+      );
     }
     return value as CustomerSession;
   } catch {
     clearCustomerSession();
     return null;
+  }
+}
+
+function redirectToLoginWhenExpired(error: unknown) {
+  if (error instanceof CustomerApiError && error.status === 401) {
+    redirectToLogin();
+  }
+}
+
+function redirectToLogin() {
+  if (typeof window !== "undefined" && window.location.pathname !== "/login") {
+    window.location.replace("/login?reason=session-expired");
   }
 }
 

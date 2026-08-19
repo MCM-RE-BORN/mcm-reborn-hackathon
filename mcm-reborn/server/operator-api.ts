@@ -484,7 +484,14 @@ async function authenticateUser(
   const payload = await readUpstreamJson(response);
 
   if (!response.ok) {
-    if (response.status === 401 || response.status === 403) {
+    // GoTrue can report a malformed, revoked, or expired access token as 400
+    // as well as 401/403. Treat every authentication rejection uniformly so
+    // the console clears its stale session and returns to the login form.
+    if (
+      response.status === 400 ||
+      response.status === 401 ||
+      response.status === 403
+    ) {
       throw new ApiProblem(
         401,
         "UNAUTHORIZED",

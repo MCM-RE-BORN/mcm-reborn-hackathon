@@ -194,7 +194,6 @@ export function OperationsDetailScreen({
                       .toUpperCase()}`,
                   }
                 : {}),
-              note: transition.note,
               targetStatus,
             }),
             method: "POST",

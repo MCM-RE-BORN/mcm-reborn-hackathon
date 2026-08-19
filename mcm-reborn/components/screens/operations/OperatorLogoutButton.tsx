@@ -1,16 +1,30 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { clearOperatorSession } from "./operator-client";
+import { useEffect, useState } from "react";
+import {
+  clearOperatorSession,
+  hasOperatorSession,
+  onOperatorSessionChange,
+} from "./operator-client";
 import styles from "./operations.module.css";
 
 export function OperatorLogoutButton() {
-  const router = useRouter();
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  useEffect(() => {
+    const sync = () => setIsAuthenticated(hasOperatorSession());
+    sync();
+    return onOperatorSessionChange(sync);
+  }, []);
 
   function handleLogout() {
     clearOperatorSession();
-    router.replace("/operations");
-    router.refresh();
+    // A document replacement also clears in-memory operator detail state.
+    window.location.replace("/operations");
+  }
+
+  if (!isAuthenticated) {
+    return null;
   }
 
   return (
