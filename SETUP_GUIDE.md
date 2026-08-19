@@ -71,7 +71,7 @@ DEMO_OPERATOR_PASSWORD=use-a-different-secret-value
 
 ### 3.1 신규·빈 Supabase 프로젝트
 
-Supabase Dashboard의 SQL Editor에서 루트 `supabase-schema.sql` 전체를 한 번 적용한다. 이 파일은 현재 v2 최종 상태의 bootstrap이며, 별도 migration 001~004를 다시 실행하지 않는다.
+Supabase Dashboard의 SQL Editor에서 루트 `supabase-schema.sql` 전체를 한 번 적용한다. 이 파일은 현재 v2 최종 상태의 bootstrap이며, 별도 migration 001~005를 다시 실행하지 않는다.
 
 bootstrap은 다음을 포함한다.
 
@@ -102,6 +102,7 @@ bootstrap은 다음을 포함한다.
 2. `supabase/migrations/202608180002_capture_four_views.sql`
 3. `supabase/migrations/202608180003_capture_seven_views.sql`
 4. `supabase/migrations/202608180004_backend_v2_runtime.sql`
+5. `supabase/migrations/202608190005_shipment_conflict_hotfix.sql`
 
 002는 과거 4장 계약을 반영하는 중간 migration이고, 003이 현재의 6면+일련번호 총 7장 계약으로 대체한다. 기존 DB의 적용 이력을 재현하기 위해 순서를 생략하지 않는다. 4장 상태의 진행 중 분석은 사진을 임의 생성해 backfill하지 않으며, 나머지 구도와 일련번호 사진을 보완한 뒤 진행한다.
 
@@ -114,7 +115,7 @@ bootstrap은 다음을 포함한다.
 v1→v2 변환 migration을 작성하거나, 보존할 데이터가 없는 개발 프로젝트라면 신규
 staging 프로젝트에 최종 bootstrap을 적용한다.
 
-구조 롤백 파일은 `supabase/rollbacks/`에 있다. 롤백이 필요하면 데이터 손실과 API 호환성을 검토하고 `004 → 003 → 002 → 001` 역순으로 수행한다. 004 rollback은 migration 뒤 제품 JSON, trigger·정책·보호 권한이 바뀌었거나 실제 LIVE 동의 증적이 있으면 자동 복원을 중단한다. OpenAPI, 앱과 DB 중 한쪽만 단독 롤백하지 않는다.
+구조 롤백 파일은 `supabase/rollbacks/`에 있다. 롤백이 필요하면 데이터 손실과 API 호환성을 검토하고 `005 → 004 → 003 → 002 → 001` 역순으로 수행한다. 005 rollback은 배송 시작 결함을 다시 만들므로 앱까지 함께 되돌릴 때만 사용한다. 004 rollback은 migration 뒤 제품 JSON, trigger·정책·보호 권한이 바뀌었거나 실제 LIVE 동의 증적이 있으면 자동 복원을 중단한다. OpenAPI, 앱과 DB 중 한쪽만 단독 롤백하지 않는다.
 
 ## 4. Supabase Auth와 profiles 연결
 
@@ -254,7 +255,7 @@ curl http://localhost:3000/api/v2/me \
 
 ### DB·migration
 
-- [ ] 신규 DB는 bootstrap만, 기존 DB는 migration 001→002→003→004만 적용했다.
+- [ ] 신규 DB는 bootstrap만, 기존 DB는 migration 001→002→003→004→005만 적용했다.
 - [ ] lifecycle RPC와 trigger가 존재하고 허용된 인접 상태 전이만 성공한다.
 - [ ] `COMPLETED` 이전 보증서 생성이 DB에서 거부된다.
 - [ ] 최종 분석 진행에는 정확히 7개 이미지가 필요하다.
@@ -325,7 +326,7 @@ curl http://localhost:3000/api/v2/me \
 ### relation 또는 RPC가 없다는 오류가 발생하는 경우
 
 - 신규/기존 DB 적용 경로를 다시 확인한다.
-- 기존 DB migration을 001→002→003→004 순서로 모두 적용했는지 확인한다.
+- 기존 DB migration을 001→002→003→004→005 순서로 모두 적용했는지 확인한다.
 - production 데이터가 있는 환경에서 bootstrap 재적용으로 해결하지 않는다.
 
 ## 11. 완료 기록

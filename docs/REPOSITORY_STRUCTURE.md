@@ -43,7 +43,7 @@
 
 영속 저장을 도입할 때 고객 원본 사진은 `public/`에 넣지 않고 Supabase private bucket에 저장해야 한다. 비밀키, 실제 고객 데이터와 운영 로그도 저장소에 추가하지 않는다.
 
-신규 DB의 전체 bootstrap 기준은 `supabase-schema.sql`이다. 호환되는 기존 v2 데모 DB에는 루트 `supabase/migrations/`의 버전 migration을 순서대로 적용하고, 구조 롤백은 대응하는 `supabase/rollbacks/` 파일과 데이터 안전 조건을 따른다. lifecycle 무결성은 `202608180001_lifecycle_integrity.sql`, 이전 4장 계약은 `202608180002_capture_four_views.sql`, 현행 7장 계약은 `202608180003_capture_seven_views.sql`, Product3D readiness·결제·고객 변경안 결정·이벤트·Storage metadata binding·외부 AI 동의 증적·신청/옵션 제약은 `202608180004_backend_v2_runtime.sql`과 rollback으로 관리한다. `origin/feature-backend` v1 DB는 이 migration 체인의 입력으로 지원하지 않는다.
+신규 DB의 전체 bootstrap 기준은 `supabase-schema.sql`이다. 호환되는 기존 v2 데모 DB에는 루트 `supabase/migrations/`의 버전 migration을 순서대로 적용하고, 구조 롤백은 대응하는 `supabase/rollbacks/` 파일과 데이터 안전 조건을 따른다. lifecycle 무결성은 `202608180001_lifecycle_integrity.sql`, 이전 4장 계약은 `202608180002_capture_four_views.sql`, 현행 7장 계약은 `202608180003_capture_seven_views.sql`, Product3D readiness·결제·고객 변경안 결정·이벤트·Storage metadata binding·외부 AI 동의 증적·신청/옵션 제약은 `202608180004_backend_v2_runtime.sql`, 배송 lifecycle RPC의 모호한 충돌 대상 수정은 `202608190005_shipment_conflict_hotfix.sql`과 각 rollback으로 관리한다. `origin/feature-backend` v1 DB는 이 migration 체인의 입력으로 지원하지 않는다.
 
 ## 지침 적용 순서
 

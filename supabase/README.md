@@ -3,8 +3,16 @@
 ## Migration order for an existing v2 database
 
 Apply the forward migrations in filename order: `202608180001` → `202608180002`
-→ `202608180003` → `202608180004`. A fresh, empty database uses the root
+→ `202608180003` → `202608180004` → `202608190005`. A fresh, empty database uses the root
 `supabase-schema.sql` bootstrap only and must not replay these migrations.
+
+## 202608190005 shipment conflict hotfix
+
+`migrations/202608190005_shipment_conflict_hotfix.sql` replaces the ambiguous
+`ON CONFLICT (application_id)` target inside the lifecycle RPC with the named
+`mock_shipments_application_id_key` constraint. This restores the
+`QUALITY_CHECK → SHIPPED` transition without changing the HTTP contract or
+existing business data.
 
 ## 202608180004 backend v2 runtime
 
@@ -112,6 +120,9 @@ the release is accepted.
 ## Rollback
 
 Rollback in reverse order. Run
+`rollbacks/202608190005_shipment_conflict_hotfix.sql` before 004 only when the
+application is also rolled back; it intentionally restores the affected RPC.
+Then run
 `rollbacks/202608180004_backend_v2_runtime.sql` before the 003, 002, or 001
 rollback. It restores the exact product JSON and trigger definitions captured
 at migration time, plus the prior RLS policy expressions and analytics grants.

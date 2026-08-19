@@ -1097,6 +1097,7 @@ def validate_sql(sql: str) -> None:
             'production-stage unavailable guard': "current_status not in ('IN_PRODUCTION', 'QUALITY_CHECK')",
             'unavailable cancellation command guard': "current_status <> 'PRODUCTION_UNAVAILABLE'",
             'shipping command payload guard': 'shipping fields are accepted only for SHIPPED',
+            'unambiguous shipment conflict target': 'on conflict on constraint mock_shipments_application_id_key do update set',
             'delivered shipment guard': 'DELIVERED requires an existing SHIPPED shipment',
             'existing shipment response lookup': 'if changed_shipment_id is null then',
             'immutable changed terms': 'customer decision cannot alter proposed terms',
@@ -1436,7 +1437,7 @@ def validate_lifecycle_migrations(up_migration: str, rollback: str) -> None:
             'guarded lifecycle RPC': 'create or replace function public.advance_application_lifecycle(',
             'operator guard': 'if auth.uid() is null or not public.is_operator() then',
             'same-state lifecycle rejection': 'lifecycle command target must be the next status',
-            'shipment upsert': 'on conflict (application_id) do update set',
+            'historical shipment upsert repaired by 005': 'on conflict (application_id) do update set',
             'existing shipment response lookup': 'if changed_shipment_id is null then',
             'certificate preflight': 'existing certificate violates COMPLETED/no-override issuance rule',
             'certificate trigger': 'create trigger esg_certificates_enforce_issuance_state',
@@ -1464,6 +1465,33 @@ def validate_lifecycle_migrations(up_migration: str, rollback: str) -> None:
     )
     if re.search(r'\bcascade\b', rollback, flags=re.IGNORECASE):
         fail('Lifecycle rollback must not use broad CASCADE drops')
+
+
+def validate_shipment_conflict_hotfix(up_migration: str, rollback: str) -> None:
+    require_fragments(
+        up_migration,
+        '202608190005 shipment conflict hotfix',
+        {
+            'transaction start': 'begin;',
+            'transaction commit': 'commit;',
+            'target lifecycle signature': 'public.advance_application_lifecycle(uuid,public.application_status,text,text,text,text)',
+            'ambiguous source detection': "position('on conflict (application_id)' in lower(function_definition))",
+            'named conflict target': 'on conflict on constraint mock_shipments_application_id_key',
+            'unknown shape stop': 'advance_application_lifecycle has an unknown shipment upsert shape',
+        },
+    )
+    require_fragments(
+        rollback,
+        '202608190005 shipment conflict rollback',
+        {
+            'transaction start': 'begin;',
+            'transaction commit': 'commit;',
+            'rollback warning': 'reintroduces the SHIPPED transition defect',
+            'restore legacy target': 'on conflict (application_id)',
+        },
+    )
+    if re.search(r'\bcascade\b', up_migration + rollback, flags=re.IGNORECASE):
+        fail('Shipment conflict hotfix must not use CASCADE')
 
 
 def validate_capture_ui(
@@ -1696,6 +1724,8 @@ def validate_guide(guide: str) -> None:
         'supabase/rollbacks/202608180003_capture_seven_views.sql',
         'supabase/migrations/202608180004_backend_v2_runtime.sql',
         'supabase/rollbacks/202608180004_backend_v2_runtime.sql',
+        'supabase/migrations/202608190005_shipment_conflict_hotfix.sql',
+        'supabase/rollbacks/202608190005_shipment_conflict_hotfix.sql',
         '정면·후면·상단·하단·좌측면·우측면·일련번호 7개',
     ):
         if fragment not in current_guidance:
@@ -1709,13 +1739,16 @@ def validate_runtime_migration_docs(
     repository_structure: str,
 ) -> None:
     migration_name = '202608180004_backend_v2_runtime.sql'
+    hotfix_name = '202608190005_shipment_conflict_hotfix.sql'
     require_fragments(
         supabase_readme,
         'supabase/README.md',
         {
             'forward runtime migration': f'migrations/{migration_name}',
             'runtime rollback': f'rollbacks/{migration_name}',
-            'forward order': '202608180001` → `202608180002`\n→ `202608180003` → `202608180004',
+            'forward order': '202608180001` → `202608180002`\n→ `202608180003` → `202608180004` → `202608190005',
+            'shipment hotfix': f'migrations/{hotfix_name}',
+            'shipment hotfix rollback': f'rollbacks/{hotfix_name}',
             'product model alignment': 'complete Product3D',
             'payment conflict': 'non-`PENDING_PAYMENT`',
             'customer ownership': '`auth.uid()`, application ownership',
@@ -1736,9 +1769,10 @@ def validate_runtime_migration_docs(
         'SETUP_GUIDE.md',
         {
             'forward runtime migration': f'supabase/migrations/{migration_name}',
-            'forward order': '001→002→003→004',
-            'reverse order': '004 → 003 → 002 → 001',
+            'forward order': '001→002→003→004→005',
+            'reverse order': '005 → 004 → 003 → 002 → 001',
             'runtime rollback behavior': '004 rollback',
+            'shipment hotfix': f'supabase/migrations/{hotfix_name}',
         },
     )
     require_fragments(
@@ -1747,6 +1781,8 @@ def validate_runtime_migration_docs(
         {
             'forward runtime migration': f'supabase/migrations/{migration_name}',
             'runtime rollback': f'supabase/rollbacks/{migration_name}',
+            'shipment hotfix': f'supabase/migrations/{hotfix_name}',
+            'shipment hotfix rollback': f'supabase/rollbacks/{hotfix_name}',
         },
     )
     require_fragments(
@@ -1754,6 +1790,7 @@ def validate_runtime_migration_docs(
         'docs/REPOSITORY_STRUCTURE.md',
         {
             'runtime migration ownership': migration_name,
+            'shipment hotfix ownership': hotfix_name,
         },
     )
 
@@ -1807,6 +1844,12 @@ def main() -> None:
     ).read_text(encoding='utf-8')
     runtime_rollback = (
         ROOT / 'supabase' / 'rollbacks' / '202608180004_backend_v2_runtime.sql'
+    ).read_text(encoding='utf-8')
+    shipment_hotfix = (
+        ROOT / 'supabase' / 'migrations' / '202608190005_shipment_conflict_hotfix.sql'
+    ).read_text(encoding='utf-8')
+    shipment_hotfix_rollback = (
+        ROOT / 'supabase' / 'rollbacks' / '202608190005_shipment_conflict_hotfix.sql'
     ).read_text(encoding='utf-8')
     guide = (ROOT / 'MCM_REBORN_API_GUIDE.md').read_text(encoding='utf-8')
     supabase_readme = (ROOT / 'supabase' / 'README.md').read_text(encoding='utf-8')
@@ -1872,6 +1915,10 @@ def main() -> None:
     validate_backend_v2_runtime_migration(
         runtime_migration,
         runtime_rollback,
+    )
+    validate_shipment_conflict_hotfix(
+        shipment_hotfix,
+        shipment_hotfix_rollback,
     )
     validate_capture_ui(
         capture_config,

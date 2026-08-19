@@ -1032,7 +1032,7 @@ begin
       normalized_tracking_number,
       'SHIPPED'
     )
-    on conflict (application_id) do update set
+    on conflict on constraint mock_shipments_application_id_key do update set
       carrier_code = excluded.carrier_code,
       carrier_name = excluded.carrier_name,
       tracking_number = excluded.tracking_number,

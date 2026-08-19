@@ -323,15 +323,24 @@ def validate_current_route_docs(errors: list[str]) -> None:
 
     operator_api = read("mcm-reborn/server/operator-api.ts")
     for marker in (
-        'request.headers.get("authorization")',
+        "authenticate(request)",
+        'requireRole(user, ["OPERATOR"])',
         'request.headers.get("idempotency-key")',
         "SUPABASE_SERVICE_ROLE_KEY",
-        '"/auth/v1/user"',
-        'role: "eq.OPERATOR"',
         '"/rest/v1/idempotency_keys"',
     ):
         if marker not in operator_api:
             errors.append(f"operator API helper must contain {marker}")
+
+    auth_middleware = read("mcm-reborn/server/auth/middleware.ts")
+    for marker in (
+        "readBearerToken(request)",
+        "publicClient.auth.getUser(token)",
+        ".from('profiles')",
+        "profile.role !== 'CUSTOMER' && profile.role !== 'OPERATOR'",
+    ):
+        if marker not in auth_middleware:
+            errors.append(f"auth middleware must contain {marker}")
 
 
 def main() -> int:
