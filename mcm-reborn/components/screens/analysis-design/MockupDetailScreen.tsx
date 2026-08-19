@@ -41,13 +41,19 @@ const MOCKUP_GALLERY = [
   },
 ] as const;
 
-function MockupHeader() {
+function getDesignsHref(analysisId?: string) {
+  return analysisId
+    ? `/submissions/demo/designs?analysisId=${encodeURIComponent(analysisId)}`
+    : "/submissions/demo/designs";
+}
+
+function MockupHeader({ analysisId }: Pick<MockupDetailScreenProps, "analysisId">) {
   return (
     <header className={styles.mockupHeader}>
       <Link
         aria-label="추천 디자인으로 돌아가기"
         className={styles.mockupBackLink}
-        href="/submissions/demo/designs"
+        href={getDesignsHref(analysisId)}
       >
         <Image
           alt=""
@@ -90,10 +96,11 @@ export function MockupDetailScreen({ analysisId, productId, state }: MockupDetai
   }, [analysisId, productId, state]);
 
   if (state !== "normal") {
+    const designsHref = getDesignsHref(analysisId);
     return (
       <AppShell
         header={
-          <PageHeader backHref="/submissions/demo/designs" title="3D 목업" />
+          <PageHeader backHref={designsHref} title="3D 목업" />
         }
       >
         <div className={styles.statePage}>
@@ -101,7 +108,7 @@ export function MockupDetailScreen({ analysisId, productId, state }: MockupDetai
             actionHref={
               state === "limited"
                 ? "/submissions/demo/ineligible"
-                : "/submissions/demo/designs"
+                : designsHref
             }
             actionLabel={
               state === "limited" ? "제작 불가 결과 보기" : "추천 디자인으로 돌아가기"
@@ -126,12 +133,12 @@ export function MockupDetailScreen({ analysisId, productId, state }: MockupDetai
           </ButtonLink>
         </StickyActionBar>
       }
-      header={<MockupHeader />}
+      header={<MockupHeader analysisId={analysisId} />}
     >
       {!analysisId || !productId || requestError ? (
         <div className={styles.statePage}>
           <DemoStatePanel
-            actionHref={analysisId ? `/submissions/demo/designs?analysisId=${analysisId}` : "/submissions/demo/designs"}
+            actionHref={getDesignsHref(analysisId)}
             actionLabel="추천 디자인으로 돌아가기"
             context="mockup"
             state="error"
