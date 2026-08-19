@@ -178,6 +178,7 @@ function stageLabel(stage: ReturnType<typeof applicationStatusToOrderStage>) {
     "change-required": "변경 조건 확인 필요",
     inspection: "실물 검수 중",
     pickup: "접수 완료",
+    "production-ready": "실물 검수 완료 · 제작 준비",
     production: "제작 중",
     quality: "품질 확인 중",
     shipping: "배송 중",

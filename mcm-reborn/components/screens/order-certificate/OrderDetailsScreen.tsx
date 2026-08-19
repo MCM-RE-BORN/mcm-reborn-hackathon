@@ -63,6 +63,11 @@ const STAGE_COPY = {
     title: "수거를 기다리고 있어요",
     tone: "permission" as const,
   },
+  "production-ready": {
+    description: "전문가 실물 검수가 완료되어 장인 제작 시작을 준비하고 있습니다.",
+    title: "실물 검수가 완료되었어요",
+    tone: "success" as const,
+  },
   production: {
     description: "승인된 최종 조건에 따라 제품을 제작하고 있습니다.",
     title: "장인 제작이 시작되었어요",
@@ -86,6 +91,7 @@ const STAGE_INDEX = {
   "change-required": 1,
   inspection: 1,
   pickup: 0,
+  "production-ready": 1,
   production: 2,
   quality: 3,
   shipping: 4,

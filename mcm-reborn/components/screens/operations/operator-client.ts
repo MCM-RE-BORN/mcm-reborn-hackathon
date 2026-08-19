@@ -219,7 +219,11 @@ export async function operatorFetch<T>(
   if (init.body && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
-  if (init.method && init.method.toUpperCase() !== "GET") {
+  if (
+    init.method &&
+    init.method.toUpperCase() !== "GET" &&
+    !headers.has("Idempotency-Key")
+  ) {
     headers.set("Idempotency-Key", createIdempotencyKey("operations"));
   }
 

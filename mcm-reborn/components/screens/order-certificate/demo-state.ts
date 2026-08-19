@@ -12,6 +12,7 @@ export const ORDER_STAGES = [
   "pickup",
   "inspection",
   "change-required",
+  "production-ready",
   "production",
   "quality",
   "shipping",

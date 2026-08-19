@@ -315,7 +315,10 @@ export function applicationStatusToOrderStage(
   if (value === "CHANGE_APPROVAL_REQUIRED") {
     return "change-required";
   }
-  if (value === "PRODUCTION_READY" || value === "IN_PRODUCTION") {
+  if (value === "PRODUCTION_READY") {
+    return "production-ready";
+  }
+  if (value === "IN_PRODUCTION") {
     return "production";
   }
   if (value === "QUALITY_CHECK") {

@@ -173,6 +173,9 @@ export function OperationsDetailScreen({
               reason: "장인 실물 검수를 완료했습니다. 제작을 진행합니다.",
               proposedTerms: null,
             }),
+            headers: {
+              "Idempotency-Key": `operations-${applicationId}-inspection-${viewStatus}`,
+            },
             method: "POST",
           },
         );
@@ -196,6 +199,9 @@ export function OperationsDetailScreen({
                 : {}),
               targetStatus,
             }),
+            headers: {
+              "Idempotency-Key": `operations-${applicationId}-${viewStatus}-${targetStatus}`,
+            },
             method: "POST",
           },
         );
@@ -208,6 +214,27 @@ export function OperationsDetailScreen({
         setLiveDetail(null);
         setLiveError(true);
         return;
+      }
+
+      // A lifecycle/inspection RPC can commit even when the response or the
+      // idempotency cache write is interrupted. Re-read the authoritative DB
+      // state before showing an error so the console never keeps a stale
+      // action button after the customer view has already advanced.
+      try {
+        const latest = await operatorFetch<OperatorApplicationDetail>(
+          `/api/v2/admin/applications/${applicationId}`,
+        );
+        const latestStatus = readOperationStatus(
+          latest.application.effectiveStatus,
+        );
+        setLiveDetail(latest);
+        setLiveStatus(latestStatus);
+        if (latestStatus !== viewStatus) {
+          router.replace(operationDetailHref(latestStatus, applicationId));
+          return;
+        }
+      } catch {
+        // Preserve the original mutation error when the recovery read fails.
       }
       setActionError(
         error instanceof OperatorApiError
