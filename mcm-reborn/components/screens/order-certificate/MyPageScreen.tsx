@@ -90,7 +90,7 @@ export function MyPageScreen({ state }: MyPageScreenProps) {
   return (
     <AppShell
       footer={<BottomNav active="mypage" />}
-      header={<PageHeader backHref="/home" title="마이페이지" />}
+      header={<PageHeader title="마이페이지" />}
     >
       {state !== "normal" ? (
         <div className={styles.stateInset}>

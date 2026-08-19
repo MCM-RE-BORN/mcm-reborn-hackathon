@@ -1,7 +1,6 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
 import { useEffect, useState } from "react";
 import { AppShell } from "@/components/layout/AppShell";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -45,27 +44,6 @@ function getDesignsHref(analysisId?: string) {
   return analysisId
     ? `/submissions/demo/designs?analysisId=${encodeURIComponent(analysisId)}`
     : "/submissions/demo/designs";
-}
-
-function MockupHeader({ analysisId }: Pick<MockupDetailScreenProps, "analysisId">) {
-  return (
-    <header className={styles.mockupHeader}>
-      <Link
-        aria-label="추천 디자인으로 돌아가기"
-        className={styles.mockupBackLink}
-        href={getDesignsHref(analysisId)}
-      >
-        <Image
-          alt=""
-          aria-hidden="true"
-          height={13}
-          loading="eager"
-          src="/assets/mvp-beta/icon-back.svg"
-          width={15}
-        />
-      </Link>
-    </header>
-  );
 }
 
 export function MockupDetailScreen({ analysisId, productId, state }: MockupDetailScreenProps) {
@@ -133,7 +111,7 @@ export function MockupDetailScreen({ analysisId, productId, state }: MockupDetai
           </ButtonLink>
         </StickyActionBar>
       }
-      header={<MockupHeader analysisId={analysisId} />}
+      header={<PageHeader backHref={getDesignsHref(analysisId)} />}
     >
       {!analysisId || !productId || requestError ? (
         <div className={styles.statePage}>

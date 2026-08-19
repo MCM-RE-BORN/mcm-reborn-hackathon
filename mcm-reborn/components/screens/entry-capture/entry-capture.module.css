@@ -873,7 +873,7 @@
 .cameraBack {
   position: absolute;
   z-index: var(--z-overlay);
-  top: calc(var(--safe-area-top) + var(--space-13));
+  top: calc(var(--safe-area-top) + var(--space-9));
   left: var(--layout-gutter);
   display: grid;
   width: var(--touch-target-min);

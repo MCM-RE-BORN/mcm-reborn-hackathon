@@ -486,6 +486,30 @@
   font-weight: var(--font-weight-semibold);
 }
 
+.ordersListCardActions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(var(--space-0), 1fr));
+  gap: var(--space-5);
+}
+
+.ordersListCardActions > :only-child {
+  grid-column: 1 / -1;
+}
+
+.ordersListCertificateAction {
+  display: inline-flex;
+  min-height: var(--control-height-sm);
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-5) var(--space-7);
+  border: var(--border-hairline) solid var(--color-ink);
+  border-radius: var(--radius-control);
+  color: var(--color-ink);
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-semibold);
+  text-align: center;
+}
+
 .ordersListCardAction img {
   width: var(--space-9);
   height: auto;

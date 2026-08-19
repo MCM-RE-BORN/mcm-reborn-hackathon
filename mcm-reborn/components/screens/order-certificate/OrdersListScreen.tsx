@@ -246,13 +246,10 @@ function ApplicationListItem({
 }) {
   const stage = applicationStatusToOrderStage(application.status);
   const image = readImageUrl(application.product.listImage);
+  const applicationHref = `/orders/demo?applicationId=${encodeURIComponent(application.id)}`;
   return (
     <li>
-      <Link
-        aria-label={`${application.product.name} 신청 상세 보기`}
-        className={styles.ordersListCard}
-        href={`/orders/demo?applicationId=${encodeURIComponent(application.id)}`}
-      >
+      <article className={styles.ordersListCard}>
         <div className={styles.ordersListCardMeta}>
           <span>{stageLabel(stage)}</span>
           <small>{application.applicationNumber}</small>
@@ -277,17 +274,31 @@ function ApplicationListItem({
           </strong>
         </div>
 
-        <span className={styles.ordersListCardAction}>
-          신청 상세 보기
-          <Image
-            alt=""
-            aria-hidden="true"
-            height={10}
-            src="/assets/mvp-beta/icon-chevron-right.svg"
-            width={12}
-          />
-        </span>
-      </Link>
+        <div className={styles.ordersListCardActions}>
+          {stage === "completed" ? (
+            <Link
+              className={styles.ordersListCertificateAction}
+              href={`/certificates/demo?applicationId=${encodeURIComponent(application.id)}&state=issued`}
+            >
+              인증서 보러가기
+            </Link>
+          ) : null}
+          <Link
+            aria-label={`${application.product.name} 신청 상세 보기`}
+            className={styles.ordersListCardAction}
+            href={applicationHref}
+          >
+            신청 상세 보기
+            <Image
+              alt=""
+              aria-hidden="true"
+              height={10}
+              src="/assets/mvp-beta/icon-chevron-right.svg"
+              width={12}
+            />
+          </Link>
+        </div>
+      </article>
     </li>
   );
 }

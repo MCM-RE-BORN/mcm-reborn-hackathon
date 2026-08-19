@@ -31,6 +31,7 @@
 | DEC-026 | 2026-08-19 | 승인 | 배송 시작 lifecycle RPC는 `ON CONFLICT (application_id)` 대신 `ON CONFLICT ON CONSTRAINT mock_shipments_application_id_key`를 사용한다. 호환 기존 v2 DB에는 004 다음 `202608190005_shipment_conflict_hotfix.sql`을 적용한다. | PL/pgSQL `RETURNS TABLE` 출력 변수와 shipment 컬럼의 이름 충돌을 제거한다. HTTP 계약과 업무 데이터는 바뀌지 않는다. 005 rollback은 결함을 재도입하므로 앱까지 함께 되돌릴 때만 사용한다. |
 | DEC-027 | 2026-08-19 | 승인 | 실물 검수 결과가 `CHANGE_REQUIRED`이면 고객의 승인·거절이 저장되기 전에는 운영자 lifecycle command로 `PRODUCTION_READY`에 진입할 수 없다. 운영 콘솔은 검수 결과를 `NO_CHANGE`·`CHANGE_REQUIRED`·`PRODUCTION_UNAVAILABLE` 중 선택해 저장하고, 고객 화면은 변경 전후 조건과 결정 UI·이력을 표시한다. | 고객 승인 전 제작 진행을 UI에만 의존하지 않도록 bootstrap과 기존 DB migration 006의 RPC·transition trigger에서 이중으로 차단한다. |
 | DEC-025 | 2026-08-19 | 승인 | 고객·운영 브라우저 화면의 업무 데이터는 v2 API를 단일 데이터 소스로 사용한다. 신청 목록·상세·완료·마이페이지·보증서·분석·추천·주문·운영 콘솔은 인증 세션의 Supabase 응답을 렌더링하고, 빈 결과·인증 실패·API 오류를 중앙 Fixture로 대체하지 않는다. | `DEMO_FIXTURE`는 서버 분석 모드와 계약 예시로만 유지한다. 실제 CUSTOMER/OPERATOR 자격증명으로 전체 원격 여정을 검증하는 작업은 staging 게이트로 남긴다. |
+| DEC-028 | 2026-08-20 | 승인 | 하단 내비게이션의 최상위 화면인 신청 내역과 마이페이지에는 뒤로가기를 표시하지 않는다. 하위 화면의 뒤로가기는 공통 `PageHeader`의 안전영역·44px 터치 좌표를 사용하며 몰입형 카메라도 같은 좌표를 따른다. 완료 신청 카드에는 해당 신청의 발급된 ESG 인증서 바로가기를 제공한다. | 최상위 탐색의 일관성을 높이고 화면마다 달랐던 뒤로가기 위치를 통일하며, 완료 사용자가 상세 화면을 거치지 않고 인증서에 접근할 수 있게 한다. |
 
 ## 대체 관계
 
