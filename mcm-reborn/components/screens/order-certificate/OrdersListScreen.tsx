@@ -7,13 +7,12 @@ import { AppShell } from "@/components/layout/AppShell";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { StatusPanel } from "@/components/ui/StatusPanel";
-import { formatKrw } from "@/lib/formatters";
+import { formatApiDate, formatKrw } from "@/lib/formatters";
 import type { DemoState } from "./demo-state";
 import { DemoStatePanel } from "./DemoStatePanel";
 import {
   applicationStatusToOrderStage,
   customerFetch,
-  formatApiDate,
   readImageUrl,
   type CustomerAnalysisListItem,
   type CustomerAnalysisPage,

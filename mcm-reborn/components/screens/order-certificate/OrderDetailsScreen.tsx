@@ -8,7 +8,7 @@ import { Section } from "@/components/layout/Section";
 import { ActionButtonLink } from "@/components/ui/ActionButtonLink";
 import { Button } from "@/components/ui/Button";
 import { KeyValueList } from "@/components/ui/KeyValueList";
-import { formatKrw } from "@/lib/formatters";
+import { formatApiDate, formatKrw } from "@/lib/formatters";
 import { ProgressStepper } from "@/components/ui/ProgressStepper";
 import { SectionBand } from "@/components/ui/SectionBand";
 import { StatusPanel } from "@/components/ui/StatusPanel";
@@ -17,7 +17,6 @@ import { DemoStatePanel } from "./DemoStatePanel";
 import {
   applicationStatusToOrderStage,
   customerFetch,
-  formatApiDate,
   readImageUrl,
   readJsonString,
   type CustomerAnalysis,

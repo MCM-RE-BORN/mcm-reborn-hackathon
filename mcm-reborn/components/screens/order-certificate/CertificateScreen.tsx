@@ -12,7 +12,8 @@ import { ProgressStepper } from "@/components/ui/ProgressStepper";
 import { StatusPanel } from "@/components/ui/StatusPanel";
 import type { DemoState } from "./demo-state";
 import { DemoStatePanel } from "./DemoStatePanel";
-import { customerFetch, formatApiDate, type CustomerCertificate } from "./customer-client";
+import { formatApiDate } from "@/lib/formatters";
+import { customerFetch, type CustomerCertificate } from "./customer-client";
 import styles from "./order-certificate.module.css";
 
 type CertificateScreenProps = {

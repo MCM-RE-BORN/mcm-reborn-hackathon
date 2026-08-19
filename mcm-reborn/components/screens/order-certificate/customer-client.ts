@@ -352,16 +352,6 @@ export function applicationStatusToOrderStage(
   return "pickup";
 }
 
-export function formatApiDate(value: string | null | undefined) {
-  if (!value) {
-    return "-";
-  }
-  const date = new Date(value);
-  return Number.isNaN(date.getTime())
-    ? value
-    : date.toLocaleDateString("ko-KR");
-}
-
 function parseCustomerSession(payload: unknown): CustomerSession {
   const sessionRecord = readRecord(readRecord(payload)?.session);
   const userRecord = readRecord(readRecord(payload)?.user);

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Card } from "@/components/ui/Card";
-import { formatKrw } from "@/lib/formatters";
+import { formatApiDate, formatKrw } from "@/lib/formatters";
 import {
   hasConfirmedInspection,
   OPERATION_STAGE_PRESENTATION,
@@ -140,7 +140,7 @@ export function OperationsListScreen({
                   const confirmed = hasConfirmedInspection(applicationStatus);
                   const displayedPriceKrw = application.product.mockPrice.amount;
                   const image = readOperatorImageUrl(application.product.listImage);
-                  const date = formatApplicationDate(application.createdAt);
+                  const date = formatApiDate(application.createdAt);
                   const applicationId = application.id;
 
                   return (
@@ -195,11 +195,4 @@ export function OperationsListScreen({
       </section>
     </OperationsShell>
   );
-}
-
-function formatApplicationDate(value: string) {
-  const date = new Date(value);
-  return Number.isNaN(date.getTime())
-    ? value
-    : date.toLocaleDateString("ko-KR");
 }
