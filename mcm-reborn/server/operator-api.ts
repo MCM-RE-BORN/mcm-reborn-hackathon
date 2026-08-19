@@ -729,13 +729,14 @@ async function reserveIdempotencyKey(
     );
   }
 
-  // A cached 4xx response never committed the domain command. Allow the same
-  // operator action to be evaluated again after a server-side validation fix
-  // instead of replaying an obsolete client error for the full 24-hour TTL.
+  // Error responses are not successful idempotent results. Re-evaluate them
+  // against the authoritative DB so a schema/RPC hotfix is not hidden by an
+  // obsolete cached 4xx/5xx response for the full reservation TTL. If an
+  // upstream timeout happened after a commit, the guarded RPC rejects a
+  // duplicate transition and the console re-reads the authoritative status.
   if (
     existing.response_status !== null &&
     existing.response_status >= 400 &&
-    existing.response_status < 500 &&
     allowExpiredReclaim
   ) {
     const reclaimed = await deleteExpiredIdempotencyRow(
