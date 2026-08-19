@@ -45,6 +45,8 @@ export function MockupViewer() {
           class={styles.modelViewer}
           environment-image="neutral"
           interaction-prompt="auto"
+          interaction-prompt-style="wiggle"
+          interaction-prompt-threshold="800"
           loading="eager"
           onError={() => setModelFailed(true)}
           rotation-per-second="18deg"

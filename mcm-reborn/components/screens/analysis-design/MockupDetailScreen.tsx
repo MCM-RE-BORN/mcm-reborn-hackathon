@@ -159,7 +159,7 @@ export function MockupDetailScreen({ analysisId, productId, state }: MockupDetai
           </header>
 
           <aside className={styles.contractNotice}>
-            <strong>목업 이용 안내</strong>
+            <strong>3D 목업 안내</strong>
             <p>
               이 목업은 고객이 등록한 원제품 사진을 바탕으로 만든 예상
               3D모델입니다. 주문 후 장인이 실물을 확인하면 소재 배치·재단

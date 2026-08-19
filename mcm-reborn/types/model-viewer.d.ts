@@ -11,6 +11,8 @@ type ModelViewerAttributes = DetailedHTMLProps<
   class?: string;
   "environment-image"?: string;
   "interaction-prompt"?: "auto" | "none";
+  "interaction-prompt-style"?: "basic" | "wiggle";
+  "interaction-prompt-threshold"?: string;
   loading?: "auto" | "eager" | "lazy";
   "rotation-per-second"?: string;
   "shadow-intensity"?: string;
