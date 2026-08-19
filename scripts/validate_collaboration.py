@@ -32,6 +32,7 @@ REQUIRED_FILES = (
     "docs/PRD.md",
     "docs/USER_FLOW.md",
     "docs/API_CONTRACT.md",
+    "docs/BACKEND_V2_DESIGN.md",
     "docs/DECISIONS.md",
     "docs/DEMO.md",
     ".github/copilot-instructions.md",
@@ -186,6 +187,8 @@ def validate_environment_guard(errors: list[str]) -> None:
         "SUPABASE_SERVICE_ROLE_KEY",
         "OPENAI_API_KEY",
         "OPENAI_VISION_MODEL",
+        "ENABLE_EXTERNAL_AI",
+        "EXTERNAL_AI_PRIVACY_NOTICE_VERSION",
         "AI_MODE",
         "DEMO_TIMELINE_PROFILE",
         "ENABLE_DEMO_LOGIN",
@@ -196,6 +199,9 @@ def validate_environment_guard(errors: list[str]) -> None:
     for secret_key in ("SUPABASE_SERVICE_ROLE_KEY", "OPENAI_API_KEY"):
         if env_values.get(secret_key):
             errors.append(f".env.example: {secret_key} must not contain a value")
+    for disabled_by_default in ("ENABLE_EXTERNAL_AI", "ENABLE_DEMO_LOGIN"):
+        if env_values.get(disabled_by_default) != "false":
+            errors.append(f".env.example: {disabled_by_default} must default to false")
 
     gitignore_lines = set(read(".gitignore").splitlines())
     for pattern in (".env", ".env.*", "!.env.example"):
@@ -295,7 +301,8 @@ def validate_current_route_docs(errors: list[str]) -> None:
     for marker in (
         "`/`·`/intro`는 서비스 소개",
         "`/home`은 홈",
-        "`app/api/v2/admin/applications/[applicationId]/lifecycle-commands`만 Route Handler로 구현됨",
+        "23개 v2 Route Handler 파일",
+        "25개 API operation",
         "`mcm-reborn/server/`",
     ):
         if marker not in structure:
@@ -316,15 +323,24 @@ def validate_current_route_docs(errors: list[str]) -> None:
 
     operator_api = read("mcm-reborn/server/operator-api.ts")
     for marker in (
-        'request.headers.get("authorization")',
+        "authenticate(request)",
+        'requireRole(user, ["OPERATOR"])',
         'request.headers.get("idempotency-key")',
         "SUPABASE_SERVICE_ROLE_KEY",
-        '"/auth/v1/user"',
-        'role: "eq.OPERATOR"',
         '"/rest/v1/idempotency_keys"',
     ):
         if marker not in operator_api:
             errors.append(f"operator API helper must contain {marker}")
+
+    auth_middleware = read("mcm-reborn/server/auth/middleware.ts")
+    for marker in (
+        "readBearerToken(request)",
+        "publicClient.auth.getUser(token)",
+        ".from('profiles')",
+        "profile.role !== 'CUSTOMER' && profile.role !== 'OPERATOR'",
+    ):
+        if marker not in auth_middleware:
+            errors.append(f"auth middleware must contain {marker}")
 
 
 def main() -> int:

@@ -13,7 +13,6 @@ import {
 import { AppShell } from "@/components/layout/AppShell";
 import { Button, ButtonLink } from "@/components/ui/Button";
 import { StatusPanel } from "@/components/ui/StatusPanel";
-import { DEMO_SCENARIO } from "@/data/demo-scenario";
 import {
   CAPTURE_SLOTS,
   getCaptureSlot,
@@ -491,16 +490,6 @@ export function CameraScreen({
       immersive
     >
       <h1 className={styles.visuallyHidden}>제품 사진 촬영</h1>
-      <Image
-        alt=""
-        aria-hidden="true"
-        className={styles.cameraBackground}
-        fill
-        priority
-        sizes="(max-width: 402px) 100vw, 402px"
-        src={DEMO_SCENARIO.sourceProduct.images[slot]}
-      />
-
       {state === "normal" && !draft ? (
         <video
           aria-label={`${slotConfig.label} 촬영을 위한 실시간 카메라 화면`}

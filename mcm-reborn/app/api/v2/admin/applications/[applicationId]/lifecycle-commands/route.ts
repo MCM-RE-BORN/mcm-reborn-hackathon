@@ -11,32 +11,21 @@ import {
   type JsonObject,
   type OperatorCommandContext,
 } from "@/server/operator-api";
+import {
+  isLifecycleCommandTarget,
+  type LifecycleCommandTarget,
+} from "@/data/application-lifecycle";
 
 export const runtime = "nodejs";
 
-const LIFECYCLE_TARGETS = [
-  "PICKUP_SCHEDULED",
-  "PICKUP_IN_PROGRESS",
-  "PRODUCT_RECEIVED",
-  "EXPERT_INSPECTION",
-  "IN_PRODUCTION",
-  "QUALITY_CHECK",
-  "SHIPPED",
-  "DELIVERED",
-  "COMPLETED",
-  "PRODUCTION_UNAVAILABLE",
-  "CANCELED",
-] as const;
 const DEFAULT_CARRIER_CODE = "MCM_REBORN_DEMO";
 const DEFAULT_CARRIER_NAME = "MCM RE:BORN Demo Logistics";
-
-type LifecycleTarget = (typeof LIFECYCLE_TARGETS)[number];
 
 type LifecycleCommand = {
   carrierCode: string | null;
   carrierName: string | null;
   note: string | null;
-  targetStatus: LifecycleTarget;
+  targetStatus: LifecycleCommandTarget;
   trackingNumber: string | null;
 };
 
@@ -90,7 +79,7 @@ function normalizeLifecycleCommand(value: unknown): LifecycleCommand {
     "targetStatus",
     40,
   );
-  if (!isLifecycleTarget(targetStatus)) {
+  if (!isLifecycleCommandTarget(targetStatus)) {
     rejectInvalidField("targetStatus");
   }
 
@@ -143,17 +132,27 @@ async function executeLifecycleCommand(
   context: OperatorCommandContext,
   command: LifecycleCommand,
 ): Promise<{ body: JsonObject; status: number }> {
+  const rpcBody: JsonObject = {
+    p_application_id: context.applicationId,
+    p_target_status: command.targetStatus,
+  };
+
+  // Every parameter other than application and target status has a SQL
+  // default. Leaving nonessential fields out keeps command calls compatible
+  // with a PostgREST schema cache that was built before optional arguments
+  // were added. The UI note is presentation-only for this compact console.
+  if (command.targetStatus === "SHIPPED") {
+    // The RPC owns the canonical demo carrier defaults. Only send the value
+    // that is genuinely required for this transition so deployed functions
+    // with older optional-argument metadata cannot reject an otherwise valid
+    // SHIPPED command.
+    rpcBody.p_tracking_number = command.trackingNumber;
+  }
+
   const rows = await callUserRpc<LifecycleRpcRow[]>(
     context,
     "advance_application_lifecycle",
-    {
-      p_application_id: context.applicationId,
-      p_carrier_code: command.carrierCode,
-      p_carrier_name: command.carrierName,
-      p_note: command.note,
-      p_target_status: command.targetStatus,
-      p_tracking_number: command.trackingNumber,
-    },
+    rpcBody,
   );
 
   const row = singleRpcRow(rows);
@@ -213,10 +212,6 @@ async function readShipment(
     trackingNumber: shipment.tracking_number,
     trackingUrl: null,
   };
-}
-
-function isLifecycleTarget(value: string): value is LifecycleTarget {
-  return (LIFECYCLE_TARGETS as readonly string[]).includes(value);
 }
 
 function singleRpcRow(rows: LifecycleRpcRow[]): LifecycleRpcRow {

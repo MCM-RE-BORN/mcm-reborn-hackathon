@@ -1,3 +1,5 @@
+import { firstValue } from "@/lib/search-params";
+
 import {
   DEFAULT_CAPTURE_SLOT,
   isCaptureSlotId,
@@ -31,10 +33,6 @@ const PAGE_STATES = new Set<PageState>([
   "permission",
   "limited",
 ]);
-
-function firstValue(value: string | string[] | undefined) {
-  return Array.isArray(value) ? value[0] : value;
-}
 
 function readCapturedSlots(value: string | undefined) {
   if (!value) {

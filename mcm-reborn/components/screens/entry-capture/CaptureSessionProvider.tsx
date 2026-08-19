@@ -10,7 +10,6 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { DEMO_SCENARIO } from "@/data/demo-scenario";
 import type { CaptureSlotId } from "./capture-config";
 
 export type CaptureAsset = {
@@ -30,13 +29,16 @@ export type ProductDetails = {
   useDuration: string;
 };
 
+export const USE_DURATION_OPTIONS = ["1년 미만", "1~2년", "3~4년", "5년 이상"] as const;
+export const DESIRED_USE_OPTIONS = ["여권지갑", "카드지갑", "캐리어 네임택", "키링"] as const;
+
 const INITIAL_PRODUCT_DETAILS: ProductDetails = {
   category: "BACKPACK",
-  conditionNote: DEMO_SCENARIO.sourceProduct.conditionNote,
-  desiredUse: DEMO_SCENARIO.sourceProduct.desiredUse,
-  purchaseYear: DEMO_SCENARIO.sourceProduct.purchaseYear,
-  serialNumber: DEMO_SCENARIO.sourceProduct.serialNumber,
-  useDuration: DEMO_SCENARIO.sourceProduct.useDuration,
+  conditionNote: "",
+  desiredUse: DESIRED_USE_OPTIONS[0],
+  purchaseYear: "",
+  serialNumber: "",
+  useDuration: USE_DURATION_OPTIONS[0],
 };
 
 type CaptureSessionValue = {

@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 import type { FormEvent, ReactNode } from "react";
 import { AppShell } from "@/components/layout/AppShell";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -14,6 +15,7 @@ import styles from "./entry-capture.module.css";
 import { SignupEmailField } from "./SignupEmailField";
 import { SignupPasswordField } from "./SignupPasswordField";
 import { SignupPhoneField } from "./SignupPhoneField";
+import { loginCustomerCredentials } from "../order-certificate/customer-client";
 
 type AuthScreenProps = {
   state: PageState;
@@ -96,11 +98,29 @@ function AuthState({ kind, state }: { kind: "login" | "signup"; state: PageState
 
 export function LoginScreen({ state }: AuthScreenProps) {
   const router = useRouter();
-  const hasError = state === "error";
+  const [loginError, setLoginError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const hasError = state === "error" || loginError !== null;
   const showForm = state === "normal" || hasError;
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    router.push("/home");
+    const formData = new FormData(event.currentTarget);
+    const email = String(formData.get("email") ?? "").trim();
+    const password = String(formData.get("password") ?? "");
+    setLoginError(null);
+    setIsSubmitting(true);
+    try {
+      await loginCustomerCredentials(email, password);
+      router.push("/home");
+    } catch (error) {
+      setLoginError(
+        error instanceof Error
+          ? error.message
+          : "아이디 또는 비밀번호를 다시 확인해주세요.",
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -117,10 +137,11 @@ export function LoginScreen({ state }: AuthScreenProps) {
             >
               <TextField
                 autoComplete="username"
-                error={hasError ? "아이디 또는 비밀번호를 다시 확인해주세요." : undefined}
+                error={hasError ? loginError ?? "아이디 또는 비밀번호를 다시 확인해주세요." : undefined}
                 hideLabel
                 id="login-id"
                 label="아이디"
+                name="email"
                 placeholder="아이디 입력"
                 required
                 type="text"
@@ -130,13 +151,17 @@ export function LoginScreen({ state }: AuthScreenProps) {
                 hideLabel
                 id="login-password"
                 label="비밀번호"
+                name="password"
                 placeholder="비밀번호 입력"
                 required
                 type="password"
               />
-              {/* TODO(integration): connect login to the approved authentication contract. */}
-              <button className={styles.authSubmit} type="submit">
-                로그인
+              <button
+                className={styles.authSubmit}
+                disabled={isSubmitting}
+                type="submit"
+              >
+                {isSubmitting ? "로그인 중..." : "로그인"}
               </button>
             </form>
             <nav aria-label="계정 도움말" className={styles.authLinks}>
@@ -151,7 +176,7 @@ export function LoginScreen({ state }: AuthScreenProps) {
           <AuthState kind="login" state={state} />
         )}
         <p className={styles.betaCaption}>
-          이 시연에서는 입력한 인증 정보를 저장하거나 전송하지 않습니다.
+          입력한 인증 정보는 Supabase Auth로 안전하게 확인합니다.
         </p>
       </div>
     </AppShell>
@@ -164,7 +189,9 @@ export function SignupScreen({ state }: AuthScreenProps) {
   const showForm = state === "normal" || hasError;
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    router.push("/home");
+    // 회원가입은 현재 데모 폼이며 실제 Auth 세션을 만들지 않으므로,
+    // 인증되지 않은 사용자를 홈으로 보내지 않고 로그인 화면으로 돌려보낸다.
+    router.replace("/login");
   };
 
   return (
@@ -196,35 +223,19 @@ export function SignupScreen({ state }: AuthScreenProps) {
               required
               type="password"
             />
-            <details className={styles.consentDisclosure}>
-              <summary>
-                <span className={styles.consentSummaryLabel}>
-                  약관 동의
-                  <Image
-                    alt=""
-                    aria-hidden="true"
-                    className={styles.consentChevron}
-                    height={9}
-                    src="/assets/mvp-beta/icon-chevron-right.svg"
-                    width={17}
-                  />
-                </span>
-                <span className={styles.consentSummaryAction}>펼쳐보기</span>
-              </summary>
-              <fieldset
-                className={`${styles.consentGroup} ${styles.consentGroupSpacing}`}
-              >
-                <legend className={styles.visuallyHidden}>약관 동의 항목</legend>
-                <label>
-                  <input required type="checkbox" />
-                  <span>[필수] 서비스 이용약관 및 개인정보 처리 동의</span>
-                </label>
-                <label>
-                  <input type="checkbox" />
-                  <span>[선택] 마케팅 정보 수신 동의</span>
-                </label>
-              </fieldset>
-            </details>
+            <fieldset
+              className={`${styles.consentGroup} ${styles.consentGroupSpacing}`}
+            >
+              <legend>약관 동의</legend>
+              <label>
+                <input required type="checkbox" />
+                <span>[필수] 서비스 이용약관 및 개인정보 처리 동의</span>
+              </label>
+              <label>
+                <input type="checkbox" />
+                <span>[선택] 마케팅 정보 수신 동의</span>
+              </label>
+            </fieldset>
             {/* TODO(integration): connect signup, consent records, and duplicate-email validation. */}
             <button className={styles.authSubmit} type="submit">
               가입하기

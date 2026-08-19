@@ -3,7 +3,6 @@
 import Image from "next/image";
 import { CAPTURE_SLOTS } from "@/components/screens/entry-capture/capture-config";
 import { useCaptureSession } from "@/components/screens/entry-capture/CaptureSessionProvider";
-import { DEMO_SCENARIO } from "@/data/demo-scenario";
 import styles from "./analysis-design.module.css";
 
 export function SubmissionProductSummary() {
@@ -12,11 +11,10 @@ export function SubmissionProductSummary() {
   const primaryCapture = primaryCaptureSlot
     ? captures[primaryCaptureSlot.id]
     : undefined;
-  const imageSource =
-    primaryCapture?.previewUrl ?? DEMO_SCENARIO.sourceProduct.image;
+  const imageSource = primaryCapture?.previewUrl;
   const imageAlt = primaryCaptureSlot
     ? `등록한 ${primaryCaptureSlot.label} 제품 사진`
-    : `${DEMO_SCENARIO.sourceProduct.name} 예시 사진`;
+    : "등록한 제품 사진 없음";
 
   return (
     <section
@@ -24,18 +22,24 @@ export function SubmissionProductSummary() {
       className={styles.sourceSummary}
     >
       <div className={styles.sourceThumbnail}>
-        <Image
-          alt={imageAlt}
-          fill
-          sizes="72px"
-          src={imageSource}
-          unoptimized={Boolean(primaryCapture)}
-        />
+        {imageSource ? (
+          <Image
+            alt={imageAlt}
+            fill
+            sizes="72px"
+            src={imageSource}
+            unoptimized
+          />
+        ) : (
+          <span aria-hidden="true" className={styles.sourceThumbnailPlaceholder}>
+            사진 없음
+          </span>
+        )}
       </div>
       <div className={styles.sourceSummaryCopy}>
         <span>등록한 원제품</span>
         <h2 id="submitted-product-title">
-          {primaryCapture ? "MCM 가방" : DEMO_SCENARIO.sourceProduct.name}
+          {productDetails.category || "등록한 제품"}
         </h2>
         <p>
           {productDetails.purchaseYear}년 구매 · {productDetails.useDuration} 사용

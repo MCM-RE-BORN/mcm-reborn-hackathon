@@ -10,8 +10,8 @@
     "contentTypes": ["image/jpeg", "image/png"],
     "maxFileSizeBytes": 10485760,
     "presignFileCount": { "min": 1, "max": 4 },
-    "analysisFileCount": { "min": 4, "max": 4 },
-    "analysisSlots": ["LEFT_SIDE", "RIGHT_SIDE", "BOTTOM", "REAR"],
+    "analysisFileCount": { "min": 7, "max": 7 },
+    "analysisSlots": ["FRONT", "REAR", "TOP", "BOTTOM", "LEFT_SIDE", "RIGHT_SIDE", "SERIAL_NUMBER"],
     "purposes": ["SOURCE_FRONT", "SOURCE_SIDE", "INTERIOR", "ENGRAVING"]
   },
   "primaryScenario": {
@@ -23,13 +23,16 @@
     "productId": "10000000-0000-4000-8000-000000000001",
     "source": {
       "brand": "MCM",
-      "name": "MCM 비세토스 모노그램 백팩",
+      "name": "MCM 모노그램 백팩",
       "category": "BACKPACK",
       "images": [
-        { "purpose": "SOURCE_FRONT", "url": "/assets/mvp-beta/source-backpack-front.webp" },
-        { "purpose": "SOURCE_SIDE", "url": "/assets/mvp-beta/source-backpack-side.webp" },
-        { "purpose": "INTERIOR", "url": "/assets/mvp-beta/source-backpack-interior.webp" },
-        { "purpose": "ENGRAVING", "url": "/assets/mvp-beta/source-backpack-engraving.webp" }
+        { "slot": "FRONT", "purpose": "SOURCE_FRONT", "url": "/assets/mvp-beta/source-backpack-front.webp" },
+        { "slot": "REAR", "purpose": "SOURCE_FRONT", "url": "/assets/mvp-beta/source-backpack-front.webp" },
+        { "slot": "TOP", "purpose": "SOURCE_FRONT", "url": "/assets/mvp-beta/source-backpack-front.webp" },
+        { "slot": "BOTTOM", "purpose": "SOURCE_FRONT", "url": "/assets/mvp-beta/source-backpack-front.webp" },
+        { "slot": "LEFT_SIDE", "purpose": "SOURCE_SIDE", "url": "/assets/mvp-beta/source-backpack-side.webp" },
+        { "slot": "RIGHT_SIDE", "purpose": "SOURCE_SIDE", "url": "/assets/mvp-beta/source-backpack-side.webp" },
+        { "slot": "SERIAL_NUMBER", "purpose": "ENGRAVING", "url": "/assets/mvp-beta/source-backpack-engraving.webp" }
       ]
     },
     "initialEstimate": {
@@ -77,14 +80,18 @@
       "code": "REBORN_PASSPORT_WALLET",
       "name": "RE:BORN 여권지갑",
       "category": "PASSPORT_WALLET",
-      "description": "MCM 비세토스 패턴을 살린 여권지갑입니다.",
+      "description": "고객 원제품의 패턴과 소재를 살린 여권지갑입니다.",
       "requiredAreaCm2": 850,
       "mockPrice": { "amount": 180000, "currency": "KRW" },
       "estimatedDuration": "3~4주",
       "dimensions": { "widthMm": 110, "heightMm": 145, "depthMm": 12 },
       "listImage": { "url": "/assets/mvp-beta/recommendation-passport-wallet.png", "alt": "RE:BORN 여권지갑", "width": 250, "height": 271, "aspectRatio": "250:271" },
+      "model3dReady": false,
       "model3d": { "format": "GLB", "url": "/assets/models/passport-wallet.glb", "posterUrl": "/assets/products/passport-wallet/poster.webp", "environmentImageUrl": "/assets/3d/studio.hdr", "cameraOrbit": "0deg 75deg 105%", "cameraTarget": "0m 0m 0m", "fieldOfView": "30deg", "autoRotate": true, "availableVariants": [{ "key": "COGNAC_GOLD", "label": "코냑·골드" }] },
-      "optionGroups": [{ "key": "initials", "label": "이니셜", "required": false, "type": "TEXT", "maxLength": 3 }],
+      "optionGroups": [
+        { "key": "edgeColor", "label": "엣지 색상", "required": true, "type": "SELECT", "options": [{ "value": "COGNAC", "label": "코냑", "modelVariant": "COGNAC_GOLD" }] },
+        { "key": "initials", "label": "이니셜", "required": false, "type": "TEXT", "maxLength": 3 }
+      ],
       "active": true
     },
     {
@@ -99,7 +106,8 @@
       "estimatedDuration": "2~3주",
       "dimensions": { "widthMm": 105, "heightMm": 75, "depthMm": 8 },
       "listImage": { "url": "/assets/mvp-beta/recommendation-card-holder.png", "alt": "RE:BORN 카드지갑", "width": 250, "height": 271, "aspectRatio": "250:271" },
-      "model3d": { "format": "GLB", "url": "/assets/models/card-wallet.glb", "posterUrl": "/assets/products/card-wallet/poster.webp", "environmentImageUrl": "/assets/3d/studio.hdr", "cameraOrbit": "20deg 75deg 110%", "cameraTarget": "0m 0m 0m", "fieldOfView": "28deg", "autoRotate": true, "availableVariants": [{ "key": "COGNAC_GOLD", "label": "코냑·골드" }] },
+      "model3dReady": false,
+      "model3d": { "format": "GLB", "url": "/assets/models/card-wallet.glb", "posterUrl": "/assets/products/card-wallet/poster.webp", "environmentImageUrl": "/assets/3d/studio.hdr", "cameraOrbit": "20deg 75deg 110%", "cameraTarget": "0m 0m 0m", "fieldOfView": "28deg", "autoRotate": true,"availableVariants": [{ "key": "COGNAC_GOLD", "label": "코냑·골드" }] },
       "optionGroups": [],
       "active": true
     },
@@ -115,6 +123,7 @@
       "estimatedDuration": "약 2주",
       "dimensions": { "widthMm": 70, "heightMm": 110, "depthMm": 6 },
       "listImage": { "url": "/assets/mvp-beta/recommendation-luggage-name-tag-v2.webp", "alt": "RE:BORN 캐리어 네임택", "width": 600, "height": 600, "aspectRatio": "1:1" },
+      "model3dReady": false,
       "model3d": { "format": "GLB", "url": "/assets/models/name-tag.glb", "posterUrl": "/assets/products/name-tag/poster.webp", "environmentImageUrl": "/assets/3d/studio.hdr", "cameraOrbit": "0deg 75deg 110%", "cameraTarget": "0m 0m 0m", "fieldOfView": "28deg", "autoRotate": true, "availableVariants": [{ "key": "GOLD", "label": "골드" }] },
       "optionGroups": [],
       "active": true
@@ -131,6 +140,7 @@
       "estimatedDuration": "1~2주",
       "dimensions": { "widthMm": 45, "heightMm": 90, "depthMm": 5 },
       "listImage": { "url": "/assets/mvp-beta/recommendation-keyring-v2.webp", "alt": "RE:BORN 키링", "width": 600, "height": 600, "aspectRatio": "1:1" },
+      "model3dReady": false,
       "model3d": { "format": "GLB", "url": "/assets/models/keyring.glb", "posterUrl": "/assets/products/keyring/poster.webp", "environmentImageUrl": "/assets/3d/studio.hdr", "cameraOrbit": "0deg 75deg 115%", "cameraTarget": "0m 0m 0m", "fieldOfView": "25deg", "autoRotate": true, "availableVariants": [{ "key": "GOLD_RING", "label": "골드 링" }] },
       "optionGroups": [],
       "active": true

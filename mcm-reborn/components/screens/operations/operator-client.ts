@@ -1,0 +1,370 @@
+"use client";
+
+import { readRecord } from "@/lib/json";
+const OPERATOR_SESSION_KEY = "mcm.reborn.operator.session";
+const OPERATOR_SESSION_EVENT = "mcm.reborn.operator.session-change";
+
+export type OperatorSession = {
+  accessToken: string;
+  expiresAt: string;
+  user: {
+    displayName: string;
+    email: string;
+    id: string;
+    role: "OPERATOR";
+  };
+};
+
+export type OperatorMoney = {
+  amount: number;
+  currency: string;
+};
+
+export type OperatorProduct = {
+  estimatedDuration: string;
+  id: string;
+  listImage: unknown;
+  mockPrice: OperatorMoney;
+  name: string;
+  recommendation?: {
+    eligible: boolean;
+    reasonCodes: string[];
+    score: number;
+  };
+};
+
+export type OperatorApplicationSummary = {
+  applicationNumber: string;
+  createdAt: string;
+  customer: {
+    displayName: string;
+    email: string;
+    id: string;
+    role: string;
+  };
+  effectiveStatus: string;
+  id: string;
+  inspectionAvailable: boolean;
+  product: OperatorProduct;
+};
+
+export type OperatorTerms = {
+  amount: OperatorMoney;
+  estimatedDuration: string;
+  estimatedReusableMaterialRate: number;
+  productId: string;
+};
+
+export type OperatorApplication = OperatorApplicationSummary & {
+  analysisId?: string;
+  demoProgressProfile?: string | null;
+  finalTerms?: OperatorTerms | null;
+  initialTerms?: OperatorTerms;
+  inspectionCompletedAt?: string | null;
+  persistedStatus?: string;
+  pickupSchedule?: Record<string, unknown>;
+  selectedOptions?: Record<string, unknown>;
+  shippingAddress?: Record<string, unknown>;
+  statusOverride?: string | null;
+};
+
+export type OperatorChangeRequest = {
+  applicationId: string;
+  createdAt: string;
+  id: string;
+  inspectionId: string;
+  previousTerms: OperatorTerms;
+  proposedTerms: OperatorTerms;
+  reason: string;
+  respondedAt: string | null;
+  status: "PENDING" | "APPROVED" | "REJECTED";
+};
+
+export type OperatorApplicationDetail = {
+  analysis: Record<string, unknown>;
+  application: OperatorApplication;
+  changeRequest: OperatorChangeRequest | null;
+  customer: OperatorApplicationSummary["customer"];
+  inspectionAvailable: boolean;
+  sourceImages: Array<{
+    assetId: string;
+    purpose: string;
+    signedUrl: string;
+  }>;
+};
+
+export type OperatorApplicationPage = {
+  items: OperatorApplicationSummary[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+};
+
+export type LifecycleCommandResponse = {
+  applicationId: string;
+  applicationStatus: string;
+  occurredAt: string;
+  previousStatus: string;
+  shipment: Record<string, unknown> | null;
+};
+
+export type InspectionResponse = {
+  applicationId: string;
+  applicationStatus: string;
+  changeRequest: Record<string, unknown> | null;
+  id: string;
+  inspectedAt: string;
+  inspectedBy: { displayName: string; id: string };
+  outcome: string;
+};
+
+export class OperatorApiError extends Error {
+  constructor(
+    message: string,
+    public readonly status: number,
+  ) {
+    super(message);
+    this.name = "OperatorApiError";
+  }
+}
+
+let sessionPromise: Promise<OperatorSession> | null = null;
+
+export function clearOperatorSession() {
+  if (typeof window !== "undefined") {
+    window.sessionStorage.removeItem(OPERATOR_SESSION_KEY);
+    window.dispatchEvent(new Event(OPERATOR_SESSION_EVENT));
+  }
+  sessionPromise = null;
+}
+
+export function hasOperatorSession(): boolean {
+  return typeof window !== "undefined" && readStoredSession() !== null;
+}
+
+export function onOperatorSessionChange(listener: () => void): () => void {
+  if (typeof window === "undefined") {
+    return () => undefined;
+  }
+  window.addEventListener(OPERATOR_SESSION_EVENT, listener);
+  return () => window.removeEventListener(OPERATOR_SESSION_EVENT, listener);
+}
+
+export async function getOperatorSession(): Promise<OperatorSession> {
+  if (typeof window === "undefined") {
+    throw new OperatorApiError("운영자 세션은 브라우저에서만 사용할 수 있습니다.", 0);
+  }
+
+  if (sessionPromise) {
+    return sessionPromise;
+  }
+
+  const stored = readStoredSession();
+  if (stored) {
+    return stored;
+  }
+
+  sessionPromise = loginOperator();
+  try {
+    return await sessionPromise;
+  } finally {
+    sessionPromise = null;
+  }
+}
+
+export async function loginOperatorCredentials(
+  email: string,
+  password: string,
+): Promise<OperatorSession> {
+  const response = await fetch("/api/v2/auth/login", {
+    body: JSON.stringify({ email, password }),
+    cache: "no-store",
+    headers: { "Content-Type": "application/json" },
+    method: "POST",
+  });
+  const payload = await response.json().catch(() => null);
+  if (!response.ok) {
+    const message =
+      readString(readRecord(payload)?.error, "message") ??
+      "운영자 로그인에 실패했습니다.";
+    throw new OperatorApiError(message, response.status);
+  }
+
+  const session = payload?.session;
+  const user = payload?.user;
+  if (
+    !session ||
+    typeof session.accessToken !== "string" ||
+    typeof session.expiresAt !== "string" ||
+    !user ||
+    user.role !== "OPERATOR" ||
+    typeof user.id !== "string" ||
+    typeof user.email !== "string" ||
+    typeof user.displayName !== "string"
+  ) {
+    throw new OperatorApiError("운영자 계정 권한을 확인할 수 없습니다.", 403);
+  }
+
+  const result: OperatorSession = {
+    accessToken: session.accessToken,
+    expiresAt: session.expiresAt,
+    user: {
+      displayName: user.displayName,
+      email: user.email,
+      id: user.id,
+      role: "OPERATOR",
+    },
+  };
+  storeOperatorSession(result);
+  sessionPromise = null;
+  return result;
+}
+
+export async function operatorFetch<T>(
+  input: string,
+  init: RequestInit = {},
+): Promise<T> {
+  const session = await getOperatorSession();
+  const headers = new Headers(init.headers);
+  headers.set("Accept", "application/json");
+  headers.set("Authorization", `Bearer ${session.accessToken}`);
+
+  if (init.body && !headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
+  }
+  if (
+    init.method &&
+    init.method.toUpperCase() !== "GET" &&
+    !headers.has("Idempotency-Key")
+  ) {
+    headers.set("Idempotency-Key", createIdempotencyKey("operations"));
+  }
+
+  const response = await fetch(input, {
+    ...init,
+    headers,
+    cache: "no-store",
+  });
+  const payload = await response.json().catch(() => null);
+
+  if (!response.ok) {
+    if (response.status === 401) {
+      clearOperatorSession();
+    }
+    const message =
+      readString(readRecord(payload)?.error, "message") ??
+      "운영 API 요청을 처리하지 못했습니다.";
+    throw new OperatorApiError(message, response.status);
+  }
+
+  return payload as T;
+}
+
+function createIdempotencyKey(prefix: string) {
+  if (typeof globalThis.crypto?.randomUUID === "function") {
+    return `${prefix}-${globalThis.crypto.randomUUID()}`;
+  }
+
+  const random = new Uint32Array(4);
+  if (typeof globalThis.crypto?.getRandomValues === "function") {
+    globalThis.crypto.getRandomValues(random);
+    return `${prefix}-${Date.now()}-${Array.from(random)
+      .map((value) => value.toString(16))
+      .join("")}`;
+  }
+
+  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
+export function readOperatorImageUrl(value: unknown): string | null {
+  if (typeof value === "string" && value.trim()) {
+    return value;
+  }
+  const record = readRecord(value);
+  const url = record?.url;
+  return typeof url === "string" && url.trim() ? url : null;
+}
+
+function loginOperator(): Promise<OperatorSession> {
+  return fetch("/api/v2/auth/demo-login", {
+    body: JSON.stringify({ demoAccount: "OPERATOR" }),
+    headers: { "Content-Type": "application/json" },
+    method: "POST",
+    cache: "no-store",
+  }).then(async (response) => {
+    const payload = await response.json().catch(() => null);
+    if (!response.ok) {
+      const message =
+        readString(readRecord(payload)?.error, "message") ??
+        "운영자 인증을 완료하지 못했습니다.";
+      throw new OperatorApiError(message, response.status);
+    }
+
+    const session = payload?.session;
+    const user = payload?.user;
+    if (
+      !session ||
+      typeof session.accessToken !== "string" ||
+      typeof session.expiresAt !== "string" ||
+      !user ||
+      user.role !== "OPERATOR" ||
+      typeof user.id !== "string" ||
+      typeof user.email !== "string" ||
+      typeof user.displayName !== "string"
+    ) {
+      throw new OperatorApiError("운영자 인증 응답이 올바르지 않습니다.", 502);
+    }
+
+    const result: OperatorSession = {
+      accessToken: session.accessToken,
+      expiresAt: session.expiresAt,
+      user: {
+        displayName: user.displayName,
+        email: user.email,
+        id: user.id,
+        role: "OPERATOR",
+      },
+    };
+    storeOperatorSession(result);
+    return result;
+  });
+}
+
+function storeOperatorSession(session: OperatorSession) {
+  window.sessionStorage.setItem(OPERATOR_SESSION_KEY, JSON.stringify(session));
+  window.dispatchEvent(new Event(OPERATOR_SESSION_EVENT));
+}
+
+function readStoredSession(): OperatorSession | null {
+  const raw = window.sessionStorage.getItem(OPERATOR_SESSION_KEY);
+  if (!raw) {
+    return null;
+  }
+
+  try {
+    const value = JSON.parse(raw) as Partial<OperatorSession>;
+    if (
+      typeof value.accessToken !== "string" ||
+      typeof value.expiresAt !== "string" ||
+      !value.user ||
+      value.user.role !== "OPERATOR"
+    ) {
+      clearOperatorSession();
+      return null;
+    }
+    if (Date.parse(value.expiresAt) <= Date.now() + 30_000) {
+      clearOperatorSession();
+      return null;
+    }
+    return value as OperatorSession;
+  } catch {
+    clearOperatorSession();
+    return null;
+  }
+}
+
+function readString(value: unknown, key: string): string | null {
+  const record = readRecord(value);
+  return typeof record?.[key] === "string" ? record[key] : null;
+}

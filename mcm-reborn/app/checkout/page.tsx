@@ -15,6 +15,8 @@ export default async function CheckoutPage({
   searchParams: DemoSearchParams;
 }) {
   const query = await searchParams;
+  const analysisId = typeof query.analysisId === "string" ? query.analysisId : undefined;
+  const productId = typeof query.productId === "string" ? query.productId : undefined;
   const state = resolveDemoState(query.state, [
     "normal",
     "loading",
@@ -24,5 +26,5 @@ export default async function CheckoutPage({
     "canceled",
   ]);
 
-  return <CheckoutScreen state={state} />;
+  return <CheckoutScreen analysisId={analysisId} productId={productId} state={state} />;
 }

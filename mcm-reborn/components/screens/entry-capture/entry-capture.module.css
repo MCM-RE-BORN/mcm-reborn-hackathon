@@ -423,58 +423,6 @@
   text-align: center;
 }
 
-/*
- * Signup's Figma design collapses the terms fieldset behind a
- * "약관 동의 / 펼쳐보기" disclosure row. <details>/<summary> gives
- * native toggle behavior without adding client-side state; browsers
- * already auto-expand a <details> that contains a required field
- * failing validation, so the required consent checkbox stays usable.
- */
-.consentDisclosure {
-  display: grid;
-}
-
-.consentDisclosure summary {
-  display: flex;
-  min-height: var(--touch-target-min);
-  align-items: center;
-  justify-content: space-between;
-  list-style: none;
-  cursor: pointer;
-}
-
-.consentDisclosure summary::-webkit-details-marker {
-  display: none;
-}
-
-.consentSummaryLabel {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-5);
-  color: var(--color-ink);
-  font-size: var(--font-size-control);
-  font-weight: var(--font-weight-regular);
-  line-height: var(--line-height-tight);
-}
-
-.consentChevron {
-  width: var(--space-7);
-  height: auto;
-}
-
-.consentDisclosure[open] .consentChevron {
-  transform: rotate(90deg);
-}
-
-.consentSummaryAction {
-  color: var(--color-link);
-  font-size: var(--font-size-control);
-  font-weight: var(--font-weight-regular);
-  line-height: var(--line-height-tight);
-  text-decoration: underline;
-  text-underline-offset: var(--space-2);
-}
-
 .consentGroupSpacing {
   margin-top: var(--space-7);
 }
@@ -599,7 +547,9 @@
 
 .homeHeroVideo {
   position: absolute;
-  top: var(--space-0);
+  /* The source clip contains a tall exported mobile frame before the hero
+     content. Crop the full lead-in so the motion starts at the mask top. */
+  top: -13rem;
   left: var(--space-0);
   display: block;
   width: 100%;
@@ -755,6 +705,18 @@
   font-weight: var(--font-weight-light);
 }
 
+.captureCompletedMark {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: var(--border-thin) solid var(--color-muted);
+  border-radius: 50%;
+  color: var(--color-ink);
+  font-size: 24px;
+  font-weight: 700;
+}
+
 .captureSlotLabel {
   position: absolute;
   z-index: var(--z-sticky);
@@ -872,6 +834,7 @@
   min-height: 100dvh;
   overflow: hidden;
   isolation: isolate;
+  background: var(--color-ink);
 }
 
 .cameraBackground {
@@ -910,7 +873,7 @@
 .cameraBack {
   position: absolute;
   z-index: var(--z-overlay);
-  top: calc(var(--safe-area-top) + var(--space-13));
+  top: calc(var(--safe-area-top) + var(--space-9));
   left: var(--layout-gutter);
   display: grid;
   width: var(--touch-target-min);

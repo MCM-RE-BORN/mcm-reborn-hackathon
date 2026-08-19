@@ -59,7 +59,7 @@
   z-index: var(--z-sticky);
   display: grid;
   min-height: calc(var(--layout-header-height) + var(--safe-area-top));
-  align-content: end;
+  align-content: start;
   gap: var(--space-5);
   padding: calc(var(--safe-area-top) + var(--space-9)) var(--layout-gutter)
     var(--space-9);
@@ -68,13 +68,8 @@
 
 /*
  * Used when the header has no title/description (e.g. login, signup).
- * `.pageHeader` reserves a fixed min-height and bottom-aligns its content so
- * multi-line titles stay flush with the row below it. With no title/
- * description there is only one grid row, so that reserved height collapsed
- * into dead space above the back button instead of below it. Dropping the
- * fixed height and top-aligning here makes the header hug the back-button
- * row, so the top padding (above the row) and bottom padding (below it)
- * match.
+ * Headers without copy do not need to reserve the title area. Both variants
+ * remain top-aligned so every back button starts at the same safe-area offset.
  */
 .pageHeaderCompact {
   min-height: auto;

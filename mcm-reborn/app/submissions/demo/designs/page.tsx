@@ -14,10 +14,14 @@ type DesignsPageProps = {
 export default async function DesignsPage({
   searchParams,
 }: DesignsPageProps) {
-  const { category, state } = await searchParams;
+  const { analysisId, category, state } = await searchParams;
+  const resolvedAnalysisId = Array.isArray(analysisId)
+    ? analysisId[0]
+    : analysisId;
 
   return (
     <RecommendationScreen
+      analysisId={resolvedAnalysisId}
       category={readRecommendationCategory(category)}
       state={readDemoState(state)}
     />
