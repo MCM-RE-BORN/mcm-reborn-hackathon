@@ -147,6 +147,10 @@ export function MockupDetailScreen({ analysisId, productId, state }: MockupDetai
         </div>
       ) : (
         <article className={styles.mockupContent}>
+          <header className={styles.productDetailHeader}>
+            <h1>{product.name}</h1>
+          </header>
+
           <div className={styles.mockupStage}>
             <MockupViewer />
           </div>
@@ -161,14 +165,11 @@ export function MockupDetailScreen({ analysisId, productId, state }: MockupDetai
             </p>
           </aside>
 
-          <section className={styles.productStory}>
-            <header className={styles.productDetailHeader}>
-              <h1>{product.name}</h1>
-              <a className={styles.engravingLink} href="#engraving-note">
-                각인 옵션 안내
-              </a>
-            </header>
+          <a className={styles.engravingLink} href="#engraving-note">
+            각인 옵션 안내
+          </a>
 
+          <section className={styles.productStory}>
             <section aria-labelledby="mockup-gallery-title">
               <h2
                 className={styles.productGalleryTitle}

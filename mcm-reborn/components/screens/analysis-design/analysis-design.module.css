@@ -523,6 +523,7 @@
 .productDetailHeader {
   display: grid;
   gap: var(--space-3);
+  padding-block: var(--space-5);
 }
 
 .productDetailHeader h1 {
@@ -568,7 +569,7 @@
 }
 
 .productGalleryTitle {
-  font-size: var(--font-size-title);
+  font-size: var(--font-size-body);
   font-weight: var(--font-weight-semibold);
   line-height: var(--line-height-tight);
 }
