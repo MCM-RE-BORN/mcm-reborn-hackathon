@@ -201,13 +201,10 @@ export class CustomerApiError extends Error {
   }
 }
 
-let sessionPromise: Promise<CustomerSession> | null = null;
-
 export function clearCustomerSession() {
   if (typeof window !== "undefined") {
     window.sessionStorage.removeItem(CUSTOMER_SESSION_KEY);
   }
-  sessionPromise = null;
 }
 
 export async function loginCustomerCredentials(
@@ -238,21 +235,15 @@ export async function getCustomerSession(): Promise<CustomerSession> {
     throw new CustomerApiError("고객 세션은 브라우저에서만 사용할 수 있습니다.", 0);
   }
 
-  if (sessionPromise) {
-    return sessionPromise;
-  }
-
   const stored = readStoredSession();
   if (stored) {
     return stored;
   }
 
-  sessionPromise = loginCustomer();
-  try {
-    return await sessionPromise;
-  } finally {
-    sessionPromise = null;
-  }
+  throw new CustomerApiError(
+    "고객 로그인이 필요합니다.",
+    401,
+  );
 }
 
 export async function customerFetch<T>(
@@ -349,42 +340,6 @@ export function formatApiDate(value: string | null | undefined) {
     : date.toLocaleDateString("ko-KR");
 }
 
-function loginCustomer(): Promise<CustomerSession> {
-  return fetch("/api/v2/auth/demo-login", {
-    body: JSON.stringify({ demoAccount: "CUSTOMER" }),
-    cache: "no-store",
-    headers: { "Content-Type": "application/json" },
-    method: "POST",
-  }).then(async (response) => {
-    const payload = await response.json().catch(() => null);
-    if (!response.ok) {
-      const errorRecord = readRecord(payload)?.error;
-      const message =
-        readStringValue(errorRecord, "message") ?? "고객 인증을 완료하지 못했습니다.";
-      throw new CustomerApiError(message, response.status);
-    }
-
-    const session = readRecord(payload)?.session;
-    const user = readRecord(payload)?.user;
-    const userRecord = readRecord(user);
-    const sessionRecord = readRecord(session);
-    if (
-      !readStringValue(sessionRecord, "accessToken") ||
-      !readStringValue(sessionRecord, "expiresAt") ||
-      readStringValue(userRecord, "role") !== "CUSTOMER" ||
-      !readStringValue(userRecord, "id") ||
-      !readStringValue(userRecord, "email") ||
-      !readStringValue(userRecord, "displayName")
-    ) {
-      throw new CustomerApiError("고객 인증 응답이 올바르지 않습니다.", 502);
-    }
-
-    const result = parseCustomerSession(payload);
-    storeCustomerSession(result);
-    return result;
-  });
-}
-
 function parseCustomerSession(payload: unknown): CustomerSession {
   const sessionRecord = readRecord(readRecord(payload)?.session);
   const userRecord = readRecord(readRecord(payload)?.user);
@@ -437,8 +392,11 @@ function readStoredSession(): CustomerSession | null {
       );
     }
     return value as CustomerSession;
-  } catch {
+  } catch (error) {
     clearCustomerSession();
+    if (error instanceof CustomerApiError) {
+      throw error;
+    }
     return null;
   }
 }

@@ -544,7 +544,7 @@ function mapSupabaseFailure(status: number, payload: unknown): ApiProblem {
     return new ApiProblem(
       400,
       "INVALID_REQUEST",
-      "요청 값이 올바르지 않습니다.",
+      upstreamMessage ?? "요청 값이 올바르지 않습니다.",
       upstreamDetails,
     );
   }
@@ -571,7 +571,12 @@ function mapSupabaseFailure(status: number, payload: unknown): ApiProblem {
   }
 
   if (status === 400) {
-    return new ApiProblem(400, "INVALID_REQUEST", "요청 값이 올바르지 않습니다.");
+    return new ApiProblem(
+      400,
+      "INVALID_REQUEST",
+      upstreamMessage ?? "요청 값이 올바르지 않습니다.",
+      upstreamDetails,
+    );
   }
   if (status === 401) {
     return new ApiProblem(401, "UNAUTHORIZED", "인증이 필요합니다.");
