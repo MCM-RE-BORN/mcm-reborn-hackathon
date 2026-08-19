@@ -1,12 +1,9 @@
 import { redirect } from "next/navigation";
 
+import { firstValue } from "@/lib/search-params";
 type CertificatesAliasPageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
-
-function firstValue(value: string | string[] | undefined) {
-  return Array.isArray(value) ? value[0] : value;
-}
 
 export default async function CertificatesAliasPage({
   searchParams,

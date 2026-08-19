@@ -1,5 +1,6 @@
 "use client";
 
+import { readRecord } from "@/lib/json";
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
@@ -633,12 +634,6 @@ export function OperationsDetailScreen({
       </div>
     </OperationsShell>
   );
-}
-
-function readRecord(value: unknown): Record<string, unknown> | null {
-  return value && typeof value === "object" && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : null;
 }
 
 function readNumber(value: unknown, key: string): number | null {

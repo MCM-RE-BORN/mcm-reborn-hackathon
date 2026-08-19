@@ -35,6 +35,7 @@ import {
   createVisionProvider,
 } from '@/server/openai/visionProviderFactory';
 import { VisionImageQualityError } from '@/server/openai/types';
+import { isRecord } from '@/server/http/json';
 import {
   calculateCarbonSaving,
   calculateRecommendationScore,
@@ -1373,10 +1374,6 @@ function isAnalysisResponse(value: unknown): value is Analysis {
     value.status === 'COMPLETED' &&
     typeof value.createdAt === 'string'
   );
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 function requireString(value: unknown, field: string): string {

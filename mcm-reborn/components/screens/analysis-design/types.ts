@@ -1,3 +1,5 @@
+import { firstValue } from "@/lib/search-params";
+
 export type DemoState =
   | "normal"
   | "loading"
@@ -16,10 +18,6 @@ const DEMO_STATES: DemoState[] = [
   "limited",
   "canceled",
 ];
-
-function firstValue(value: string | string[] | undefined) {
-  return Array.isArray(value) ? value[0] : value;
-}
 
 export function readDemoState(
   value: string | string[] | undefined,

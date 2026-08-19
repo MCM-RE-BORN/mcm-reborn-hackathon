@@ -4,6 +4,7 @@ import { createHash, randomUUID } from "node:crypto";
 
 import { AppError } from "@/contracts/errors";
 import { authenticate, requireRole } from "@/server/auth/middleware";
+import { isRecord, stableStringify } from "@/server/http/json";
 
 type JsonPrimitive = boolean | number | string | null;
 export type JsonValue =
@@ -623,20 +624,6 @@ function namespaceIdempotencyKey(
     .digest("hex")}`;
 }
 
-function stableStringify(value: unknown): string {
-  if (Array.isArray(value)) {
-    return `[${value.map(stableStringify).join(",")}]`;
-  }
-  if (value !== null && typeof value === "object") {
-    return `{${Object.entries(value)
-      .sort(([left], [right]) => left.localeCompare(right))
-      .map(([key, nested]) => `${JSON.stringify(key)}:${stableStringify(nested)}`)
-      .join(",")}}`;
-  }
-
-  return JSON.stringify(value);
-}
-
 type ReservationResult =
   | { kind: "reserved" }
   | { body: JsonValue; kind: "cached"; status: number }
@@ -859,10 +846,6 @@ async function cacheIdempotentResponse(
       { retryable: false },
     );
   }
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
 export type { ApiProblem, CommandResult, OperatorCommandContext };

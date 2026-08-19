@@ -1,5 +1,6 @@
 "use client";
 
+import { readRecord } from "@/lib/json";
 import type { OrderStage } from "./demo-state";
 
 const CUSTOMER_SESSION_KEY = "mcm.reborn.customer.session";
@@ -423,12 +424,6 @@ function redirectToLogin() {
   if (typeof window !== "undefined" && window.location.pathname !== "/login") {
     window.location.replace("/login?reason=session-expired");
   }
-}
-
-function readRecord(value: unknown): Record<string, unknown> | null {
-  return value && typeof value === "object" && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : null;
 }
 
 function readStringValue(value: unknown, key: string): string | null {

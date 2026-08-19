@@ -52,3 +52,25 @@ export function zodErrorDetails(
     })),
   };
 }
+
+export function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+/**
+ * 멱등성 요청 해시용 직렬화. 객체 키를 정렬해 같은 내용이면 항상 같은
+ * 문자열이 나오게 한다. JSON.stringify는 키 순서를 보존하므로 그대로 쓰면
+ * 논리적으로 동일한 요청이 다른 해시를 갖게 된다.
+ */
+export function stableStringify(value: unknown): string {
+  if (Array.isArray(value)) {
+    return `[${value.map(stableStringify).join(",")}]`;
+  }
+  if (value !== null && typeof value === "object") {
+    return `{${Object.entries(value)
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([key, nested]) => `${JSON.stringify(key)}:${stableStringify(nested)}`)
+      .join(",")}}`;
+  }
+  return JSON.stringify(value);
+}

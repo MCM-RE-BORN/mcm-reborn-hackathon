@@ -18,6 +18,7 @@ import {
 } from "@/lib/supabase/server";
 import { getAnalysisById } from "@/server/analyses/analysisService";
 import type { AuthenticatedUser } from "@/server/auth/middleware";
+import { stableStringify } from "@/server/http/json";
 import type {
   CreateApplicationRequest,
   MockPaymentRequest,
@@ -1711,19 +1712,6 @@ function paged(
 function paymentTransactionId(applicationId: string, paidAt: string): string {
   const date = paidAt.slice(0, 10).replaceAll("-", "");
   return `MOCK-PAY-${date}-${applicationId.replaceAll("-", "").slice(0, 12)}`;
-}
-
-function stableStringify(value: unknown): string {
-  if (Array.isArray(value)) {
-    return `[${value.map(stableStringify).join(",")}]`;
-  }
-  if (value !== null && typeof value === "object") {
-    return `{${Object.entries(value)
-      .sort(([left], [right]) => left.localeCompare(right))
-      .map(([key, nested]) => `${JSON.stringify(key)}:${stableStringify(nested)}`)
-      .join(",")}}`;
-  }
-  return JSON.stringify(value);
 }
 
 function namespacedIdempotencyKey(

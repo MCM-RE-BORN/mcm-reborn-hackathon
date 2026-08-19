@@ -1,5 +1,6 @@
 "use client";
 
+import { readRecord } from "@/lib/json";
 const OPERATOR_SESSION_KEY = "mcm.reborn.operator.session";
 const OPERATOR_SESSION_EVENT = "mcm.reborn.operator.session-change";
 
@@ -361,12 +362,6 @@ function readStoredSession(): OperatorSession | null {
     clearOperatorSession();
     return null;
   }
-}
-
-function readRecord(value: unknown): Record<string, unknown> | null {
-  return value && typeof value === "object" && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : null;
 }
 
 function readString(value: unknown, key: string): string | null {
