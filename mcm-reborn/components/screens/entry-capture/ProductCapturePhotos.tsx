@@ -5,6 +5,11 @@ import Link from "next/link";
 import { useRef, useState, type ChangeEvent } from "react";
 import { Button } from "@/components/ui/Button";
 import { CAPTURE_SLOTS, type CaptureSlotId } from "./capture-config";
+import {
+  completedCaptureSlotIds,
+  isCaptureSlotCompleted,
+  nextEmptyCaptureSlot,
+} from "./capture-progress";
 import { useCaptureSession } from "./CaptureSessionProvider";
 import styles from "./entry-capture.module.css";
 import { normalizeSelectedImage } from "./image-processing";
@@ -25,13 +30,9 @@ export function ProductCapturePhotos({
   const [albumMessage, setAlbumMessage] = useState<string>();
   const [isProcessing, setIsProcessing] = useState(false);
   const capturedSlotSet = new Set(capturedSlots);
-  const completedSlotIds = CAPTURE_SLOTS.filter(
-    (slot) => captures[slot.id] || capturedSlotSet.has(slot.id),
-  ).map((slot) => slot.id);
+  const completedSlotIds = completedCaptureSlotIds(captures, capturedSlots);
   const completedCount = completedSlotIds.length;
-  const nextAlbumSlot = CAPTURE_SLOTS.find(
-    (slot) => !captures[slot.id] && !capturedSlotSet.has(slot.id),
-  );
+  const nextAlbumSlot = nextEmptyCaptureSlot(captures, capturedSlots);
   const completedQuery = completedSlotIds.length
     ? `&completed=${completedSlotIds.join(",")}`
     : "";
@@ -81,9 +82,13 @@ export function ProductCapturePhotos({
       <div className={styles.captureGrid}>
         {CAPTURE_SLOTS.map((slot) => {
           const sessionCapture = captures[slot.id];
-          const isLegacyFallback =
-            capturedSlotSet.has(slot.id) && !sessionCapture;
-          const isCompleted = Boolean(sessionCapture || isLegacyFallback);
+          const isCompleted = isCaptureSlotCompleted(
+            captures,
+            capturedSlotSet,
+            slot.id,
+          );
+          // 이전 세션에서 등록만 되고 이번 세션에 미리보기가 없는 슬롯
+          const isLegacyFallback = isCompleted && !sessionCapture;
 
           return (
             <Link
