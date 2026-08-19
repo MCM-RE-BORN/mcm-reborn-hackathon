@@ -23,6 +23,24 @@ type MockupDetailScreenProps = {
   state: DemoState;
 };
 
+const MOCKUP_GALLERY = [
+  {
+    alt: "RE:BORN 여권지갑 정면 예상 이미지",
+    label: "정면",
+    src: "/assets/mvp-beta/passport-wallet-front.png",
+  },
+  {
+    alt: "RE:BORN 여권지갑 내부 예상 이미지",
+    label: "내부",
+    src: "/assets/mvp-beta/passport-wallet-open.png",
+  },
+  {
+    alt: "RE:BORN 여권지갑 후면 예상 이미지",
+    label: "후면",
+    src: "/assets/mvp-beta/passport-wallet-back.png",
+  },
+] as const;
+
 function MockupHeader() {
   return (
     <header className={styles.mockupHeader}>
@@ -155,6 +173,28 @@ export function MockupDetailScreen({ analysisId, productId, state }: MockupDetai
                 여권과 카드, 지퍼 포켓을 한 번에 정리할 수 있는 내부 구성입니다.
               </figcaption>
             </figure>
+
+            <section aria-labelledby="mockup-gallery-title">
+              <h2
+                className={styles.productGalleryTitle}
+                id="mockup-gallery-title"
+              >
+                다각도 예상 이미지
+              </h2>
+              <div className={styles.mockupGallery}>
+                {MOCKUP_GALLERY.map((view) => (
+                  <figure className={styles.galleryItem} key={view.src}>
+                    <Image
+                      alt={view.alt}
+                      fill
+                      sizes="(max-width: 402px) calc(100vw - 40px), 350px"
+                      src={view.src}
+                    />
+                    <figcaption>{view.label}</figcaption>
+                  </figure>
+                ))}
+              </div>
+            </section>
 
             <aside className={styles.contractNotice}>
               <strong>목업 이용 안내</strong>

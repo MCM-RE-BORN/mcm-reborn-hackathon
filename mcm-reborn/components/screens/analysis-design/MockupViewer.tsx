@@ -1,15 +1,12 @@
 "use client";
 
-import Image from "next/image";
 import { useEffect, useState } from "react";
 import styles from "./analysis-design.module.css";
 
 const MODEL_SRC = "/assets/models/reborn-passport-wallet.glb";
-const MODEL_POSTER = "/assets/mvp-beta/passport-wallet-front.png";
 
 export function MockupViewer() {
   const [viewerReady, setViewerReady] = useState(false);
-  const [modelLoaded, setModelLoaded] = useState(false);
   const [modelFailed, setModelFailed] = useState(false);
 
   useEffect(() => {
@@ -33,16 +30,11 @@ export function MockupViewer() {
       aria-label="RE:BORN 여권지갑 3D 목업"
       className={styles.modelViewerFrame}
     >
-      {!modelLoaded && (
-        <Image
-          alt="RE:BORN 여권지갑 3D 목업을 불러오는 중"
-          className={styles.modelViewerPoster}
-          fill
-          priority
-          sizes="(max-width: 402px) calc(100vw - 40px), 350px"
-          src={MODEL_POSTER}
-        />
-      )}
+      {!viewerReady ? (
+        <div className={styles.modelViewerLoading} role="status">
+          3D 목업을 불러오고 있습니다.
+        </div>
+      ) : null}
 
       {viewerReady && !modelFailed ? (
         <model-viewer
@@ -55,7 +47,6 @@ export function MockupViewer() {
           interaction-prompt="auto"
           loading="eager"
           onError={() => setModelFailed(true)}
-          onLoad={() => setModelLoaded(true)}
           rotation-per-second="18deg"
           shadow-intensity="1"
           src={MODEL_SRC}
