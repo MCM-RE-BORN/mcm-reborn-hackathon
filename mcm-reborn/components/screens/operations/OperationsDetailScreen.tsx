@@ -174,7 +174,7 @@ export function OperationsDetailScreen({
               proposedTerms: null,
             }),
             headers: {
-              "Idempotency-Key": `operations-${applicationId}-inspection-${viewStatus}`,
+              "Idempotency-Key": `operations-v2-${applicationId}-inspection-${viewStatus}`,
             },
             method: "POST",
           },
@@ -200,7 +200,7 @@ export function OperationsDetailScreen({
               targetStatus,
             }),
             headers: {
-              "Idempotency-Key": `operations-${applicationId}-${viewStatus}-${targetStatus}`,
+              "Idempotency-Key": `operations-v2-${applicationId}-${viewStatus}-${targetStatus}`,
             },
             method: "POST",
           },

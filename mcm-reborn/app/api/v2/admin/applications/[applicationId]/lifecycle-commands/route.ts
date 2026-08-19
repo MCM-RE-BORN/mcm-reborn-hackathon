@@ -142,8 +142,10 @@ async function executeLifecycleCommand(
   // with a PostgREST schema cache that was built before optional arguments
   // were added. The UI note is presentation-only for this compact console.
   if (command.targetStatus === "SHIPPED") {
-    rpcBody.p_carrier_code = command.carrierCode;
-    rpcBody.p_carrier_name = command.carrierName;
+    // The RPC owns the canonical demo carrier defaults. Only send the value
+    // that is genuinely required for this transition so deployed functions
+    // with older optional-argument metadata cannot reject an otherwise valid
+    // SHIPPED command.
     rpcBody.p_tracking_number = command.trackingNumber;
   }
 

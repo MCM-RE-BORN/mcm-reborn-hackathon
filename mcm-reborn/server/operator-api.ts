@@ -532,9 +532,21 @@ function mapSupabaseFailure(status: number, payload: unknown): ApiProblem {
   const upstreamCode = isRecord(payload) && typeof payload.code === "string"
     ? payload.code
     : null;
+  const upstreamMessage = isRecord(payload) && typeof payload.message === "string"
+    ? payload.message.slice(0, 240)
+    : null;
+  const upstreamDetails: JsonObject = {
+    ...(upstreamCode ? { upstreamCode } : {}),
+    ...(upstreamMessage ? { upstreamMessage } : {}),
+  };
 
   if (upstreamCode === "22023" || upstreamCode === "22P02") {
-    return new ApiProblem(400, "INVALID_REQUEST", "요청 값이 올바르지 않습니다.");
+    return new ApiProblem(
+      400,
+      "INVALID_REQUEST",
+      "요청 값이 올바르지 않습니다.",
+      upstreamDetails,
+    );
   }
   if (upstreamCode === "42501") {
     return new ApiProblem(403, "FORBIDDEN", "운영자 권한이 필요합니다.");
