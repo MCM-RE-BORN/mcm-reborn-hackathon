@@ -10,7 +10,6 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { DEMO_SCENARIO } from "@/data/demo-scenario";
 import type { CaptureSlotId } from "./capture-config";
 
 export type CaptureAsset = {
@@ -32,11 +31,11 @@ export type ProductDetails = {
 
 const INITIAL_PRODUCT_DETAILS: ProductDetails = {
   category: "BACKPACK",
-  conditionNote: DEMO_SCENARIO.sourceProduct.conditionNote,
-  desiredUse: DEMO_SCENARIO.sourceProduct.desiredUse,
-  purchaseYear: DEMO_SCENARIO.sourceProduct.purchaseYear,
-  serialNumber: DEMO_SCENARIO.sourceProduct.serialNumber,
-  useDuration: DEMO_SCENARIO.sourceProduct.useDuration,
+  conditionNote: "",
+  desiredUse: "",
+  purchaseYear: "",
+  serialNumber: "",
+  useDuration: "",
 };
 
 type CaptureSessionValue = {

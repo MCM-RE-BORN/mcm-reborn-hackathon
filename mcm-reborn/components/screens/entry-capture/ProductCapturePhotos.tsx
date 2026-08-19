@@ -4,7 +4,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRef, useState, type ChangeEvent } from "react";
 import { Button } from "@/components/ui/Button";
-import { DEMO_SCENARIO } from "@/data/demo-scenario";
 import { CAPTURE_SLOTS, type CaptureSlotId } from "./capture-config";
 import { useCaptureSession } from "./CaptureSessionProvider";
 import styles from "./entry-capture.module.css";
@@ -108,13 +107,9 @@ export function ProductCapturePhotos({
                   unoptimized
                 />
               ) : isLegacyFallback ? (
-                <Image
-                  alt={`${slot.label} MCM 제품 예시 촬영본`}
-                  fill
-                  loading="eager"
-                  sizes="(max-width: 360px) calc(100vw - 40px), (max-width: 402px) calc(100vw - 52px), 350px"
-                  src={DEMO_SCENARIO.sourceProduct.images[slot.id]}
-                />
+                <span aria-hidden="true" className={styles.captureCompletedMark}>
+                  ✓
+                </span>
               ) : slot.id === "serialNumber" ? (
                 <Image
                   alt=""

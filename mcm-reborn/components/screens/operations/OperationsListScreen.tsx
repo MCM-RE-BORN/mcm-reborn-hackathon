@@ -4,14 +4,11 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Card } from "@/components/ui/Card";
-import { formatKrw } from "@/data/demo-scenario";
 import {
   hasConfirmedInspection,
-  OPERATION_APPLICATION,
   OPERATION_STAGE_PRESENTATION,
   operationDetailHref,
   readOperationStatus,
-  type OperationStatus,
 } from "./operations-data";
 import {
   operatorFetch,
@@ -23,12 +20,10 @@ import styles from "./operations.module.css";
 
 type OperationsListScreenProps = {
   empty: boolean;
-  status: OperationStatus;
 };
 
 export function OperationsListScreen({
   empty,
-  status,
 }: OperationsListScreenProps) {
   const [liveApplications, setLiveApplications] = useState<
     OperatorApplicationSummary[] | null
@@ -58,9 +53,7 @@ export function OperationsListScreen({
   }, []);
 
   const usingLiveData = liveApplications !== null;
-  const applications = usingLiveData
-    ? liveApplications
-    : [OPERATION_APPLICATION];
+  const applications = liveApplications ?? [];
   const visibleApplications = empty ? [] : applications;
 
   return (
@@ -84,8 +77,8 @@ export function OperationsListScreen({
           {usingLiveData
             ? "운영자 인증으로 실제 신청 목록을 조회하고 있습니다."
             : connectionError
-              ? "운영자 인증 또는 API 조회에 실패해 중앙 데모 데이터를 표시합니다."
-              : "운영 API를 확인하는 중이며, 잠시 동안 중앙 데모 데이터를 표시합니다."}
+              ? "운영자 인증 또는 API 조회에 실패했습니다. 다시 시도해 주세요."
+              : "운영 API에서 신청 목록을 불러오고 있습니다."}
         </span>
       </aside>
 
@@ -99,9 +92,9 @@ export function OperationsListScreen({
           <Card className={styles.emptyState} tone="outline">
             <strong>표시할 신청이 없습니다.</strong>
             <p>
-              {usingLiveData
-                ? "새 신청이 접수되면 이 목록에서 확인할 수 있습니다."
-                : "중앙 데모 데이터에 등록된 신청이 없습니다."}
+              {connectionError
+                ? "운영자 인증을 확인한 뒤 목록을 새로고침해 주세요."
+                : "새 신청이 접수되면 이 목록에서 확인할 수 있습니다."}
             </p>
             <Link href="/operations">목록 새로고침</Link>
           </Card>
@@ -124,26 +117,13 @@ export function OperationsListScreen({
               </thead>
               <tbody>
                 {visibleApplications.map((application) => {
-                  const isLiveApplication = "effectiveStatus" in application;
-                  const applicationStatus = isLiveApplication
-                    ? readOperationStatus(application.effectiveStatus)
-                    : status;
+                  const applicationStatus = readOperationStatus(application.effectiveStatus);
                   const stage = OPERATION_STAGE_PRESENTATION[applicationStatus];
                   const confirmed = hasConfirmedInspection(applicationStatus);
-                  const displayedPriceKrw = isLiveApplication
-                    ? application.product.mockPrice.amount
-                    : confirmed
-                      ? OPERATION_APPLICATION.expertInspection.revisedPriceKrw
-                      : OPERATION_APPLICATION.product.initialPriceKrw;
-                  const image = isLiveApplication
-                    ? application.product.listImage
-                    : OPERATION_APPLICATION.product.image;
-                  const date = isLiveApplication
-                    ? formatApplicationDate(application.createdAt)
-                    : OPERATION_APPLICATION.orderedAt;
-                  const applicationId = isLiveApplication
-                    ? application.id
-                    : OPERATION_APPLICATION.applicationId;
+                  const displayedPriceKrw = application.product.mockPrice.amount;
+                  const image = application.product.listImage;
+                  const date = formatApplicationDate(application.createdAt);
+                  const applicationId = application.id;
 
                   return (
                     <tr key={applicationId}>
@@ -154,15 +134,13 @@ export function OperationsListScreen({
                               alt=""
                               fill
                               sizes="56px"
-                              src={image || OPERATION_APPLICATION.product.image}
+                              src={image}
                             />
                           </span>
                           <div>
                             <strong>{application.product.name}</strong>
                             <span>
-                              {isLiveApplication
-                                ? application.customer.displayName
-                                : OPERATION_APPLICATION.sourceProduct.name}
+                              {application.customer.displayName}
                             </span>
                           </div>
                         </div>
@@ -205,4 +183,8 @@ function formatApplicationDate(value: string) {
   return Number.isNaN(date.getTime())
     ? value
     : date.toLocaleDateString("ko-KR");
+}
+
+function formatKrw(amount: number) {
+  return `${amount.toLocaleString("ko-KR")}원`;
 }

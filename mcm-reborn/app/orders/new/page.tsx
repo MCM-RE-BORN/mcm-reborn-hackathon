@@ -15,6 +15,12 @@ export default async function OrderNewPage({
   searchParams: DemoSearchParams;
 }) {
   const query = await searchParams;
+  const analysisId = Array.isArray(query.analysisId)
+    ? query.analysisId[0]
+    : query.analysisId;
+  const productId = Array.isArray(query.productId)
+    ? query.productId[0]
+    : query.productId;
   const state = resolveDemoState(query.state, [
     "normal",
     "loading",
@@ -23,5 +29,11 @@ export default async function OrderNewPage({
     "permission",
   ]);
 
-  return <OrderNewScreen state={state} />;
+  return (
+    <OrderNewScreen
+      analysisId={analysisId}
+      productId={productId}
+      state={state}
+    />
+  );
 }

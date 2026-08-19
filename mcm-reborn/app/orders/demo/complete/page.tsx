@@ -15,6 +15,7 @@ export default async function OrderCompletePage({
   searchParams: DemoSearchParams;
 }) {
   const query = await searchParams;
+  const applicationId = typeof query.applicationId === "string" ? query.applicationId : undefined;
   const state = resolveDemoState(query.state, [
     "normal",
     "loading",
@@ -23,5 +24,5 @@ export default async function OrderCompletePage({
     "permission",
   ]);
 
-  return <OrderCompleteScreen state={state} />;
+  return <OrderCompleteScreen applicationId={applicationId} state={state} />;
 }

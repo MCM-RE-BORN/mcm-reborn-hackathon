@@ -7,7 +7,6 @@ import { Card } from "@/components/ui/Card";
 import { KeyValueList } from "@/components/ui/KeyValueList";
 import { ProgressStepper } from "@/components/ui/ProgressStepper";
 import { StatusPanel } from "@/components/ui/StatusPanel";
-import { DEMO_SCENARIO } from "@/data/demo-scenario";
 import { DemoStatePanel } from "./DemoStatePanel";
 import { SubmissionLoadingState } from "./SubmissionLoadingState";
 import { SubmissionProductSummary } from "./SubmissionProductSummary";
@@ -15,10 +14,12 @@ import styles from "./analysis-design.module.css";
 import type { DemoState } from "./types";
 
 type SubmissionStatusScreenProps = {
+  analysisId?: string;
   state: DemoState;
 };
 
 export function SubmissionStatusScreen({
+  analysisId,
   state,
 }: SubmissionStatusScreenProps) {
   if (state !== "normal") {
@@ -116,7 +117,7 @@ export function SubmissionStatusScreen({
           <div className={styles.statusCardHeader}>
             <div>
               <span className={styles.cardLabel}>접수 번호</span>
-              <strong>{DEMO_SCENARIO.submission.id}</strong>
+              <strong>{analysisId ?? "분석 접수 정보"}</strong>
             </div>
             <span className={styles.statusBadge}>분석 완료</span>
           </div>
@@ -133,7 +134,7 @@ export function SubmissionStatusScreen({
               { label: "사진 품질", value: "분석에 적합" },
               {
                 label: "사진 사전 적합성",
-                value: `주문 진행 가능 · 예상 ${DEMO_SCENARIO.analysis.authenticityPrecheckPercent}%`,
+                value: "주문 적합성은 AI 분석 결과에서 확인",
               },
               { label: "다음 단계", value: "결과 확인" },
             ]}

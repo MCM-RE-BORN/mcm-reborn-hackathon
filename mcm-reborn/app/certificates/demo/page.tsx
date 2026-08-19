@@ -17,6 +17,9 @@ export default async function CertificatePage({
   const requestedState = Array.isArray(query.state)
     ? query.state[0]
     : query.state;
+  const applicationId = Array.isArray(query.applicationId)
+    ? query.applicationId[0]
+    : query.applicationId;
   const requestedVerification = Array.isArray(query.verify)
     ? query.verify[0]
     : query.verify;
@@ -37,5 +40,11 @@ export default async function CertificatePage({
   const state =
     requestedState === "issued" ? "normal" : (exceptionalState ?? "locked");
 
-  return <CertificateScreen state={state} verification={verification} />;
+  return (
+    <CertificateScreen
+      applicationId={applicationId}
+      state={state}
+      verification={verification}
+    />
+  );
 }

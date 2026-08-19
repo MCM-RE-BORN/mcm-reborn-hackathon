@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import {
   OrdersListScreen,
   resolveDemoState,
-  resolveOrderStage,
 } from "@/components/screens/order-certificate";
 
 export const metadata: Metadata = {
@@ -13,34 +12,14 @@ type OrdersAliasPageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
 
-function firstValue(value: string | string[] | undefined) {
-  return Array.isArray(value) ? value[0] : value;
-}
-
 export default async function OrdersAliasPage({
   searchParams,
 }: OrdersAliasPageProps) {
-  const { panel, stage, state } = await searchParams;
-  const panelValue = firstValue(panel);
-  const stageValue = firstValue(stage);
-  const stateValue = firstValue(state);
-  const requestedStage =
-    stateValue === "canceled"
-      ? "canceled"
-      : stateValue === "change-request" || panelValue === "change-request"
-        ? "change-required"
-        : stageValue;
+  const { state } = await searchParams;
   const resolvedState = resolveDemoState(
-    stateValue === "canceled" || stateValue === "change-request"
-      ? undefined
-      : state,
+    state,
     ["normal", "loading", "empty", "error", "permission"],
   );
 
-  return (
-    <OrdersListScreen
-      stage={resolveOrderStage(requestedStage)}
-      state={resolvedState}
-    />
-  );
+  return <OrdersListScreen state={resolvedState} />;
 }

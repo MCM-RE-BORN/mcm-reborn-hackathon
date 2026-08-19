@@ -1,16 +1,25 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { AppShell } from "@/components/layout/AppShell";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { StickyActionBar } from "@/components/layout/StickyActionBar";
 import { ButtonLink } from "@/components/ui/Button";
-import { DEMO_SCENARIO } from "@/data/demo-scenario";
+import { StatusPanel } from "@/components/ui/StatusPanel";
 import { DemoStatePanel } from "./DemoStatePanel";
 import { MockupViewer } from "./MockupViewer";
+import {
+  customerFetch,
+  type CustomerProductDetail,
+} from "../order-certificate/customer-client";
 import styles from "./analysis-design.module.css";
 import type { DemoState } from "./types";
 
 type MockupDetailScreenProps = {
+  analysisId?: string;
+  productId?: string;
   state: DemoState;
 };
 
@@ -35,7 +44,33 @@ function MockupHeader() {
   );
 }
 
-export function MockupDetailScreen({ state }: MockupDetailScreenProps) {
+export function MockupDetailScreen({ analysisId, productId, state }: MockupDetailScreenProps) {
+  const [product, setProduct] = useState<CustomerProductDetail | null>(null);
+  const [requestError, setRequestError] = useState(false);
+
+  useEffect(() => {
+    if (state !== "normal" || !analysisId || !productId) {
+      return;
+    }
+    let cancelled = false;
+    customerFetch<CustomerProductDetail>(
+      `/api/v2/products/${productId}?analysisId=${encodeURIComponent(analysisId)}`,
+    )
+      .then((value) => {
+        if (!cancelled) {
+          setProduct(value);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setRequestError(true);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [analysisId, productId, state]);
+
   if (state !== "normal") {
     return (
       <AppShell
@@ -65,28 +100,45 @@ export function MockupDetailScreen({ state }: MockupDetailScreenProps) {
     <AppShell
       footer={
         <StickyActionBar>
-          <ButtonLink fullWidth href="/orders/new">
+        <ButtonLink
+          fullWidth
+          href={`/orders/new?analysisId=${analysisId ?? ""}&productId=${productId ?? ""}`}
+        >
             이 디자인으로 주문 신청
           </ButtonLink>
         </StickyActionBar>
       }
       header={<MockupHeader />}
     >
+      {!analysisId || !productId || requestError ? (
+        <div className={styles.statePage}>
+          <DemoStatePanel
+            actionHref={analysisId ? `/submissions/demo/designs?analysisId=${analysisId}` : "/submissions/demo/designs"}
+            actionLabel="추천 디자인으로 돌아가기"
+            context="mockup"
+            state="error"
+          />
+        </div>
+      ) : !product ? (
+        <div className={styles.statePage}>
+          <StatusPanel
+            description="Supabase에 저장된 제품 정보를 불러오고 있습니다."
+            title="제품 목업 정보를 준비하고 있어요"
+            tone="loading"
+          />
+        </div>
+      ) : (
       <article className={styles.mockupContent}>
         <MockupViewer />
 
         <header className={styles.productDetailHeader}>
-          <h1>{DEMO_SCENARIO.selectedDesign.name}</h1>
+          <h1>{product.name}</h1>
           <a className={styles.engravingLink} href="#engraving-note">
             각인 옵션 안내
           </a>
         </header>
 
-        <p className={styles.productDescription}>
-          오래 함께한 모노그램 원단의 표정을 살려 새로운 여행을 위한
-          여권지갑으로 제안합니다. 사진에서 확인한 상태가 좋은 전면 원단과
-          측면 가죽을 중심으로 배치한 예상 디자인입니다.
-        </p>
+        <p className={styles.productDescription}>{product.description}</p>
 
         <aside className={styles.contractNotice}>
           <strong>목업 이용 안내</strong>
@@ -105,6 +157,7 @@ export function MockupDetailScreen({ state }: MockupDetailScreenProps) {
           </p>
         </aside>
       </article>
+      )}
     </AppShell>
   );
 }

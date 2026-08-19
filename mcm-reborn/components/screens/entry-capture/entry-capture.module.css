@@ -757,6 +757,18 @@
   font-weight: var(--font-weight-light);
 }
 
+.captureCompletedMark {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: var(--border-thin) solid var(--color-muted);
+  border-radius: 50%;
+  color: var(--color-ink);
+  font-size: 24px;
+  font-weight: 700;
+}
+
 .captureSlotLabel {
   position: absolute;
   z-index: var(--z-sticky);
@@ -874,6 +886,7 @@
   min-height: 100dvh;
   overflow: hidden;
   isolation: isolate;
+  background: var(--color-ink);
 }
 
 .cameraBackground {

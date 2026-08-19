@@ -1513,11 +1513,14 @@ export function applicationDetail(
   product: ProductRow,
   recommendation: RecommendationRow,
 ): JsonRecord {
+  const initialTerms = readTerms(row.initial_terms);
   return {
     ...applicationSummary(row, product, recommendation),
     analysisId: row.analysis_id,
     demoProgressProfile: row.demo_progress_profile,
     effectiveStatus: effectiveStatus(row),
+    finalTerms: row.final_terms ? readTerms(row.final_terms) : null,
+    initialTerms,
     inspectionCompletedAt: row.inspection_completed_at,
     persistedStatus: row.persisted_status,
     pickupSchedule: row.pickup_schedule,

@@ -1,9 +1,7 @@
 import type { Metadata } from "next";
 import {
   OrderDetailsScreen,
-  resolveCancellationReason,
   resolveDemoState,
-  resolveOrderStage,
   type DemoSearchParams,
 } from "@/components/screens/order-certificate";
 
@@ -19,18 +17,9 @@ export default async function OrderDetailsPage({
   const query = await searchParams;
   const firstValue = (value: string | string[] | undefined) =>
     Array.isArray(value) ? value[0] : value;
-  const legacyState = firstValue(query.state);
-  const legacyPanel = firstValue(query.panel);
-  const requestedStage =
-    legacyState === "canceled"
-      ? "canceled"
-      : legacyState === "change-request" || legacyPanel === "change-request"
-        ? "change-required"
-        : query.stage;
+  const applicationId = firstValue(query.applicationId);
   const state = resolveDemoState(
-    legacyState === "canceled" || legacyState === "change-request"
-      ? undefined
-      : query.state,
+    query.state,
     [
     "normal",
     "loading",
@@ -39,13 +28,10 @@ export default async function OrderDetailsPage({
     "permission",
     ],
   );
-  const stage = resolveOrderStage(requestedStage);
-  const cancellationReason = resolveCancellationReason(query.reason);
 
   return (
     <OrderDetailsScreen
-      cancellationReason={cancellationReason}
-      stage={stage}
+      applicationId={applicationId}
       state={state}
     />
   );

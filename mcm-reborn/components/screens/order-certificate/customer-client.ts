@@ -1,0 +1,442 @@
+"use client";
+
+import type { OrderStage } from "./demo-state";
+
+const CUSTOMER_SESSION_KEY = "mcm.reborn.customer.session";
+
+export type CustomerSession = {
+  accessToken: string;
+  expiresAt: string;
+  user: {
+    displayName: string;
+    email: string;
+    id: string;
+    role: "CUSTOMER";
+  };
+};
+
+export type CustomerMoney = {
+  amount: number;
+  currency: string;
+};
+
+export type CustomerProduct = {
+  category?: string;
+  code?: string;
+  estimatedDuration: string;
+  has3d?: boolean;
+  id: string;
+  listImage: unknown;
+  mockPrice: CustomerMoney;
+  name: string;
+  recommendation?: {
+    eligible: boolean;
+    reasonCodes: string[];
+    score: number;
+  };
+};
+
+export type CustomerProductDetail = CustomerProduct & {
+  description: string;
+  optionGroups: Array<{
+    key: string;
+    options?: Array<{ value: string }>;
+    required: boolean;
+    type: "SELECT" | "TEXT";
+  }>;
+};
+
+export type CustomerApplicationSummary = {
+  amount: CustomerMoney;
+  applicationNumber: string;
+  createdAt: string;
+  id: string;
+  product: CustomerProduct;
+  status: string;
+};
+
+export type CustomerApplication = CustomerApplicationSummary & {
+  analysisId: string;
+  demoProgressProfile?: string | null;
+  effectiveStatus: string;
+  finalTerms?: CustomerTerms | null;
+  inspectionCompletedAt?: string | null;
+  persistedStatus: string;
+  pickupSchedule: Record<string, unknown>;
+  selectedOptions: Record<string, unknown>;
+  shippingAddress: Record<string, unknown>;
+  statusOverride?: string | null;
+};
+
+export type CustomerTerms = {
+  amount: CustomerMoney;
+  estimatedDuration: string;
+  estimatedReusableMaterialRate: number;
+  productId: string;
+};
+
+export type CustomerApplicationPage = {
+  items: CustomerApplicationSummary[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+};
+
+export type CustomerApplicationDetail = {
+  analysisId: string;
+  amount: CustomerMoney;
+  applicationNumber: string;
+  createdAt: string;
+  demoProgressProfile?: string | null;
+  effectiveStatus: string;
+  finalTerms?: CustomerTerms | null;
+  id: string;
+  inspectionCompletedAt?: string | null;
+  persistedStatus: string;
+  pickupSchedule: Record<string, unknown>;
+  product: CustomerProduct;
+  selectedOptions: Record<string, unknown>;
+  shippingAddress: Record<string, unknown>;
+  status: string;
+  statusOverride?: string | null;
+};
+
+export type CustomerTimelineStep = {
+  description: string | null;
+  label: string;
+  occurredAt: string | null;
+  state: "CURRENT" | "COMPLETED" | "UPCOMING" | "EXCEPTION";
+  status: string;
+};
+
+export type CustomerTimeline = {
+  applicationId: string;
+  effectiveStatus: string;
+  refreshedAt: string;
+  steps: CustomerTimelineStep[];
+};
+
+export type CustomerAnalysis = {
+  condition: {
+    grade: string;
+    overallDamageSeverity: number;
+    summary: string;
+  };
+  estimatedReusableAreaCm2: number;
+  estimatedReusableMaterialRate: number;
+  estimateMeta?: {
+    confidencePercent: number;
+    notice: string;
+  };
+  esgPreview?: {
+    estimatedCarbonSavingKgCo2e: number;
+    methodologyVersion: string;
+  };
+  id: string;
+  authenticityPrecheck?: {
+    estimatePercent: number;
+    status: string;
+  };
+  recommendations: Array<{
+    eligible: boolean;
+    estimatedReusableMaterialRate: number;
+    productId: string;
+    score: number;
+  }>;
+  sourceProduct: {
+    category: string;
+    materialType: string;
+  };
+};
+
+export type CustomerChangeRequest = {
+  applicationId: string;
+  createdAt: string;
+  id: string;
+  previousTerms: CustomerTerms;
+  proposedTerms: CustomerTerms;
+  reason: string;
+  respondedAt: string | null;
+  status: "PENDING" | "APPROVED" | "REJECTED";
+};
+
+export type CustomerShipment = {
+  applicationId: string;
+  carrierCode: string;
+  carrierName: string;
+  status: string;
+  trackingNumber: string;
+};
+
+export type CustomerCertificate = {
+  applicationNumber: string;
+  certificateNumber: string;
+  certificateId: string;
+  disclaimer: string;
+  estimatedCarbonSavingKgCo2e: number;
+  issuedAt: string;
+  methodologyVersion: string;
+  rebornProduct: string;
+  reusedAreaCm2: number;
+  reusedMaterialRate: number;
+  sourceCategory: string;
+  verificationCode: string;
+};
+
+export type CustomerMe = {
+  displayName: string;
+  email: string;
+  id: string;
+  role: "CUSTOMER";
+};
+
+export class CustomerApiError extends Error {
+  constructor(
+    message: string,
+    public readonly status: number,
+  ) {
+    super(message);
+    this.name = "CustomerApiError";
+  }
+}
+
+let sessionPromise: Promise<CustomerSession> | null = null;
+
+export function clearCustomerSession() {
+  if (typeof window !== "undefined") {
+    window.sessionStorage.removeItem(CUSTOMER_SESSION_KEY);
+  }
+  sessionPromise = null;
+}
+
+export async function loginCustomerCredentials(
+  email: string,
+  password: string,
+): Promise<CustomerSession> {
+  const response = await fetch("/api/v2/auth/login", {
+    body: JSON.stringify({ email, password }),
+    cache: "no-store",
+    headers: { "Content-Type": "application/json" },
+    method: "POST",
+  });
+  const payload = await response.json().catch(() => null);
+  if (!response.ok) {
+    const errorRecord = readRecord(payload)?.error;
+    throw new CustomerApiError(
+      readStringValue(errorRecord, "message") ?? "로그인에 실패했습니다.",
+      response.status,
+    );
+  }
+  const parsed = parseCustomerSession(payload);
+  storeCustomerSession(parsed);
+  return parsed;
+}
+
+export async function getCustomerSession(): Promise<CustomerSession> {
+  if (typeof window === "undefined") {
+    throw new CustomerApiError("고객 세션은 브라우저에서만 사용할 수 있습니다.", 0);
+  }
+
+  if (sessionPromise) {
+    return sessionPromise;
+  }
+
+  const stored = readStoredSession();
+  if (stored) {
+    return stored;
+  }
+
+  sessionPromise = loginCustomer();
+  try {
+    return await sessionPromise;
+  } finally {
+    sessionPromise = null;
+  }
+}
+
+export async function customerFetch<T>(
+  input: string,
+  init: RequestInit = {},
+): Promise<T> {
+  const session = await getCustomerSession();
+  const headers = new Headers(init.headers);
+  headers.set("Accept", "application/json");
+  headers.set("Authorization", `Bearer ${session.accessToken}`);
+  if (init.body && !headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
+  }
+  if (init.method && init.method.toUpperCase() !== "GET") {
+    headers.set("Idempotency-Key", `customer-${crypto.randomUUID()}`);
+  }
+
+  const response = await fetch(input, {
+    ...init,
+    cache: "no-store",
+    headers,
+  });
+  const payload = await response.json().catch(() => null);
+  if (!response.ok) {
+    if (response.status === 401) {
+      clearCustomerSession();
+    }
+    const errorRecord = readRecord(payload)?.error;
+    const message =
+      readStringValue(errorRecord, "message") ??
+      "고객 API 요청을 처리하지 못했습니다.";
+    throw new CustomerApiError(message, response.status);
+  }
+  return payload as T;
+}
+
+export function readImageUrl(value: unknown, fallback = "") {
+  if (typeof value === "string") {
+    return value;
+  }
+  const record = readRecord(value);
+  return typeof record?.url === "string" ? record.url : fallback;
+}
+
+export function readJsonString(value: unknown, key: string) {
+  const record = readRecord(value);
+  return typeof record?.[key] === "string" ? record[key] : "";
+}
+
+export function applicationStatusToOrderStage(
+  value: string,
+): OrderStage {
+  if (value === "CHANGE_APPROVAL_REQUIRED") {
+    return "change-required";
+  }
+  if (value === "PRODUCTION_READY" || value === "IN_PRODUCTION") {
+    return "production";
+  }
+  if (value === "QUALITY_CHECK") {
+    return "quality";
+  }
+  if (value === "SHIPPED" || value === "DELIVERED") {
+    return "shipping";
+  }
+  if (value === "COMPLETED") {
+    return "completed";
+  }
+  if (value === "PRODUCTION_UNAVAILABLE" || value === "CANCELED") {
+    return "canceled";
+  }
+  if (value === "PRODUCT_RECEIVED" || value === "EXPERT_INSPECTION") {
+    return "inspection";
+  }
+  return "pickup";
+}
+
+export function formatApiDate(value: string | null | undefined) {
+  if (!value) {
+    return "-";
+  }
+  const date = new Date(value);
+  return Number.isNaN(date.getTime())
+    ? value
+    : date.toLocaleDateString("ko-KR");
+}
+
+function loginCustomer(): Promise<CustomerSession> {
+  return fetch("/api/v2/auth/demo-login", {
+    body: JSON.stringify({ demoAccount: "CUSTOMER" }),
+    cache: "no-store",
+    headers: { "Content-Type": "application/json" },
+    method: "POST",
+  }).then(async (response) => {
+    const payload = await response.json().catch(() => null);
+    if (!response.ok) {
+      const errorRecord = readRecord(payload)?.error;
+      const message =
+        readStringValue(errorRecord, "message") ?? "고객 인증을 완료하지 못했습니다.";
+      throw new CustomerApiError(message, response.status);
+    }
+
+    const session = readRecord(payload)?.session;
+    const user = readRecord(payload)?.user;
+    const userRecord = readRecord(user);
+    const sessionRecord = readRecord(session);
+    if (
+      !readStringValue(sessionRecord, "accessToken") ||
+      !readStringValue(sessionRecord, "expiresAt") ||
+      readStringValue(userRecord, "role") !== "CUSTOMER" ||
+      !readStringValue(userRecord, "id") ||
+      !readStringValue(userRecord, "email") ||
+      !readStringValue(userRecord, "displayName")
+    ) {
+      throw new CustomerApiError("고객 인증 응답이 올바르지 않습니다.", 502);
+    }
+
+    const result = parseCustomerSession(payload);
+    storeCustomerSession(result);
+    return result;
+  });
+}
+
+function parseCustomerSession(payload: unknown): CustomerSession {
+  const sessionRecord = readRecord(readRecord(payload)?.session);
+  const userRecord = readRecord(readRecord(payload)?.user);
+  const accessToken = readStringValue(sessionRecord, "accessToken");
+  const expiresAt = readStringValue(sessionRecord, "expiresAt");
+  const displayName = readStringValue(userRecord, "displayName");
+  const email = readStringValue(userRecord, "email");
+  const id = readStringValue(userRecord, "id");
+  if (
+    !accessToken ||
+    !expiresAt ||
+    readStringValue(userRecord, "role") !== "CUSTOMER" ||
+    !displayName ||
+    !email ||
+    !id
+  ) {
+    throw new CustomerApiError("고객 인증 응답이 올바르지 않습니다.", 502);
+  }
+  return {
+    accessToken,
+    expiresAt,
+    user: { displayName, email, id, role: "CUSTOMER" },
+  };
+}
+
+function storeCustomerSession(session: CustomerSession) {
+  window.sessionStorage.setItem(CUSTOMER_SESSION_KEY, JSON.stringify(session));
+}
+
+function readStoredSession(): CustomerSession | null {
+  const raw = window.sessionStorage.getItem(CUSTOMER_SESSION_KEY);
+  if (!raw) {
+    return null;
+  }
+  try {
+    const value = JSON.parse(raw) as Partial<CustomerSession>;
+    if (
+      typeof value.accessToken !== "string" ||
+      typeof value.expiresAt !== "string" ||
+      value.user?.role !== "CUSTOMER"
+    ) {
+      clearCustomerSession();
+      return null;
+    }
+    if (Date.parse(value.expiresAt) <= Date.now() + 30_000) {
+      clearCustomerSession();
+      return null;
+    }
+    return value as CustomerSession;
+  } catch {
+    clearCustomerSession();
+    return null;
+  }
+}
+
+function readRecord(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
+}
+
+function readStringValue(value: unknown, key: string): string | null {
+  const record = readRecord(value);
+  return typeof record?.[key] === "string" ? record[key] : null;
+}

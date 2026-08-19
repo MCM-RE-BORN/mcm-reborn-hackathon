@@ -3,7 +3,6 @@ import {
   getNextApplicationLifecycleStatus,
   type ApplicationLifecycleStatus,
 } from "@/data/application-lifecycle";
-import { DEMO_SCENARIO } from "@/data/demo-scenario";
 
 export const OPERATION_STATUSES = [
   "PENDING_PAYMENT",
@@ -168,20 +167,6 @@ const NEXT_TRANSITIONS: Partial<
   },
 };
 
-export const OPERATION_APPLICATION = {
-  analysis: DEMO_SCENARIO.analysis,
-  applicationId: DEMO_SCENARIO.order.id,
-  applicationNumber: DEMO_SCENARIO.order.number,
-  certificate: DEMO_SCENARIO.certificate,
-  customer: DEMO_SCENARIO.order.customer,
-  expertInspection: DEMO_SCENARIO.expertInspection,
-  orderedAt: DEMO_SCENARIO.order.orderedAt,
-  pickupDateLabel: DEMO_SCENARIO.order.pickupDateLabel,
-  pickupTimeLabel: DEMO_SCENARIO.order.pickupTimeLabel,
-  product: DEMO_SCENARIO.selectedDesign,
-  sourceProduct: DEMO_SCENARIO.sourceProduct,
-} as const;
-
 export function readOperationStatus(
   value: string | string[] | undefined,
 ): OperationStatus {
@@ -209,18 +194,10 @@ export function getNextOperationTransition(
 }
 
 export function isOperationApplication(applicationId: string) {
-  return (
-    applicationId === OPERATION_APPLICATION.applicationId ||
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
-      applicationId,
-    )
-  );
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(applicationId);
 }
 
-export function operationDetailHref(
-  status: OperationStatus,
-  applicationId: string = OPERATION_APPLICATION.applicationId,
-) {
+export function operationDetailHref(status: OperationStatus, applicationId: string) {
   return `/operations/${applicationId}?status=${status}`;
 }
 

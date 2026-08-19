@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import {
   isOperationApplication,
   OperationsDetailScreen,
-  readOperationStatus,
 } from "@/components/screens/operations";
 
 export const metadata: Metadata = {
@@ -11,23 +10,17 @@ export const metadata: Metadata = {
 
 type OperationDetailPageProps = {
   params: Promise<{ applicationId: string }>;
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
 
 export default async function OperationDetailPage({
   params,
-  searchParams,
 }: OperationDetailPageProps) {
-  const [{ applicationId }, { status }] = await Promise.all([
-    params,
-    searchParams,
-  ]);
+  const { applicationId } = await params;
 
   return (
     <OperationsDetailScreen
       applicationId={applicationId}
       found={isOperationApplication(applicationId)}
-      status={readOperationStatus(status)}
     />
   );
 }
