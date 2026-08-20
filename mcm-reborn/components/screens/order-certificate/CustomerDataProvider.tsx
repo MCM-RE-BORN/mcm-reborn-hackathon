@@ -11,6 +11,7 @@ import {
 } from "react";
 import {
   clearCustomerSession,
+  CustomerApiError,
   customerFetch,
   getCustomerSession,
   subscribeCustomerSession,
@@ -66,7 +67,10 @@ async function loadHistory(
       latestApplication = await customerFetch<CustomerApplicationDetail>(
         `/api/v2/applications/${latest.id}`,
       );
-    } catch {
+    } catch (error) {
+      if (error instanceof CustomerApiError && error.status === 401) {
+        throw error;
+      }
       latestApplication =
         previousLatestApplication?.id === latest.id
           ? previousLatestApplication
@@ -80,7 +84,12 @@ async function loadHistory(
 async function loadInitialData(fallbackProfile: CustomerMe) {
   const [history, profile] = await Promise.all([
     loadHistory(),
-    customerFetch<CustomerMe>("/api/v2/me").catch(() => fallbackProfile),
+    customerFetch<CustomerMe>("/api/v2/me").catch((error) => {
+      if (error instanceof CustomerApiError && error.status === 401) {
+        throw error;
+      }
+      return fallbackProfile;
+    }),
   ]);
   return { ...history, profile };
 }

@@ -178,6 +178,7 @@ function ForcedCameraState({
 
 type RuntimeCameraStateProps = {
   description?: string;
+  isProcessing: boolean;
   onChooseFile: () => void;
   onRetry: () => void;
   runtimeState: Exclude<CameraRuntimeState, "ready">;
@@ -185,6 +186,7 @@ type RuntimeCameraStateProps = {
 
 function RuntimeCameraState({
   description,
+  isProcessing,
   onChooseFile,
   onRetry,
   runtimeState,
@@ -210,12 +212,19 @@ function RuntimeCameraState({
         action={
           <div className={styles.cameraStatusActions}>
             {!isStarting && !isUnsupported ? (
-              <Button fullWidth onClick={onRetry} variant="outline">
+              <Button
+                disabled={isProcessing}
+                fullWidth
+                onClick={onRetry}
+                variant="outline"
+              >
                 카메라 다시 시도
               </Button>
             ) : null}
             <Button
               fullWidth
+              loading={isProcessing}
+              loadingLabel="사진 준비 중"
               onClick={onChooseFile}
               variant={isStarting ? "outline" : "primary"}
             >
@@ -445,6 +454,7 @@ export function CameraScreen({
       return;
     }
 
+    setIsCapturing(true);
     setRuntimeDescription(undefined);
 
     try {
@@ -467,6 +477,10 @@ export function CameraScreen({
           : "사진을 읽지 못했습니다. 다른 사진을 선택해주세요.",
       );
       setRuntimeState("error");
+    } finally {
+      if (mountedRef.current) {
+        setIsCapturing(false);
+      }
     }
   };
 
@@ -613,6 +627,7 @@ export function CameraScreen({
       ) : (
         <RuntimeCameraState
           description={runtimeDescription}
+          isProcessing={isCapturing}
           onChooseFile={() => fallbackInputRef.current?.click()}
           onRetry={handleRetry}
           runtimeState={runtimeState}

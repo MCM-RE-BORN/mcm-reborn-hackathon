@@ -45,7 +45,7 @@
 .startTagline {
   position: absolute;
   right: var(--layout-gutter);
-  bottom: calc(var(--safe-area-bottom) + var(--space-21));
+  bottom: calc(var(--safe-area-bottom) + var(--space-25));
   left: var(--layout-gutter);
   color: var(--color-canvas);
   font-size: var(--font-size-caption);
@@ -96,7 +96,9 @@
 
 .introContent {
   gap: var(--space-19);
-  padding-block: var(--space-17) var(--space-14);
+  padding-block:
+    calc(var(--safe-area-top) + var(--space-17))
+    calc(var(--safe-area-bottom) + var(--space-14));
 }
 
 .introBrand {
@@ -123,7 +125,12 @@
 
 .introHero {
   display: grid;
-  min-height: max(26rem, calc(100dvh - 12rem));
+  min-height: max(
+    26rem,
+    calc(
+      100dvh - 12rem - var(--safe-area-top) - var(--safe-area-bottom)
+    )
+  );
   align-content: center;
   gap: var(--space-9);
   padding-block: var(--space-21) var(--space-17);
@@ -155,6 +162,8 @@
 .introScrollCue {
   display: grid;
   width: fit-content;
+  min-height: var(--touch-target-min);
+  align-content: center;
   justify-items: center;
   gap: var(--space-4);
   margin: calc(var(--space-13) * -1) auto var(--space-0);
