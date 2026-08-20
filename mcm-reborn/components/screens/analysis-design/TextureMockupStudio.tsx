@@ -237,10 +237,10 @@ export function TextureMockupStudio({ analysisId }: TextureMockupStudioProps) {
             setExternalStatus(
               "생성된 텍스처를 검수된 여권 지갑 외관 소재 맵에 합성하고 있습니다.",
             );
-            if (!task.textureUrl) {
-              throw new Error("Meshy가 목표 UV 텍스처를 반환하지 않았습니다.");
-            }
-            const generatedAtlas = await downloadTextureBlob(task.textureUrl);
+            const generatedAtlas = await downloadTextureBlob(
+              analysisId,
+              taskToken,
+            );
             const composedAtlas = await composeExteriorAtlas(generatedAtlas);
             if (pollGenerationRef.current[jobKind] !== generation) return;
 
@@ -396,7 +396,7 @@ export function TextureMockupStudio({ analysisId }: TextureMockupStudioProps) {
           updateTask("SOURCE_MODEL", {
             error: readExternalError(error),
             status: "failed",
-            terminal: false,
+            terminal: true,
           });
         }
       }
@@ -422,7 +422,10 @@ export function TextureMockupStudio({ analysisId }: TextureMockupStudioProps) {
         ...current,
         error: message,
         status: "failed",
-        terminal: false,
+        // A create request can fail after Meshy accepted a paid job but before
+        // its task id reached this browser. The server deliberately seals that
+        // reservation to prevent an accidental second charge.
+        terminal: true,
       }));
       setExternalError(message);
       setExternalStatus(null);
@@ -917,20 +920,28 @@ function targetTextureStepState(task: MeshyUiState) {
   return "waiting";
 }
 
-async function downloadTextureBlob(textureUrl: string) {
+async function downloadTextureBlob(analysisId: string, taskToken: string) {
+  const asset = await customerFetch<{
+    expiresAt: string;
+    signedUrl: string;
+  }>("/api/demo/texture-preview/asset", {
+    body: JSON.stringify({ analysisId, taskToken }),
+    method: "POST",
+  });
+
   let response: Response;
   try {
-    response = await fetch(textureUrl, {
+    response = await fetch(asset.signedUrl, {
       cache: "no-store",
       referrerPolicy: "no-referrer",
     });
   } catch {
     throw new Error(
-      "Meshy 텍스처를 브라우저에서 불러오지 못했습니다. 자산 CORS 설정을 확인해 주세요.",
+      "보호된 텍스처 자산을 불러오지 못했습니다.",
     );
   }
   if (!response.ok) {
-    throw new Error("Meshy 목표 UV 텍스처를 다운로드하지 못했습니다.");
+    throw new Error("보호된 목표 UV 텍스처를 다운로드하지 못했습니다.");
   }
   const blob = await response.blob();
   if (

@@ -75,7 +75,7 @@ semanticMask.reason = MESHY_DOES_NOT_RETURN_SEMANTIC_MASK
 }
 ```
 
-멀티뷰 입력은 Meshy 7로 고정한다. 성공한 원격 GLB를 최종 결과로 표시하지 않고, 허용된 `meshy.ai` asset host의 base-color `textureUrl`만 브라우저가 가져온다. MIME은 JPEG, PNG, WebP 중 하나, 크기는 1 byte 이상 8 MiB 이하로 검증한다. 외부 asset CORS가 허용되지 않으면 기본 GLB로 복구한다.
+멀티뷰 입력은 Meshy 7로 고정한다. 성공한 원격 GLB를 최종 결과로 표시하지 않으며 Meshy `textureUrl`도 브라우저에 노출하지 않는다. 인증된 내부 asset 경로가 task token의 고객·분석·`TARGET_RETEXTURE` binding과 성공 상태를 재검증한 뒤, 허용된 `meshy.ai` host에서 base-color를 내려받아 private `source-products/<customerId>/texture-previews/<analysisId>/` 파생 경로에 보관한다. 리다이렉트도 매 hop마다 `meshy.ai` host인지 검증하고 실제 응답을 1 byte 이상 8 MiB 이하, JPEG/PNG MIME과 image signature로 제한한다. 현재 bucket 정책상 WebP는 저장하지 않고 명시적으로 거부한다. 브라우저에는 5분짜리 Supabase signed URL만 반환한다.
 
 ## 5. 여권 지갑 소재 맵과 결정론적 합성
 
@@ -112,7 +112,7 @@ finalBaseColor = generatedTargetAtlas * exteriorMask
 4. 목표 UV 텍스처 생성
 5. 여권 지갑 외관 결합
 
-OpenAI 계획이나 source 3D가 비활성·실패해도 target 작업은 계속된다. target 원격 작업이 `FAILED` 또는 `CANCELED`이면 같은 유료 작업을 새로 만들지 못하도록 terminal 상태와 token/key를 보존한다. 폴링 timeout, CORS 또는 로컬 합성 오류는 같은 token과 idempotency key로 재조회할 수 있다. target atlas가 적용되면 기본 모델과 비교 토글을 제공한다.
+OpenAI 계획이나 source 3D가 비활성·실패해도 target 작업은 계속된다. target 원격 작업이 `FAILED` 또는 `CANCELED`이면 같은 유료 작업을 새로 만들지 못하도록 terminal 상태와 token/key를 보존한다. 폴링 timeout, 파생 자산 저장 또는 로컬 합성 오류는 같은 token과 idempotency key로 재조회할 수 있다. 동일 task의 파생 경로는 결정적 hash를 사용해 이미 저장된 결과를 재사용한다. target atlas가 적용되면 기본 모델과 비교 토글을 제공한다.
 
 ## 7. 인증, 동의, 멱등성과 비용 상한
 
@@ -126,7 +126,7 @@ OpenAI 계획이나 source 3D가 비활성·실패해도 target 작업은 계속
 | `SOURCE_MODEL` | Meshy | 1 | 1 | 2 |
 | `TARGET_RETEXTURE` | Meshy | 1 | 3 | 5 |
 
-서버 storage key와 request hash에는 고객, 분석, jobKind, provider, 동의 버전, stable idempotency key와 네 source asset ID digest를 포함한다. 같은 완료 요청은 plan 또는 signed task token을 재생하며 진행 중 요청은 두 번째 provider 호출을 차단한다. 브라우저도 분석+jobKind별 key와 Meshy token을 `sessionStorage`에 보관하고 동기 ref로 중복 클릭을 막는다.
+서버 storage key는 고객, 분석, jobKind와 provider를 기준으로 분석당 유료 작업을 한 번만 허용한다. request hash는 고객, 분석, jobKind, provider, 동의 버전과 네 source asset ID digest로 구성하며 브라우저가 발급한 idempotency key에는 의존하지 않는다. 따라서 같은 완료 요청은 새 탭에서도 plan 또는 signed task token을 재생하고, 진행 중 요청은 두 번째 provider 호출을 차단한다. 브라우저의 분석+jobKind별 key와 Meshy token `sessionStorage`, 동기 ref는 같은 탭에서 중복 클릭과 새로고침 복원을 빠르게 처리한다.
 
 Meshy token은 고객, 분석, jobKind, provider task ID와 72시간 만료를 전용 `TEXTURE_TASK_SIGNING_SECRET` HMAC으로 서명한다. token은 암호문이 아니므로 URL query가 아니라 인증된 PUT body에만 보낸다. polling은 진행 중 Promise까지 합치는 짧은 in-process cache를 사용한다. 이는 서버리스 인스턴스 간 분산 rate limit이나 durable queue를 대체하지 않는다.
 
@@ -161,13 +161,13 @@ MESHY_SOURCE_MODEL=meshy-7
 ## 9. 보존·비용·운영 전 보강
 
 - OpenAI API 콘텐츠는 기본 abuse-monitoring 정책에서 최대 30일 보관될 수 있다. 계정별 data control을 배포 전에 확인한다.
-- Meshy API asset은 비 Enterprise 계정에서 최대 3일 보존된다. 현재 target atlas와 source GLB는 소유 Storage에 복사하지 않으므로 만료 뒤 복구할 수 없다.
+- Meshy API asset은 비 Enterprise 계정에서 최대 3일 보존된다. target atlas는 성공 시 소유 Storage에 복사하므로 재사용할 수 있지만 source GLB는 아직 복사하지 않아 provider 만료 뒤 복구할 수 없다.
 - 2026-08-21 공식 표 기준 2K/4K Multi-Image textured source는 30 credits, Retexture는 10 credits다. 두 Meshy 단계를 모두 켜면 분석 하나에 40 credits가 필요하다. Pro 계정과 API credit 잔액은 별개로 확인한다.
 - idempotency row와 consent row 자동 purge, 월 금액 budget, provider webhook, 분산 poll throttle은 아직 없다.
-- Meshy asset CORS가 바뀌면 브라우저 target texture fetch가 실패한다. 운영에서는 성공 즉시 server worker가 stream size를 제한해 소유 object storage로 복사하고 signed URL을 발급해야 한다.
+- target atlas는 기존 private `source-products` bucket의 분리된 `texture-previews` namespace를 임시로 공유한다. 원본 `media_assets` 행과는 연결하지 않으며, 운영 전에는 파생 자산 전용 bucket과 자동 삭제·보존 정책으로 분리해야 한다.
 - 운영용 GLB는 BODY, TRIM, HARDWARE를 별도 named material로 재제작하고 PBR/UV 품질 gate와 사람 승인을 거쳐야 한다.
 
-`/api/demo/texture-preview`는 OpenAPI v2의 장기 제품 계약에 포함하지 않은 시연용 내부 경로다. durable job, owned derived asset, 삭제·재생성 정책과 운영 API로 승격할 때는 별도 계약 변경이 필요하다.
+`/api/demo/texture-preview`는 OpenAPI v2의 장기 제품 계약에 포함하지 않은 시연용 내부 경로다. durable job, 파생 자산 삭제·재생성 정책과 운영 API로 승격할 때는 별도 계약 변경이 필요하다.
 
 ## 10. `@google/model-viewer`를 유지하는 이유
 

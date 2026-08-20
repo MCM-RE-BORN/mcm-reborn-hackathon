@@ -41,6 +41,10 @@ import {
   MeshySourceModelProvider,
   isMeshySourceModelConfigured,
 } from "./MeshySourceModelProvider";
+import {
+  persistTrustedMeshyTexture,
+  type MeshyTextureAssetAccess,
+} from "./MeshyTextureAssetProxy";
 import { getAnalysisSourceImageUrls } from "./analysisSourceImages";
 
 const TEXTURE_OPERATION = "createTexturePreview";
@@ -233,7 +237,51 @@ export async function getMeshyTextureTask(
   if (payload.analysisId !== analysisId || payload.userId !== viewer.id) {
     throw new ForbiddenError("This texture task does not belong to the viewer");
   }
-  return getCachedMeshyTask(payload.taskId, payload.jobKind, viewer.id);
+  const task = await getCachedMeshyTask(
+    payload.taskId,
+    payload.jobKind,
+    viewer.id,
+  );
+  return payload.jobKind === "TARGET_RETEXTURE"
+    ? { ...task, textureUrl: undefined }
+    : task;
+}
+
+export async function getMeshyTargetTextureAsset(
+  analysisId: string,
+  taskToken: string,
+  viewer: AnalysisViewer,
+): Promise<MeshyTextureAssetAccess> {
+  await getAnalysisById(analysisId, viewer);
+  assertMeshyPollingAvailable();
+  const payload = verifyMeshyTaskToken(taskToken);
+  if (
+    payload.analysisId !== analysisId ||
+    payload.userId !== viewer.id ||
+    payload.jobKind !== "TARGET_RETEXTURE"
+  ) {
+    throw new ForbiddenError("This texture asset does not belong to the viewer");
+  }
+
+  const task = await getCachedMeshyTask(
+    payload.taskId,
+    "TARGET_RETEXTURE",
+    viewer.id,
+  );
+  if (task.status !== "succeeded" || !task.textureUrl) {
+    throw new ConflictError(
+      "TEXTURE_TASK_NOT_READY",
+      "The target texture task is not ready for download",
+      { retryable: task.status === "queued" || task.status === "running" },
+    );
+  }
+
+  return persistTrustedMeshyTexture({
+    analysisId,
+    taskId: payload.taskId,
+    textureUrl: task.textureUrl,
+    userId: viewer.id,
+  });
 }
 
 function assertExternalTextureConsent(input: CreateTexturePreviewInput) {
@@ -278,12 +326,14 @@ async function reserveTextureOperation(
   const sourceAssetDigest = createHash("sha256")
     .update(sourceAssetIds.join(":"))
     .digest("hex");
+  // The database key already allows exactly one paid operation per
+  // customer/analysis/job. Keep the hash semantic so a new browser tab can
+  // replay the cached task even though it necessarily sends a new header key.
   const requestHash = createHash("sha256")
     .update(
       JSON.stringify({
         analysisId: input.analysisId,
         customerId,
-        idempotencyKey: input.idempotencyKey,
         jobKind: input.jobKind,
         operation: TEXTURE_OPERATION,
         privacyNoticeVersion: input.privacyNoticeVersion,
