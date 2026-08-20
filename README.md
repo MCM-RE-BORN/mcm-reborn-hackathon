@@ -135,38 +135,3 @@ Python 검증에는 PyYAML이 필요합니다. `validate_package.py`는 API 참�
 ## 중요 고지
 
 이 패키지의 제품 가격·기간, 재사용 면적, 재활용률, 탄소 절감량, 사진 기반 주문 가능성 신호, 결제, 물류, 보증서는 모두 서비스 시연용 예상치 또는 가상 데이터입니다. `estimateMeta.notice`와 각 화면의 예상치 고지를 통해 실측값·공식 판정·상용 거래처럼 오인되지 않도록 표시해야 합니다.
-
-```typescript
-import { NextResponse } from "next/server";
-
-export const dynamic = "force-dynamic";
-export const runtime = "nodejs";
-
-const API_VERSION = "2.0.0";
-const AI_MODES = ["DEMO_FIXTURE", "SEEDED_ESTIMATE", "LIVE"] as const;
-
-type AiMode = (typeof AI_MODES)[number];
-
-export async function GET(): Promise<NextResponse> {
-  const configuredAiMode = process.env.AI_MODE?.trim();
-  const aiMode: AiMode = isAiMode(configuredAiMode)
-    ? configuredAiMode
-    : "DEMO_FIXTURE";
-
-  return NextResponse.json(
-    {
-      status: "ok",
-      version: API_VERSION,
-      timestamp: new Date().toISOString(),
-      aiMode,
-    },
-    {
-      headers: { "Cache-Control": "no-store" },
-      status: 200,
-    },
-  );
-}
-
-function isAiMode(value: string | undefined): value is AiMode {
-  return AI_MODES.some((mode) => mode === value);
-}
