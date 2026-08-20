@@ -38,6 +38,7 @@ export interface VisionAnalyzeResult {
   model: string;
   providerRequestId: string | null;
   modeUsed: AnalysisModeUsed;
+  knowledgeVersion?: string;
   fixtureEstimate?: FixtureEstimateOverrides;
   warnings?: Array<{ code: string; message: string }>;
 }

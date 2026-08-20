@@ -34,6 +34,7 @@ import {
   assertExternalAiReady,
   createVisionProvider,
 } from '@/server/openai/visionProviderFactory';
+import { MCM_MATERIAL_REUSE_KNOWLEDGE_VERSION } from '@/server/openai/materialReuseKnowledge';
 import { VisionImageQualityError } from '@/server/openai/types';
 import { isRecord } from '@/server/http/json';
 import {
@@ -331,6 +332,7 @@ export async function createAnalysis(input: CreateAnalysisInput): Promise<Analys
       provider_result: {
         confidence: result.confidence,
         imageQuality: { status: 'ACCEPTABLE', issues: [] },
+        knowledgeVersion: providerOutput.knowledgeVersion ?? null,
       },
       damages: result.damages,
       warnings: providerOutput.warnings ?? [],
@@ -1150,6 +1152,10 @@ function analysisRequestHash(
           input.externalAiProcessingConsentAccepted ?? null,
         externalAiPrivacyNoticeVersion:
           input.externalAiPrivacyNoticeVersion?.trim() ?? null,
+        knowledgeVersion:
+          (process.env.AI_MODE ?? 'DEMO_FIXTURE').trim().toUpperCase() === 'LIVE'
+            ? MCM_MATERIAL_REUSE_KNOWLEDGE_VERSION
+            : null,
       }),
     )
     .digest('hex');

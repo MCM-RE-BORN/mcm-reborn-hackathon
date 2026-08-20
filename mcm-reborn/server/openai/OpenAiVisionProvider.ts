@@ -9,8 +9,12 @@ import type {
   VisionAnalyzeResult,
   VisionProvider,
 } from './types';
+import {
+  MCM_MATERIAL_REUSE_KNOWLEDGE,
+  MCM_MATERIAL_REUSE_KNOWLEDGE_VERSION,
+} from './materialReuseKnowledge';
 
-const BAG_ANALYSIS_SYSTEM_PROMPT = `You are the visual inspection component of a service-demo prototype named MCM RE:BORN.
+const BAG_ANALYSIS_DEVELOPER_PROMPT = `You are the visual inspection component of a service-demo prototype named MCM RE:BORN.
 Analyze exactly six supplied images as ordered views of one customer-owned bag: front, rear, top, bottom, left side, and right side.
 
 Return only data matching the supplied structured-output schema.
@@ -32,7 +36,10 @@ Rules:
 7. longStripAvailable means a visibly long, continuous, low-damage strip suitable for a strap-like component; use false when uncertain.
 8. confidence must reflect image quality and ambiguity. A visible logo alone does not justify high confidence.
 9. summaryKo must be neutral Korean no longer than 300 characters.
-10. Do not calculate reusable material rate, reusable area, price, recommendations, or carbon savings. The application rule engine calculates those values.`;
+10. Use the appended MCM material and reuse reference when interpreting visually supported materials, components, damage locations, reusable condition, and continuous area. It never overrides the evidence boundary in rule 1.
+11. Do not calculate reusable material rate, reusable area, price, recommendations, or carbon savings. The application rule engine calculates those values.`;
+
+const LIVE_ANALYSIS_DEVELOPER_PROMPT = `${BAG_ANALYSIS_DEVELOPER_PROMPT}\n\n${MCM_MATERIAL_REUSE_KNOWLEDGE}`;
 
 /** OpenAI Structured Outputs provider for the LIVE v2 analysis mode. */
 export class OpenAiVisionProvider implements VisionProvider {
@@ -57,7 +64,7 @@ export class OpenAiVisionProvider implements VisionProvider {
     const completion = await this.client.chat.completions.parse({
       model: this.model,
       messages: [
-        { role: 'system', content: BAG_ANALYSIS_SYSTEM_PROMPT },
+        { role: 'developer', content: LIVE_ANALYSIS_DEVELOPER_PROMPT },
         {
           role: 'user',
           content: [
@@ -90,6 +97,7 @@ export class OpenAiVisionProvider implements VisionProvider {
       model: this.model,
       providerRequestId: completion.id,
       modeUsed: 'LIVE',
+      knowledgeVersion: MCM_MATERIAL_REUSE_KNOWLEDGE_VERSION,
     };
   }
 }
