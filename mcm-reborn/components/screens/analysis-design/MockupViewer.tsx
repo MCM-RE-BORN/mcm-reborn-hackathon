@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { LoadingIndicator } from "@/components/ui/LoadingIndicator";
 import styles from "./analysis-design.module.css";
 
 const MODEL_SRC = "/assets/models/reborn-passport-wallet.glb";
@@ -225,6 +226,7 @@ export function MockupViewer({
     >
       {!viewerReady && !modelFailed ? (
         <div className={styles.modelViewerLoading} role="status">
+          <LoadingIndicator className={styles.modelViewerLoadingSpinner} />
           3D 목업을 불러오고 있습니다.
         </div>
       ) : null}

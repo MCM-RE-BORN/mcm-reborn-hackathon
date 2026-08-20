@@ -175,7 +175,7 @@ create table public.analysis_images (
   analysis_id uuid not null references public.analyses(id) on delete cascade,
   media_asset_id uuid not null references public.media_assets(id) on delete cascade,
   display_order integer not null
-    constraint analysis_images_display_order_check check (display_order between 0 and 6),
+    constraint analysis_images_display_order_check check (display_order between 0 and 5),
   primary key (analysis_id, media_asset_id),
   unique (analysis_id, display_order)
 );
@@ -571,10 +571,14 @@ begin
     join public.media_assets ma on ma.id = ai.media_asset_id
     where ai.analysis_id = new.id
       and ma.owner_id = new.customer_id
-      and ma.upload_status = 'UPLOADED';
+      and ma.upload_status = 'UPLOADED'
+      and (
+        (ai.display_order between 0 and 1 and ma.purpose = 'SOURCE_FRONT')
+        or (ai.display_order between 2 and 5 and ma.purpose = 'SOURCE_SIDE')
+      );
 
-    if uploaded_photo_count <> 7 then
-      raise exception 'analysis requires exactly 7 uploaded owner photos';
+    if uploaded_photo_count <> 6 then
+      raise exception 'analysis requires exactly 6 uploaded owner photos with directional purposes';
     end if;
   end if;
   return new;

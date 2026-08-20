@@ -42,10 +42,38 @@
   background: rgb(18 18 18 / 48%);
 }
 
+.startBrand {
+  position: absolute;
+  z-index: 1;
+  top: 45%;
+  right: var(--layout-gutter);
+  left: var(--layout-gutter);
+  display: grid;
+  justify-items: center;
+  gap: var(--space-2);
+  color: var(--color-canvas);
+  text-align: center;
+  transform: translateY(-50%);
+}
+
+.startBrand h1 {
+  font-size: var(--font-size-display);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-relaxed);
+  letter-spacing: var(--letter-spacing-tight);
+}
+
+.startBrand p {
+  font-size: var(--font-size-control);
+  font-weight: var(--font-weight-light);
+  line-height: var(--line-height-tight);
+}
+
 .startTagline {
   position: absolute;
+  z-index: 1;
   right: var(--layout-gutter);
-  bottom: calc(var(--safe-area-bottom) + var(--space-16));
+  bottom: calc(var(--safe-area-bottom) + var(--space-25));
   left: var(--layout-gutter);
   color: var(--color-canvas);
   font-size: var(--font-size-caption);
@@ -54,14 +82,52 @@
   text-align: center;
 }
 
-.startScreen:focus-visible {
+.startTransitionStatus {
+  position: absolute;
+  z-index: 1;
+  right: var(--layout-gutter);
+  bottom: calc(var(--safe-area-bottom) + var(--space-9));
+  left: var(--layout-gutter);
+  display: flex;
+  min-height: var(--space-9);
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+  color: rgb(255 255 255 / 82%);
+  font-size: var(--font-size-caption);
+  line-height: var(--line-height-tight);
+  text-align: center;
+}
+
+.startLoadingIndicator {
+  width: var(--space-7);
+  height: var(--space-7);
+  border-width: var(--border-thin);
+  border-color: rgb(255 255 255 / 38%);
+  border-top-color: var(--color-canvas);
+}
+
+.startRetryButton {
+  min-height: var(--touch-target-min);
+  padding-inline: var(--space-5);
+  border: var(--space-0);
+  border-bottom: var(--border-thin) solid currentcolor;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+}
+
+.startRetryButton:focus-visible {
   outline-color: var(--color-canvas);
-  outline-offset: calc(var(--space-2) * -1);
+  outline-offset: var(--space-2);
 }
 
 .introContent {
   gap: var(--space-19);
-  padding-block: var(--space-17) var(--space-14);
+  padding-block:
+    calc(var(--safe-area-top) + var(--space-17))
+    calc(var(--safe-area-bottom) + var(--space-14));
 }
 
 .introBrand {
@@ -115,6 +181,68 @@
   line-height: var(--line-height-reading);
 }
 
+.introHero h1 + p {
+  margin-top: var(--space-6);
+}
+
+.introScrollOverlay {
+  position: fixed;
+  z-index: var(--z-sticky);
+  bottom: var(--space-0);
+  left: 50%;
+  display: grid;
+  width: min(100%, var(--layout-shell-max));
+  min-height: var(--space-29);
+  align-content: end;
+  justify-items: center;
+  padding: var(--space-21) var(--layout-gutter)
+    calc(var(--safe-area-bottom) + var(--space-7));
+  background: linear-gradient(
+    to top,
+    var(--color-canvas) 35%,
+    var(--color-transparent) 100%
+  );
+  pointer-events: none;
+  transform: translateX(-50%);
+}
+
+.introScrollCue {
+  display: grid;
+  width: fit-content;
+  min-height: var(--touch-target-min);
+  align-content: center;
+  justify-items: center;
+  gap: var(--space-4);
+  color: var(--color-muted);
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-tight);
+  pointer-events: auto;
+  text-decoration: none;
+}
+
+.introScrollCue i {
+  width: var(--space-5);
+  height: var(--space-5);
+  border-right: var(--border-thin) solid currentcolor;
+  border-bottom: var(--border-thin) solid currentcolor;
+  animation: intro-scroll-cue 1.6s ease-in-out infinite;
+  transform: rotate(45deg);
+}
+
+@keyframes intro-scroll-cue {
+  0%,
+  100% {
+    translate: 0 calc(var(--space-1) * -1);
+    opacity: 0.5;
+  }
+
+  50% {
+    translate: 0 var(--space-2);
+    opacity: 1;
+  }
+}
+
 .introSteps {
   display: grid;
   gap: var(--space-0);
@@ -139,7 +267,7 @@
 
 .introSteps li div {
   display: grid;
-  gap: var(--space-2);
+  gap: var(--space-14);
 }
 
 .introSteps h2 {
@@ -148,7 +276,13 @@
   line-height: var(--line-height-tight);
 }
 
-.introSteps p,
+.introSteps p {
+  color: var(--color-muted);
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-light);
+  line-height: var(--line-height-tight);
+}
+
 .notice {
   color: var(--color-muted);
   font-size: var(--font-size-body);
@@ -394,6 +528,21 @@
   cursor: pointer;
 }
 
+.authSubmitLoading {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-5);
+}
+
+.authSubmitSpinner {
+  width: var(--space-7);
+  height: var(--space-7);
+  border-width: var(--border-thin);
+  border-color: currentcolor;
+  border-top-color: var(--color-transparent);
+}
+
 .authLinks {
   display: flex;
   min-height: var(--touch-target-min);
@@ -573,7 +722,7 @@
 }
 
 .homeTagline {
-  margin-top: var(--space-5);
+  margin-top: var(--space-14);
   color: var(--color-muted);
   font-size: var(--font-size-body);
   font-weight: var(--font-weight-light);
@@ -620,7 +769,7 @@
 
 .captureSectionHeading > div {
   display: grid;
-  gap: var(--space-3);
+  gap: var(--space-14);
 }
 
 .captureSectionHeading h2 {
@@ -636,11 +785,26 @@
   color: var(--color-muted);
   font-size: var(--font-size-label);
   font-weight: var(--font-weight-regular);
-  line-height: var(--line-height-reading);
+  line-height: var(--line-height-tight);
 }
 
 .captureSectionHeading > span {
   flex: none;
+}
+
+.productInfoHeading h2 {
+  color: var(--color-ink);
+  font-size: var(--font-size-title);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
+  letter-spacing: var(--letter-spacing-tight);
+}
+
+.productInfoHeading p {
+  color: var(--color-ink-soft);
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-light);
+  line-height: var(--line-height-tight);
 }
 
 .captureGrid {
@@ -655,13 +819,12 @@
   min-height: var(--touch-target-min);
   place-items: center;
   overflow: hidden;
-  border: var(--border-hairline) solid var(--color-muted);
+  border: var(--space-0);
   border-radius: var(--radius-image);
   background: var(--color-surface);
 }
 
-.captureSlotHero,
-.captureSlotSerial {
+.captureSlotHero {
   grid-column: 1 / -1;
 }
 
@@ -673,12 +836,8 @@
   aspect-ratio: 168 / 115;
 }
 
-.captureSlotSerial {
-  min-height: var(--space-24);
-}
-
 .captureSlot:hover {
-  border-color: var(--color-ink);
+  background: var(--color-divider);
 }
 
 .captureSlot > img {
@@ -721,10 +880,10 @@
   position: absolute;
   z-index: var(--z-sticky);
   right: var(--space-7);
-  bottom: var(--space-7);
+  bottom: var(--space-5);
   left: var(--space-7);
   padding: var(--space-5) var(--space-7);
-  background: var(--color-canvas);
+  background: var(--color-transparent);
   color: var(--color-ink);
   font-size: var(--font-size-label);
   font-weight: var(--font-weight-medium);
@@ -733,25 +892,23 @@
 }
 
 .captureSlotCompleted .captureSlotLabel {
-  background: var(--color-ink);
   color: var(--color-canvas);
 }
 
 .captureRule {
-  padding: var(--space-7) var(--space-9);
-  background: var(--color-surface);
+  padding: var(--space-0);
   text-align: center;
-}
-
-.captureBarcode {
-  width: auto;
-  height: var(--space-17);
 }
 
 .captureSecondaryAction {
   display: grid;
   gap: var(--space-5);
   text-align: center;
+}
+
+.captureUploadNotes {
+  display: grid;
+  gap: var(--space-2);
 }
 
 .captureSecondaryAction .captureAlbumMessage {
@@ -968,16 +1125,26 @@
   outline-offset: var(--space-2);
 }
 
-.cameraShutter img:first-child {
+.cameraShutter img:first-of-type {
   z-index: var(--z-sticky);
   margin: auto;
   object-fit: contain;
   transform: scale(0.825);
 }
 
-.cameraShutter img:last-child {
+.cameraShutter img:last-of-type {
   z-index: var(--z-behind);
   object-fit: contain;
+}
+
+.cameraShutterLoading {
+  position: relative;
+  z-index: calc(var(--z-sticky) + 1);
+  width: var(--space-9);
+  height: var(--space-9);
+  border-width: var(--border-thin);
+  border-color: rgb(255 255 255 / 45%);
+  border-top-color: var(--color-canvas);
 }
 
 .cameraState {
@@ -1031,6 +1198,10 @@
 @media (prefers-reduced-motion: reduce) {
   .homeHeroMedia {
     display: none;
+  }
+
+  .introScrollCue i {
+    animation: none;
   }
 }
 

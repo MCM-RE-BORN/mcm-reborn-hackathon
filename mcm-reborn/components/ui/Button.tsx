@@ -4,6 +4,7 @@ import type {
   ComponentProps,
   ReactNode,
 } from "react";
+import { LoadingIndicator } from "./LoadingIndicator";
 import styles from "./ui.module.css";
 
 export type ButtonVariant =
@@ -23,7 +24,10 @@ type SharedButtonProps = {
   variant?: ButtonVariant;
 };
 
-export type ButtonProps = SharedButtonProps &
+export type ButtonProps = SharedButtonProps & {
+  loading?: boolean;
+  loadingLabel?: ReactNode;
+} &
   Omit<ButtonHTMLAttributes<HTMLButtonElement>, keyof SharedButtonProps>;
 
 export type ButtonLinkProps = SharedButtonProps &
@@ -53,18 +57,30 @@ export function Button({
   children,
   className,
   fullWidth,
+  loading = false,
+  loadingLabel,
   size,
   type = "button",
   variant,
+  disabled,
   ...props
 }: ButtonProps) {
   return (
     <button
+      aria-busy={loading || undefined}
       className={buttonClassName({ className, fullWidth, size, variant })}
+      disabled={disabled || loading}
       type={type}
       {...props}
     >
-      {children}
+      {loading ? (
+        <span className={styles.buttonLoadingContent}>
+          <LoadingIndicator className={styles.buttonLoadingIndicator} />
+          <span>{loadingLabel ?? children}</span>
+        </span>
+      ) : (
+        children
+      )}
     </button>
   );
 }

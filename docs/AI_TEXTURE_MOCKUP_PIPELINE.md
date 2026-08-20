@@ -7,7 +7,7 @@
 이 파이프라인은 한 고객 분석을 다음 순서로 연결한다.
 
 ```text
-7장 촬영/업로드
+6면 촬영/업로드
   -> OpenAI 구조화 비전 분석 또는 재현 가능한 Fixture
   -> 애플리케이션 규칙 기반 재사용량·추천 점수
   -> 브라우저의 결정론적 소재 크롭·미러 타일
@@ -131,7 +131,7 @@ MESHY_RETEXTURE_MODEL=meshy-7
 
 ### 동의와 보안
 
-- 분석 동의와 texture 동의는 별개다. 분석 `LIVE`는 7장 원본을 OpenAI로 보내며, texture 단계는 선택한 provider에 추출·보정 소재 이미지를 보낸다.
+- 분석 동의와 texture 동의는 별개다. 분석 `LIVE`는 정면·후면·상단·하단·좌측면·우측면 6장 원본을 OpenAI로 보내며, texture 단계는 선택한 provider에 추출·보정 소재 이미지를 보낸다.
 - texture 개인정보 안내 버전은 `MCM_TEXTURE_AI_2026_08_21_R2`로 고정되어 있다. 체크박스를 선택하고 provider 버튼을 누르기 전에는 유료 외부 호출이 발생하지 않는다.
 - 동의 시각, 고객, 분석, 안내 버전과 요청 hash를 기존 외부 AI 동의 테이블에 기록한다. API는 인증된 분석 소유권을 먼저 확인한다.
 - 입력은 base64 JPEG/PNG 2MB 이하로 제한하고 content magic byte를 검사한다. Meshy 기준 model URL은 배포 환경만 결정하며, provider 결과는 HTTPS와 허용된 Meshy asset host를 검증한다.

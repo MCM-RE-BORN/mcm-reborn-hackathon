@@ -10,7 +10,10 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import type { CaptureSlotId } from "./capture-config";
+import {
+  DEMO_SERIAL_NUMBER,
+  type CaptureSlotId,
+} from "./capture-config";
 
 export type CaptureAsset = {
   blob: Blob;
@@ -84,6 +87,13 @@ export function CaptureSessionProvider({
 
       capturesRef.current = nextCaptures;
       setCaptures(nextCaptures);
+
+      if (slot === "serialNumber") {
+        setProductDetails((current) => ({
+          ...current,
+          serialNumber: DEMO_SERIAL_NUMBER,
+        }));
+      }
     },
     [],
   );

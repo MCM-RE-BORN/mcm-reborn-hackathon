@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { AppShell } from "@/components/layout/AppShell";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Section } from "@/components/layout/Section";
 import { ActionButtonLink } from "@/components/ui/ActionButtonLink";
+import { Button } from "@/components/ui/Button";
 import { KeyValueList } from "@/components/ui/KeyValueList";
 import { SectionBand } from "@/components/ui/SectionBand";
 import { StatusPanel } from "@/components/ui/StatusPanel";
@@ -14,12 +15,9 @@ import { DemoLogoutButton } from "./DemoLogoutButton";
 import { DemoStatePanel } from "./DemoStatePanel";
 import {
   applicationStatusToOrderStage,
-  customerFetch,
   readJsonString,
-  type CustomerApplicationDetail,
-  type CustomerApplicationPage,
-  type CustomerMe,
 } from "./customer-client";
+import { useCustomerData } from "./CustomerDataProvider";
 import fieldStyles from "@/components/ui/ui.module.css";
 import styles from "./order-certificate.module.css";
 
@@ -40,46 +38,32 @@ function AccordionChevron() {
 }
 
 export function MyPageScreen({ state }: MyPageScreenProps) {
-  const [profile, setProfile] = useState<CustomerMe | null>(null);
-  const [latestApplication, setLatestApplication] =
-    useState<CustomerApplicationDetail | null>(null);
-  const [hasIssuedCertificate, setHasIssuedCertificate] = useState(false);
-  const [requestError, setRequestError] = useState(false);
+  const { bootstrap, data, revalidateHistory, status } = useCustomerData();
+  const requestedOnEntryRef = useRef(false);
+  const profile = data?.profile ?? null;
+  const latestApplication = data?.latestApplication ?? null;
+  const hasIssuedCertificate =
+    data?.applications.items.some(
+      (application) =>
+        applicationStatusToOrderStage(application.status) === "completed",
+    ) ?? false;
+  const requestError = status === "error" && data === null;
+
+  const requestData = useCallback(() => {
+    if (requestedOnEntryRef.current) return;
+    requestedOnEntryRef.current = true;
+    const request = data ? revalidateHistory() : bootstrap().then(() => true);
+    void request.catch(() => {
+      requestedOnEntryRef.current = false;
+    });
+  }, [bootstrap, data, revalidateHistory]);
 
   useEffect(() => {
-    let cancelled = false;
-    async function loadProfile() {
-      try {
-        const [me, applications] = await Promise.all([
-          customerFetch<CustomerMe>("/api/v2/me"),
-          customerFetch<CustomerApplicationPage>("/api/v2/applications?size=50"),
-        ]);
-        const latest = applications.items[0];
-        const detail = latest
-          ? await customerFetch<CustomerApplicationDetail>(
-              `/api/v2/applications/${latest.id}`,
-            )
-          : null;
-        const issuedCertificate = applications.items.some(
-          (application) =>
-            applicationStatusToOrderStage(application.status) === "completed",
-        );
-        if (!cancelled) {
-          setProfile(me);
-          setLatestApplication(detail);
-          setHasIssuedCertificate(issuedCertificate);
-        }
-      } catch {
-        if (!cancelled) {
-          setRequestError(true);
-        }
-      }
+    if (state !== "normal" || requestedOnEntryRef.current) {
+      return;
     }
-    void loadProfile();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+    requestData();
+  }, [requestData, state]);
 
   const address = latestApplication?.shippingAddress;
   const addressText = [
@@ -109,11 +93,15 @@ export function MyPageScreen({ state }: MyPageScreenProps) {
         </div>
       ) : requestError ? (
         <div className={styles.stateInset}>
-          <DemoStatePanel
-            emptyDescription="프로필 정보를 불러오지 못했습니다."
-            retryHref="/mypage"
-            state="error"
-            subject="프로필 정보"
+          <StatusPanel
+            action={
+              <Button fullWidth onClick={requestData} variant="outline">
+                다시 시도
+              </Button>
+            }
+            description="잠시 후 다시 시도해 주세요."
+            title="프로필 정보를 불러오지 못했습니다"
+            tone="error"
           />
         </div>
       ) : !profile ? (
@@ -121,7 +109,7 @@ export function MyPageScreen({ state }: MyPageScreenProps) {
           <StatusPanel
             description="정보를 불러오고 있습니다."
             title="프로필 정보를 확인하고 있어요"
-            tone="permission"
+            tone="loading"
           />
         </div>
       ) : (

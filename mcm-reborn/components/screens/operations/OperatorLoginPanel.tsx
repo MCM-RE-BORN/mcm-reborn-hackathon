@@ -70,8 +70,13 @@ export function OperatorLoginPanel({
             value={password}
           />
         </label>
-        <Button disabled={isSubmitting} size="medium" type="submit">
-          {isSubmitting ? "로그인 중..." : "운영자 로그인"}
+        <Button
+          loading={isSubmitting}
+          loadingLabel="로그인 중"
+          size="medium"
+          type="submit"
+        >
+          운영자 로그인
         </Button>
       </form>
       {error ? <p className={styles.loginError} role="alert">{error}</p> : null}

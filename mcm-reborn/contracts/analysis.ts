@@ -67,7 +67,7 @@ export const AnalysisModeUsedSchema = z.enum([
  * OpenAI Structured Output schema
  */
 export const ImageQualityIssueSchema = z.object({
-  imageIndex: z.number().int().min(0).max(6),
+  imageIndex: z.number().int().min(0).max(5),
   code: ImageQualityIssueCodeSchema,
   guidanceKo: z.string().min(1).max(120),
 });

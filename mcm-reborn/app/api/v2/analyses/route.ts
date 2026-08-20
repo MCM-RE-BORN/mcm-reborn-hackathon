@@ -13,7 +13,7 @@ import { readJsonBody } from '@/server/http/json';
 export const runtime = 'nodejs';
 
 const CreateAnalysisRequestSchema = z.object({
-  imageAssetIds: z.array(z.string().uuid()).length(7).refine(
+  imageAssetIds: z.array(z.string().uuid()).length(6).refine(
     (ids) => new Set(ids).size === ids.length,
     'imageAssetIds must be unique',
   ),
@@ -21,7 +21,13 @@ const CreateAnalysisRequestSchema = z.object({
   purchaseYear: z.number().int().min(1976).max(2100),
   useDuration: z.string().trim().min(1).max(80),
   desiredUse: z.string().trim().min(1).max(200),
-  serialNumber: z.string().trim().min(1).max(100).optional(),
+  serialNumber: z
+    .string()
+    .trim()
+    .regex(
+      /^(?=.*[A-Za-z])(?=.*[0-9])[A-Za-z0-9]{11}$/,
+      'serialNumber must be exactly 11 ASCII alphanumeric characters and include at least one letter and one digit',
+    ),
   conditionNote: z.string().trim().max(500).optional(),
   locale: z.literal('ko-KR'),
   demoScenarioKey: z

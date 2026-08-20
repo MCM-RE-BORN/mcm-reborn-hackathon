@@ -11,14 +11,14 @@ import type {
 } from './types';
 
 const BAG_ANALYSIS_SYSTEM_PROMPT = `You are the visual inspection component of a service-demo prototype named MCM RE:BORN.
-Analyze exactly seven supplied images as ordered views of one customer-owned bag: front, rear, top, bottom, left side, right side, and serial-number detail.
+Analyze exactly six supplied images as ordered views of one customer-owned bag: front, rear, top, bottom, left side, and right side.
 
 Return only data matching the supplied structured-output schema.
 
 Rules:
 1. Describe only visually observable evidence. Do not invent purchase history, serial-number matches, exact product model, manufacturing year, legal status, or official MCM records.
-2. Assess whether all seven images are usable before analyzing the bag:
-   - Treat the images as a zero-based ordered list. Every imageQuality issue must identify its affected imageIndex from 0 through 6.
+2. Assess whether all six images are usable before analyzing the bag:
+   - Treat the images as a zero-based ordered list. Every imageQuality issue must identify its affected imageIndex from 0 through 5.
    - ACCEPTABLE requires an empty issues array.
    - RECAPTURE_REQUIRED requires at least one issue with short Korean guidanceKo.
    - For RECAPTURE_REQUIRED, keep other classifications conservative. The application discards them and asks for new photos.
@@ -50,8 +50,8 @@ export class OpenAiVisionProvider implements VisionProvider {
   }
 
   async analyze(input: VisionAnalyzeInput): Promise<VisionAnalyzeResult> {
-    if (input.imageUrls.length !== 7) {
-      throw new Error('LIVE analysis requires exactly seven image URLs');
+    if (input.imageUrls.length !== 6) {
+      throw new Error('LIVE analysis requires exactly six image URLs');
     }
 
     const completion = await this.client.chat.completions.parse({
@@ -63,7 +63,7 @@ export class OpenAiVisionProvider implements VisionProvider {
           content: [
             {
               type: 'text',
-              text: '일곱 이미지를 지정된 순서의 동일 제품으로 보고 분석하세요.',
+              text: '여섯 이미지를 지정된 순서의 동일 제품으로 보고 분석하세요.',
             },
             ...input.imageUrls.map((url) => ({
               type: 'image_url' as const,

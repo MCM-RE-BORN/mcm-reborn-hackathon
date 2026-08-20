@@ -10,8 +10,8 @@
     "contentTypes": ["image/jpeg", "image/png"],
     "maxFileSizeBytes": 10485760,
     "presignFileCount": { "min": 1, "max": 4 },
-    "analysisFileCount": { "min": 7, "max": 7 },
-    "analysisSlots": ["FRONT", "REAR", "TOP", "BOTTOM", "LEFT_SIDE", "RIGHT_SIDE", "SERIAL_NUMBER"],
+    "analysisFileCount": { "min": 6, "max": 6 },
+    "analysisSlots": ["FRONT", "REAR", "TOP", "BOTTOM", "LEFT_SIDE", "RIGHT_SIDE"],
     "purposes": ["SOURCE_FRONT", "SOURCE_SIDE", "INTERIOR", "ENGRAVING"]
   },
   "primaryScenario": {
@@ -28,11 +28,10 @@
       "images": [
         { "slot": "FRONT", "purpose": "SOURCE_FRONT", "url": "/assets/mvp-beta/source-backpack-front.webp" },
         { "slot": "REAR", "purpose": "SOURCE_FRONT", "url": "/assets/mvp-beta/source-backpack-front.webp" },
-        { "slot": "TOP", "purpose": "SOURCE_FRONT", "url": "/assets/mvp-beta/source-backpack-front.webp" },
-        { "slot": "BOTTOM", "purpose": "SOURCE_FRONT", "url": "/assets/mvp-beta/source-backpack-front.webp" },
+        { "slot": "TOP", "purpose": "SOURCE_SIDE", "url": "/assets/mvp-beta/source-backpack-front.webp" },
+        { "slot": "BOTTOM", "purpose": "SOURCE_SIDE", "url": "/assets/mvp-beta/source-backpack-front.webp" },
         { "slot": "LEFT_SIDE", "purpose": "SOURCE_SIDE", "url": "/assets/mvp-beta/source-backpack-side.webp" },
-        { "slot": "RIGHT_SIDE", "purpose": "SOURCE_SIDE", "url": "/assets/mvp-beta/source-backpack-side.webp" },
-        { "slot": "SERIAL_NUMBER", "purpose": "ENGRAVING", "url": "/assets/mvp-beta/source-backpack-engraving.webp" }
+        { "slot": "RIGHT_SIDE", "purpose": "SOURCE_SIDE", "url": "/assets/mvp-beta/source-backpack-side.webp" }
       ]
     },
     "initialEstimate": {

@@ -2,7 +2,7 @@
 
 이 문서는 API 계약 `v2.0.0`의 23개 Route Handler 파일·25개 operation을 로컬 또는 staging Supabase 프로젝트에 연결하는 절차다. 실행 앱은 저장소의 `mcm-reborn/`에 있고 HTTP 기준은 루트 `openapi.yaml`, 신규 DB 기준은 `supabase-schema.sql`이다.
 
-> 2026-08-19 현재 `mcm-reborn/.env.local`에 Supabase 환경변수가 설정되어 `/api/v2/health` 연결은 확인됐다. 비밀값과 실제 계정 자격증명은 저장소에 기록하지 않으며, 전체 7장 업로드·신청·운영 전이·보증서 원격 여정은 staging에서 별도로 검증해야 한다.
+> 2026-08-19 현재 `mcm-reborn/.env.local`에 Supabase 환경변수가 설정되어 `/api/v2/health` 연결은 확인됐다. 비밀값과 실제 계정 자격증명은 저장소에 기록하지 않으며, 필수 6장 업로드·신청·운영 전이·보증서 원격 여정은 staging에서 별도로 검증해야 한다.
 
 ## 1. 사전 준비
 
@@ -71,7 +71,7 @@ DEMO_OPERATOR_PASSWORD=use-a-different-secret-value
 
 ### 3.1 신규·빈 Supabase 프로젝트
 
-Supabase Dashboard의 SQL Editor에서 루트 `supabase-schema.sql` 전체를 한 번 적용한다. 이 파일은 현재 v2 최종 상태의 bootstrap이며, 별도 migration 001~007을 다시 실행하지 않는다.
+Supabase Dashboard의 SQL Editor에서 루트 `supabase-schema.sql` 전체를 한 번 적용한다. 이 파일은 현재 v2 최종 상태의 bootstrap이며, 별도 migration 001~008을 다시 실행하지 않는다.
 
 bootstrap은 다음을 포함한다.
 
@@ -79,7 +79,7 @@ bootstrap은 다음을 포함한다.
 - media assets, 분석·추천, 신청·상태 이력, Mock 결제·배송, 실물 검수·변경안, 보증서, 이벤트, 멱등성 테이블
 - 현재 주문 lifecycle enum·제약·RPC·trigger
 - `COMPLETED` 이전 보증서 생성을 차단하는 DB 무결성 규칙
-- 정확히 7개 분석 이미지 규칙
+- 정면·후면·상단·하단·좌측면·우측면 정확히 6개 분석 이미지 규칙
 - OpenAPI Product3D 필수 필드가 모두 들어 있는 네 제품의 `model_3d`
 - 실제 GLB/poster 준비 전 3D 노출을 막는 `model_3d_ready=false`
 - 결제 상태 불일치 시 전체 결제를 중단하는 Mock 결제 trigger
@@ -105,8 +105,9 @@ bootstrap은 다음을 포함한다.
 5. `supabase/migrations/202608190005_shipment_conflict_hotfix.sql`
 6. `supabase/migrations/202608190006_customer_decision_gate.sql`
 7. `supabase/migrations/202608200007_generic_source_pattern_copy.sql`
+8. `supabase/migrations/202608210008_capture_six_views.sql`
 
-002는 과거 4장 계약을 반영하는 중간 migration이고, 003이 현재의 6면+일련번호 총 7장 계약으로 대체한다. 기존 DB의 적용 이력을 재현하기 위해 순서를 생략하지 않는다. 4장 상태의 진행 중 분석은 사진을 임의 생성해 backfill하지 않으며, 나머지 구도와 일련번호 사진을 보완한 뒤 진행한다.
+002는 과거 4장 계약, 003은 그 다음의 6면+일련번호 7장 계약을 반영하는 중간 migration이다. 기존 DB의 적용 이력을 재현하기 위해 순서를 생략하지 않는다. 현행 008은 일련번호 사진 연결을 private backup에 보존한 뒤 분석에서 제외하고, 정면·후면·상단·하단·좌측면·우측면 6장만 필수로 강제한다. 원본 미디어와 private Storage 객체는 삭제하지 않는다.
 
 004는 네 제품의 `model_3d`를 OpenAPI Product3D와 같은 canonical Mock 값으로 정렬하되 실제 자산 준비 전 `model_3d_ready=false`를 유지하고, PAID 결제가 `PENDING_PAYMENT` 주문을 실제로 갱신하지 못하면 결제 트랜잭션을 중단한다. 고객 변경안 결정은 `SECURITY DEFINER` trigger 안에서 `auth.uid()`·주문 소유권·`PENDING` 상태를 다시 검사한다. 이벤트 server-only INSERT, Storage metadata binding, 외부 AI 동의 증적, 신청·terms·option 제약도 함께 적용한다. 적용 전의 변경 대상 정의·권한은 private backup에 보존한다.
 
@@ -117,7 +118,7 @@ bootstrap은 다음을 포함한다.
 v1→v2 변환 migration을 작성하거나, 보존할 데이터가 없는 개발 프로젝트라면 신규
 staging 프로젝트에 최종 bootstrap을 적용한다.
 
-구조 롤백 파일은 `supabase/rollbacks/`에 있다. 롤백이 필요하면 데이터 손실과 API 호환성을 검토하고 `007 → 006 → 005 → 004 → 003 → 002 → 001` 역순으로 수행한다. 006 rollback은 고객 승인 전 제작 진행 우회를 다시 허용하므로 앱까지 함께 되돌릴 때만 사용한다. 005 rollback은 배송 시작 결함을 다시 만들므로 앱까지 함께 되돌릴 때만 사용한다. 004 rollback은 migration 뒤 제품 JSON, trigger·정책·보호 권한이 바뀌었거나 실제 LIVE 동의 증적이 있으면 자동 복원을 중단한다. OpenAPI, 앱과 DB 중 한쪽만 단독 롤백하지 않는다.
+구조 롤백 파일은 `supabase/rollbacks/`에 있다. 롤백이 필요하면 데이터 손실과 API 호환성을 검토하고 `008 → 007 → 006 → 005 → 004 → 003 → 002 → 001` 역순으로 수행한다. 008 rollback은 backup한 일련번호 사진 연결을 복구하고 분석 계약을 정확히 7장으로 되돌리므로 앱·API도 함께 되돌릴 때만 사용한다. 006 rollback은 고객 승인 전 제작 진행 우회를 다시 허용하므로 앱까지 함께 되돌릴 때만 사용한다. 005 rollback은 배송 시작 결함을 다시 만들므로 앱까지 함께 되돌릴 때만 사용한다. 004 rollback은 migration 뒤 제품 JSON, trigger·정책·보호 권한이 바뀌었거나 실제 LIVE 동의 증적이 있으면 자동 복원을 중단한다. OpenAPI, 앱과 DB 중 한쪽만 단독 롤백하지 않는다.
 
 ## 4. Supabase Auth와 profiles 연결
 
@@ -257,10 +258,10 @@ curl http://localhost:3000/api/v2/me \
 
 ### DB·migration
 
-- [ ] 신규 DB는 bootstrap만, 기존 DB는 migration 001→002→003→004→005→006→007만 적용했다.
+- [ ] 신규 DB는 bootstrap만, 기존 DB는 migration 001→002→003→004→005→006→007→008만 적용했다.
 - [ ] lifecycle RPC와 trigger가 존재하고 허용된 인접 상태 전이만 성공한다.
 - [ ] `COMPLETED` 이전 보증서 생성이 DB에서 거부된다.
-- [ ] 최종 분석 진행에는 정확히 7개 이미지가 필요하다.
+- [ ] 최종 분석 진행에는 정확히 6개 방향 이미지가 필요하고, 일련번호 사진은 분석에 포함하지 않는다.
 - [ ] 네 제품의 `model_3d`가 Product3D 필수 필드를 모두 포함한다.
 - [ ] 실제 GLB/poster가 없는 제품은 `model_3d_ready=false`이며 API가 `has3d=false`, `model3d=null`을 반환한다.
 - [ ] PAID 결제의 대상 주문이 `PENDING_PAYMENT`가 아니면 결제 행까지 롤백된다.
@@ -328,7 +329,7 @@ curl http://localhost:3000/api/v2/me \
 ### relation 또는 RPC가 없다는 오류가 발생하는 경우
 
 - 신규/기존 DB 적용 경로를 다시 확인한다.
-- 기존 DB migration을 001→002→003→004→005→006→007 순서로 모두 적용했는지 확인한다.
+- 기존 DB migration을 001→002→003→004→005→006→007→008 순서로 모두 적용했는지 확인한다.
 - production 데이터가 있는 환경에서 bootstrap 재적용으로 해결하지 않는다.
 
 ## 11. 완료 기록
