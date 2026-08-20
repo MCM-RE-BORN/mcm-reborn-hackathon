@@ -133,7 +133,7 @@ export function MockupDetailScreen({ analysisId, productId, state }: MockupDetai
       ) : (
         <article className={styles.mockupContent}>
           <div className={styles.mockupStage}>
-            <TextureMockupStudio />
+            <TextureMockupStudio analysisId={analysisId} />
           </div>
 
           <header className={styles.productDetailHeader}>

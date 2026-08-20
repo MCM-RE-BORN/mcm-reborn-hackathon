@@ -5,6 +5,7 @@ import styles from "./analysis-design.module.css";
 
 const MODEL_SRC = "/assets/models/reborn-passport-wallet.glb";
 const PROMPT_RESET_DELAY_MS = 10_000;
+const MODEL_LOAD_TIMEOUT_MS = 20_000;
 
 type ModelViewerTexture = object;
 
@@ -40,12 +41,16 @@ export type TextureApplicationState =
 
 type MockupViewerProps = {
   modelSrc?: string;
+  onModelError?: () => void;
+  onModelLoad?: () => void;
   onTextureStateChange?: (state: TextureApplicationState) => void;
   textureBlob?: Blob;
 };
 
 export function MockupViewer({
   modelSrc = MODEL_SRC,
+  onModelError,
+  onModelLoad,
   onTextureStateChange,
   textureBlob,
 }: MockupViewerProps) {
@@ -58,6 +63,7 @@ export function MockupViewer({
     ModelViewerTexture | null | undefined
   >(undefined);
   const originalTextureModelRef = useRef<string | null>(null);
+  const reportedModelLoadRef = useRef<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -67,13 +73,16 @@ export function MockupViewer({
         if (active) setViewerReady(true);
       })
       .catch(() => {
-        if (active) setModelFailed(true);
+        if (active) {
+          setModelFailed(true);
+          onModelError?.();
+        }
       });
 
     return () => {
       active = false;
     };
-  }, []);
+  }, [onModelError]);
 
   useEffect(() => {
     const viewer = viewerRef.current;
@@ -96,6 +105,25 @@ export function MockupViewer({
       if (resetTimer) clearTimeout(resetTimer);
     };
   }, [viewerReady]);
+
+  useEffect(() => {
+    const viewer = viewerRef.current;
+    if (!viewerReady || !viewer || modelFailed || viewer.loaded) return;
+
+    const clearLoadTimeout = () => window.clearTimeout(loadTimeout);
+    const loadTimeout = window.setTimeout(() => {
+      setModelFailed(true);
+      onModelError?.();
+    }, MODEL_LOAD_TIMEOUT_MS);
+    viewer.addEventListener("error", clearLoadTimeout, { once: true });
+    viewer.addEventListener("load", clearLoadTimeout, { once: true });
+
+    return () => {
+      window.clearTimeout(loadTimeout);
+      viewer.removeEventListener("error", clearLoadTimeout);
+      viewer.removeEventListener("load", clearLoadTimeout);
+    };
+  }, [modelFailed, modelSrc, onModelError, viewerReady]);
 
   useEffect(() => {
     const viewer = viewerRef.current;
@@ -159,13 +187,21 @@ export function MockupViewer({
       }
     };
 
+    const reportModelLoad = () => {
+      if (reportedModelLoadRef.current === modelSrc) return;
+      reportedModelLoadRef.current = modelSrc;
+      onModelLoad?.();
+    };
+
     const handleModelLoad = () => {
       originalTextureRef.current = undefined;
+      reportModelLoad();
       void applyTexture();
     };
 
     viewer.addEventListener("load", handleModelLoad);
     if (viewer.loaded) {
+      reportModelLoad();
       void applyTexture();
     }
 
@@ -173,14 +209,21 @@ export function MockupViewer({
       cancelled = true;
       viewer.removeEventListener("load", handleModelLoad);
     };
-  }, [modelFailed, modelSrc, onTextureStateChange, textureBlob, viewerReady]);
+  }, [
+    modelFailed,
+    modelSrc,
+    onModelLoad,
+    onTextureStateChange,
+    textureBlob,
+    viewerReady,
+  ]);
 
   return (
     <section
       aria-label="RE:BORN 여권지갑 3D 목업"
       className={styles.modelViewerFrame}
     >
-      {!viewerReady ? (
+      {!viewerReady && !modelFailed ? (
         <div className={styles.modelViewerLoading} role="status">
           3D 목업을 불러오고 있습니다.
         </div>
@@ -198,7 +241,10 @@ export function MockupViewer({
           interaction-prompt-style="wiggle"
           interaction-prompt-threshold="800"
           loading="eager"
-          onError={() => setModelFailed(true)}
+          onError={() => {
+            setModelFailed(true);
+            onModelError?.();
+          }}
           key={modelSrc}
           ref={viewerRef}
           rotation-per-second="18deg"
