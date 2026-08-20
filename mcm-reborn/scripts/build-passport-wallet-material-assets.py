@@ -1,4 +1,4 @@
-"""Extract the passport-wallet PBR maps and build its reviewed exterior mask.
+"""Extract passport-wallet PBR maps and build its reviewed preservation masks.
 
 This is a one-time asset-authoring helper, not an application runtime dependency.
 It requires Pillow and NumPy and intentionally fails if the source GLB layout or
@@ -77,6 +77,41 @@ def sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def validate_image(path: Path) -> None:
+    with Image.open(path) as image:
+        if image.size != EXPECTED_TEXTURE_SIZE:
+            raise RuntimeError(f"Unexpected {path.name} size: {image.size}")
+
+
+def validate_checksum(path: Path, expected_sha256: str) -> None:
+    actual_sha256 = sha256(path)
+    if actual_sha256 != expected_sha256:
+        raise RuntimeError(
+            f"Checksum mismatch for {path.name}: "
+            f"expected {expected_sha256}, got {actual_sha256}"
+        )
+
+
+def validate_manifest_assets(manifest: dict) -> None:
+    if tuple(manifest["atlasSize"]) != EXPECTED_TEXTURE_SIZE:
+        raise RuntimeError("Material asset manifest atlas size is not 2048x2048")
+
+    validate_checksum(MODEL_PATH, manifest["sourceGlb"]["sha256"])
+
+    image_checksums = {
+        manifest["exteriorMask"]["path"]: manifest["exteriorMask"]["sha256"],
+        manifest["stitchPreserveMask"]["path"]: manifest[
+            "stitchPreserveMask"
+        ]["sha256"],
+        manifest["materialIdMap"]["path"]: manifest["materialIdMap"]["sha256"],
+        **manifest["originalMaps"],
+    }
+    for relative_path, expected_sha256 in image_checksums.items():
+        asset_path = OUTPUT_DIR / relative_path
+        validate_image(asset_path)
+        validate_checksum(asset_path, expected_sha256)
+
+
 def main() -> None:
     document, binary = read_glb(MODEL_PATH)
     materials = document.get("materials", [])
@@ -136,16 +171,58 @@ def main() -> None:
     mask.save(OUTPUT_DIR / "exterior-mask.png", optimize=True)
 
     mask_pixels = np.asarray(mask)
+
+    # Stitching and the adjacent antialiased dark linework live in the original
+    # base-color atlas. Keep this explicit mask independent from exterior-mask,
+    # even where both already protect the same pixels. The one-pixel expansion
+    # and soft edge stop JPEG resampling/mipmaps from replacing thread edges.
+    stitch_detail = (
+        (red <= 120)
+        & (green <= 70)
+        & (blue <= 80)
+        & (metallic < 96)
+    )
+    stitch_mask = Image.fromarray(
+        (stitch_detail.astype(np.uint8) * 255),
+        mode="L",
+    )
+    stitch_mask = stitch_mask.filter(ImageFilter.MaxFilter(3)).filter(
+        ImageFilter.GaussianBlur(radius=0.75)
+    )
+    stitch_mask = Image.fromarray(
+        np.maximum(
+            np.asarray(stitch_mask),
+            stitch_detail.astype(np.uint8) * 255,
+        ),
+        mode="L",
+    )
+    stitch_mask.save(OUTPUT_DIR / "stitch-preserve-mask.png", optimize=True)
+    stitch_mask_pixels = np.asarray(stitch_mask)
+    if np.any(stitch_mask_pixels[stitch_detail] != 255):
+        raise RuntimeError("Detected stitch pixels must be fully preserved")
+
     material_ids = np.zeros((*EXPECTED_TEXTURE_SIZE[::-1], 3), dtype=np.uint8)
     material_ids[mask_pixels >= 128] = (239, 68, 68)  # replaceable exterior
     material_ids[zipper] = (214, 53, 142)  # zipper / trim retained in MVP
     material_ids[hardware] = (242, 184, 72)  # metallic hardware retained
+    material_ids[
+        (stitch_mask_pixels >= 128) & (mask_pixels >= 128)
+    ] = (56, 189, 248)  # explicit stitching/detail preservation
     Image.fromarray(material_ids, mode="RGB").save(
         OUTPUT_DIR / "material-id-map.png",
         optimize=True,
     )
 
     exterior_coverage = float(np.mean(mask_pixels >= 128))
+    stitch_coverage = float(np.mean(stitch_mask_pixels >= 128))
+    stitch_exterior_overlap = float(
+        np.mean((stitch_mask_pixels >= 128) & (mask_pixels >= 128))
+    )
+    effective_mask = (
+        mask_pixels.astype(np.float32)
+        * (1 - stitch_mask_pixels.astype(np.float32) / 255)
+    )
+    effective_exterior_coverage = float(np.mean(effective_mask >= 128))
     hardware_coverage = float(np.mean(hardware))
     if not 0.75 <= exterior_coverage <= 0.90:
         raise RuntimeError(
@@ -155,9 +232,19 @@ def main() -> None:
         raise RuntimeError(
             f"Hardware coverage {hardware_coverage:.4f} is outside reviewed bounds"
         )
+    if not 0.10 <= stitch_exterior_overlap <= 0.20:
+        raise RuntimeError(
+            "Stitch/exterior overlap "
+            f"{stitch_exterior_overlap:.4f} is outside reviewed bounds"
+        )
+    if not 0.65 <= effective_exterior_coverage <= 0.80:
+        raise RuntimeError(
+            "Effective exterior coverage "
+            f"{effective_exterior_coverage:.4f} is outside reviewed bounds"
+        )
 
     manifest = {
-        "schemaVersion": "MCM_PASSPORT_WALLET_MATERIAL_MAP_V1",
+        "schemaVersion": "MCM_PASSPORT_WALLET_MATERIAL_MAP_V2",
         "sourceGlb": {
             "path": MODEL_PATH.name,
             "sha256": sha256(MODEL_PATH),
@@ -167,7 +254,18 @@ def main() -> None:
             "path": "exterior-mask.png",
             "sha256": sha256(OUTPUT_DIR / "exterior-mask.png"),
             "replaceableCoverage": round(exterior_coverage, 6),
+            "effectiveReplaceableCoverage": round(
+                effective_exterior_coverage,
+                6,
+            ),
             "meaning": "white=replaceable exterior; black=preserve original",
+        },
+        "stitchPreserveMask": {
+            "path": "stitch-preserve-mask.png",
+            "sha256": sha256(OUTPUT_DIR / "stitch-preserve-mask.png"),
+            "preservedCoverage": round(stitch_coverage, 6),
+            "blocksExteriorCoverage": round(stitch_exterior_overlap, 6),
+            "meaning": "white=preserve original stitch/dark detail base-color",
         },
         "materialIdMap": {
             "path": "material-id-map.png",
@@ -176,6 +274,7 @@ def main() -> None:
                 "#ef4444": "BODY_EXTERIOR_REPLACE",
                 "#d6358e": "ZIPPER_OR_TRIM_KEEP",
                 "#f2b848": "HARDWARE_KEEP",
+                "#38bdf8": "STITCH_OR_DARK_DETAIL_KEEP",
                 "#000000": "DETAIL_OR_UNUSED_KEEP",
             },
         },
@@ -192,9 +291,12 @@ def main() -> None:
         json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
     )
+    validate_manifest_assets(manifest)
 
     print(
         f"Wrote passport-wallet material assets: exterior={exterior_coverage:.2%}, "
+        f"stitch-blocked={stitch_exterior_overlap:.2%}, "
+        f"effective={effective_exterior_coverage:.2%}, "
         f"hardware={hardware_coverage:.2%}"
     )
 

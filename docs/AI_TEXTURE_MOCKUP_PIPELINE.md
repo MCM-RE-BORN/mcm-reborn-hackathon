@@ -87,20 +87,22 @@ public/assets/models/reborn-passport-wallet/
   original-normal.jpg
   original-metallic-roughness.jpg
   exterior-mask.png
+  stitch-preserve-mask.png
   material-id-map.png
   material-assets.json
 ```
 
-`exterior-mask.png`는 2048×2048 UV와 정렬된다. 흰색은 교체할 외피, 검은색은 원본을 보존할 지퍼·금속·로고·솔기·미사용 영역이다. 현재 source GLB checksum과 mask checksum, 85.933% 교체 범위는 `material-assets.json`에 기록한다. 생성 스크립트는 `mcm-reborn/scripts/build-passport-wallet-material-assets.py`이며 source GLB 구조와 coverage 범위가 달라지면 실패한다.
+`exterior-mask.png`와 `stitch-preserve-mask.png`는 모두 2048×2048 UV와 정렬된다. 외관 마스크의 흰색은 교체 후보 외피이고, 스티치 보존 마스크의 흰색은 원본 base-color의 스티치와 인접한 어두운 디테일을 강제로 유지한다. 두 마스크가 중복되더라도 스티치 보존 마스크가 우선한다. 현재 source GLB, 원본 PBR map, 두 mask와 material ID map의 checksum 및 각 coverage는 `material-assets.json`에 기록한다. 생성 스크립트는 `mcm-reborn/scripts/build-passport-wallet-material-assets.py`이며 2048 정렬, checksum, GLB 구조와 검토된 coverage 범위가 달라지면 실패한다.
 
 브라우저 합성은 AI가 적용 부위를 임의로 고르지 못하게 다음 식을 항상 적용한다.
 
 ```text
-finalBaseColor = generatedTargetAtlas * exteriorMask
-               + originalBaseColor * (1 - exteriorMask)
+effectiveMask = exteriorMask * (1 - stitchPreserveMask)
+finalBaseColor = generatedTargetAtlas * effectiveMask
+               + originalBaseColor * (1 - effectiveMask)
 ```
 
-`compose-exterior-atlas.ts`가 2048px Canvas에서 이 합성을 수행하고 JPEG로 만든다. `MockupViewer`는 로컬 canonical GLB의 `Material_0.baseColorTexture`에만 결과를 적용한다. 기존 normal과 metallic-roughness map은 유지하므로 금속 반응과 표면 디테일을 보존한다. 현 mask는 시연용 검토 자산이며 제조용 재단 SSOT는 아니다. 생산 전에는 DCC에서 UV island, body/trim/hardware material과 edge padding을 정식 검수해야 한다.
+`compose-exterior-atlas.ts`가 manifest schema, 2048 크기와 SHA-256을 확인한 뒤 2048px Canvas에서 이 합성을 수행한다. 결과는 PNG로 인코딩해 보존 마스크가 255인 위치의 디코딩된 원본 base-color RGB가 JPEG 재압축으로 바뀌지 않게 한다. 이 PNG는 서버에 다시 전송하지 않고 `model-viewer`의 로컬 object URL로만 적용한다. 디코딩한 bitmap은 성공·실패와 무관하게 해제한다. `MockupViewer`는 로컬 canonical GLB의 `Material_0.baseColorTexture`에만 결과를 적용한다. 기존 normal과 metallic-roughness map은 유지하므로 스티치의 입체감, 금속 반응과 표면 디테일도 보존한다. 현 mask는 시연용 검토 자산이며 제조용 재단 SSOT는 아니다. 생산 전에는 DCC에서 UV island, body/trim/hardware material과 edge padding을 정식 검수해야 한다.
 
 ## 6. UI 상태와 복구
 

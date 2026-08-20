@@ -1,5 +1,5 @@
 {
-  "schemaVersion": "MCM_PASSPORT_WALLET_MATERIAL_MAP_V1",
+  "schemaVersion": "MCM_PASSPORT_WALLET_MATERIAL_MAP_V2",
   "sourceGlb": {
     "path": "reborn-passport-wallet.glb",
     "sha256": "6c52d0eb510816984ee760deefb4727e9e8eca7b1c993454382194eb565c0e13"
@@ -12,15 +12,24 @@
     "path": "exterior-mask.png",
     "sha256": "e4648a43d29a32491b5a51a4ca0b75999eec82c917bb1a8ea3bb2725782f6be1",
     "replaceableCoverage": 0.85933,
+    "effectiveReplaceableCoverage": 0.699064,
     "meaning": "white=replaceable exterior; black=preserve original"
+  },
+  "stitchPreserveMask": {
+    "path": "stitch-preserve-mask.png",
+    "sha256": "92b8432f0e6e1d81b8ecd801402ef0a498432e760709e703935523bd17f0e8a0",
+    "preservedCoverage": 0.210786,
+    "blocksExteriorCoverage": 0.159608,
+    "meaning": "white=preserve original stitch/dark detail base-color"
   },
   "materialIdMap": {
     "path": "material-id-map.png",
-    "sha256": "c9613688835eaf9b7a4310a189a9ed7dd75af45758ccb2bafd6d1a214de8bfde",
+    "sha256": "02b73e3c3431034e99b6e069f88a754e8b683da92238a055c59ca256f2e32c81",
     "colors": {
       "#ef4444": "BODY_EXTERIOR_REPLACE",
       "#d6358e": "ZIPPER_OR_TRIM_KEEP",
       "#f2b848": "HARDWARE_KEEP",
+      "#38bdf8": "STITCH_OR_DARK_DETAIL_KEEP",
       "#000000": "DETAIL_OR_UNUSED_KEEP"
     }
   },
