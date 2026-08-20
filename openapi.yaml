@@ -134,7 +134,9 @@ paths:
 
         LIVE는 서버의 명시적 외부 AI opt-in, 고정된 개인정보 안내 버전, 요청별 사진 처리 동의가 모두 확인된 경우에만 실행합니다.
 
-        분석 입력은 정면, 후면, 상단, 하단, 좌측면, 우측면, 일련번호 순서의 서로 다른 사진 7장입니다.
+        분석 입력은 정면, 후면, 상단, 하단, 좌측면, 우측면 순서의 서로 다른 사진 6장입니다. 배열 0~1의 purpose는 SOURCE_FRONT, 2~5는 SOURCE_SIDE여야 합니다. INTERIOR 또는 ENGRAVING 자산과 일련번호 사진은 imageAssetIds에 포함하지 않습니다.
+
+        serialNumber는 신규 분석 접수에 필수이며, 영문자와 숫자를 각각 하나 이상 포함하는 ASCII 영문·숫자 11자리여야 합니다. 시리얼 번호 사진은 선택적인 자동 입력 보조 수단일 뿐 분석 이미지에는 포함하지 않습니다.
 
         이미지 품질이 분석에 충분하지 않으면 성공 분석을 생성하지 않고 IMAGE_QUALITY_INSUFFICIENT 오류와 재촬영 안내를 반환합니다.
 
@@ -1329,12 +1331,13 @@ components:
       - purchaseYear
       - useDuration
       - desiredUse
+      - serialNumber
       properties:
         imageAssetIds:
           type: array
-          description: 정면, 후면, 상단, 하단, 좌측면, 우측면, 일련번호 촬영 자산 ID를 이 순서로 전달합니다. 일곱 슬롯은 모두 필수입니다.
-          minItems: 7
-          maxItems: 7
+          description: 정면, 후면, 상단, 하단, 좌측면, 우측면 촬영 자산 ID만 이 순서로 전달합니다. 여섯 슬롯은 모두 필수이며 배열 0~1은 SOURCE_FRONT, 2~5는 SOURCE_SIDE purpose여야 합니다. INTERIOR·ENGRAVING 자산과 일련번호 사진은 포함하지 않습니다.
+          minItems: 6
+          maxItems: 6
           uniqueItems: true
           items:
             type: string
@@ -1355,8 +1358,10 @@ components:
           maxLength: 200
         serialNumber:
           type: string
-          minLength: 1
-          maxLength: 100
+          description: 신규 분석 접수에 필요한 제품 시리얼 번호입니다. 앞뒤 공백을 제거한 뒤 ASCII 영문자와 숫자를 각각 하나 이상 포함한 11자리여야 합니다. 시리얼 번호 사진은 선택입니다.
+          minLength: 11
+          maxLength: 11
+          pattern: '^(?=.*[A-Za-z])(?=.*[0-9])[A-Za-z0-9]{11}$'
         conditionNote:
           type: string
           maxLength: 500

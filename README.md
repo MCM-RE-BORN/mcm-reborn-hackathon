@@ -89,7 +89,7 @@ public/assets/products/keyring/poster.webp
 public/assets/models/keyring.glb
 ```
 
-대표 시나리오의 아래 네 WebP는 여러 화면에서 재사용하는 표시용 Fixture일 뿐 7슬롯 업로드를 대신하지 않습니다. 고객 분석 계약은 정면·후면·상단·하단·좌측면·우측면·일련번호 JPG/PNG 7장을 모두 요구합니다.
+대표 시나리오의 아래 네 WebP는 여러 화면에서 재사용하는 표시용 Fixture일 뿐 분석 업로드를 대신하지 않습니다. 고객 분석 계약은 정면·후면·상단·하단·좌측면·우측면 JPG/PNG 6장을 모두 요구합니다. 일련번호 사진은 선택 사항이며 분석 `imageAssetIds`에 포함하지 않습니다.
 
 ```text
 public/assets/mvp-beta/source-backpack-front.webp

@@ -13,7 +13,7 @@
 
 .submissionLead {
   display: grid;
-  gap: var(--space-5);
+  gap: var(--space-14);
 }
 
 .submissionLead h2 {
@@ -28,7 +28,7 @@
   color: var(--color-muted);
   font-size: var(--font-size-body);
   font-weight: var(--font-weight-light);
-  line-height: var(--line-height-reading);
+  line-height: var(--line-height-tight);
 }
 
 .eyebrow,
@@ -53,7 +53,7 @@
 }
 
 .statusCardHeader strong {
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
   font-size: var(--font-size-control);
   font-weight: var(--font-weight-semibold);
   line-height: var(--line-height-tight);
@@ -120,16 +120,20 @@
 }
 
 .sourceSummaryCopy h2 {
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
   font-size: var(--font-size-body);
   font-weight: var(--font-weight-semibold);
   line-height: var(--line-height-tight);
 }
 
+.sourceSummaryCopy h2 + p {
+  margin-top: var(--space-12);
+}
+
 .contractNotice,
 .engravingNotice {
   display: grid;
-  gap: var(--space-4);
+  gap: var(--space-14);
   padding: var(--space-9);
   border-radius: var(--radius-control);
   background: var(--color-surface);
@@ -147,7 +151,7 @@
   color: var(--color-muted);
   font-size: var(--font-size-label);
   font-weight: var(--font-weight-light);
-  line-height: var(--line-height-reading);
+  line-height: var(--line-height-tight);
 }
 
 .textAction,
@@ -198,6 +202,8 @@
   position: absolute;
   inset: var(--space-0);
   display: grid;
+  align-content: center;
+  gap: var(--space-5);
   place-items: center;
   font-size: var(--font-size-metric);
   font-weight: var(--font-weight-bold);
@@ -219,7 +225,7 @@
 
 .limitedCopy {
   display: grid;
-  gap: var(--space-9);
+  gap: var(--space-14);
   margin-top: var(--space-7);
   padding-top: var(--space-13);
   border-top: var(--border-thin) solid var(--color-divider);
@@ -236,7 +242,7 @@
   color: var(--color-ink-soft);
   font-size: var(--font-size-body);
   font-weight: var(--font-weight-light);
-  line-height: var(--line-height-relaxed);
+  line-height: var(--line-height-tight);
 }
 
 .recommendationHeader {
@@ -410,7 +416,7 @@
   font-size: var(--font-size-label);
   font-weight: var(--font-weight-regular);
   line-height: var(--line-height-tight);
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 
 .recommendationMetrics {
@@ -478,6 +484,11 @@
   font-size: var(--font-size-label);
 }
 
+.modelViewerLoadingSpinner {
+  width: var(--control-height-sm);
+  height: var(--control-height-sm);
+}
+
 .modelViewerFallback {
   position: absolute;
   inset: var(--space-0);
@@ -485,7 +496,7 @@
   padding: var(--space-14);
   place-items: center;
   align-content: center;
-  gap: var(--space-3);
+  gap: var(--space-14);
   background: color-mix(in srgb, var(--color-canvas) 92%, transparent);
   color: var(--color-ink-soft);
   text-align: center;
@@ -493,7 +504,7 @@
 
 .modelViewerFallback p {
   font-size: var(--font-size-label);
-  line-height: var(--line-height-reading);
+  line-height: var(--line-height-tight);
 }
 
 .productStory {

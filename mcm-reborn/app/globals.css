@@ -157,7 +157,9 @@ body {
   font-weight: var(--font-weight-regular);
   line-height: var(--line-height-tight);
   letter-spacing: var(--letter-spacing-normal);
+  overflow-wrap: break-word;
   text-rendering: optimizeLegibility;
+  word-break: keep-all;
   -webkit-font-smoothing: antialiased;
 }
 

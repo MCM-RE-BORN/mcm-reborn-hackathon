@@ -6,7 +6,11 @@ import {
 } from "@/components/screens/entry-capture/page-state";
 
 export default async function LandingPage({ searchParams }: EntryPageProps) {
-  const { state } = await readEntrySearchParams(searchParams);
+  const { bootstrapCustomer, state } = await readEntrySearchParams(searchParams);
 
-  return state === "normal" ? <StartScreen /> : <IntroScreen state={state} />;
+  return state === "normal" ? (
+    <StartScreen bootstrapCustomer={bootstrapCustomer} />
+  ) : (
+    <IntroScreen state={state} />
+  );
 }

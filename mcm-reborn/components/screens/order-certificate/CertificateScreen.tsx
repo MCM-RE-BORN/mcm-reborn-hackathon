@@ -82,9 +82,9 @@ export function CertificateScreen({
       ) : !certificate ? (
         <div className={styles.stateInset}>
           <StatusPanel
-            description="완료된 신청과 보증서 기록을 Supabase에서 조회하고 있습니다."
+            description="완료된 신청과 보증서 기록을 확인하고 있습니다."
             title="ESG Passport를 확인하고 있어요"
-            tone="permission"
+            tone="loading"
           />
         </div>
       ) : (

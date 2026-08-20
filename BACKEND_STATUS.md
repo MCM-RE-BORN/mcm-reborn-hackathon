@@ -56,7 +56,7 @@ collection 파일에 공존하는 두 곳 때문에 파일 수와 operation 수�
 
 - 원본은 private `source-products` bucket의 사용자별 경로에 저장한다.
 - presign은 한 요청에 1~4개씩 발급할 수 있지만 분석 생성은 정면·후면·상단·하단·
-  좌측면·우측면·일련번호의 정확히 7개 자산을 순서대로 요구한다.
+  좌측면·우측면의 정확히 6개 자산을 순서대로 요구한다. 일련번호 사진은 선택 기능이며 분석에 포함하지 않는다.
 - 분석은 `DEMO_FIXTURE`, `SEEDED_ESTIMATE`, `LIVE` 모드를 지원하며 모두 사진 기반
   예상치로 표현한다.
 - `LIVE`는 배포 opt-in·privacy notice·요청별 동의 증적이 있어야 하며 공식 OpenAI
@@ -86,11 +86,11 @@ collection 파일에 공존하는 두 곳 때문에 파일 수와 operation 수�
 1. 추적되지 않는 `mcm-reborn/.env.local` 또는 배포 환경에 URL·publishable key·
    service role key가 설정되어 있다.
 2. 신규 프로젝트에는 `supabase-schema.sql`, 호환되는 기존 v2 데모 DB에는 migration
-   001→002→003→004가 실제 적용되었다. `feature-backend` v1 DB는 이 체인의 입력으로
+   001→002→003→004→005→006→007→008이 실제 적용되었다. `feature-backend` v1 DB는 이 체인의 입력으로
    지원하지 않으므로 실제 백업에 맞춘 별도 변환 또는 빈 v2 staging을 사용한다.
 3. CUSTOMER·OPERATOR Auth 사용자와 같은 UUID의 `profiles` 행이 존재한다.
 4. `/api/v2/health`가 DB 연결을 확인하고 정상 상태를 반환한다.
-5. CUSTOMER/OPERATOR 권한 거부, 7장 업로드·분석, Mock 결제, 수거→검수→변경 승인→
+5. CUSTOMER/OPERATOR 권한 거부, 필수 6장 업로드·분석, Mock 결제, 수거→검수→변경 승인→
    제작→배송→완료→보증서 흐름을 원격 DB에서 검증한다.
 6. service role 없이 가능한 조회/RPC는 요청 JWT와 RLS가 실제로 적용됨을 확인한다.
 
