@@ -5,7 +5,7 @@ import {
   UpstreamError,
 } from "@/contracts/errors";
 import type { MeshyTextureTaskResponse } from "@/lib/texture-preview";
-import type { RetextureProvider, TextureStyleImage } from "./types";
+import type { RetextureProvider } from "./types";
 
 const MESHY_API_BASE_URL = "https://api.meshy.ai/openapi/v1";
 const REQUEST_TIMEOUT_MS = 30_000;
@@ -67,11 +67,17 @@ export class MeshyRetextureProvider implements RetextureProvider {
     this.apiKey = apiKey;
   }
 
-  async createTask(styleImage: TextureStyleImage) {
+  async createTask(imageUrls: readonly string[]) {
     const modelUrl = readMeshyMockupModelUrl();
     if (!modelUrl) {
       throw new ServiceUnavailableError(
         "Meshy retexture model URL is not configured",
+        { retryable: false },
+      );
+    }
+    if (imageUrls.length !== 4 || imageUrls.some((url) => !isHttpsUrl(url))) {
+      throw new ServiceUnavailableError(
+        "Exactly four HTTPS exterior images are required for Meshy retexture",
         { retryable: false },
       );
     }
@@ -80,8 +86,8 @@ export class MeshyRetextureProvider implements RetextureProvider {
         ai_model: readMeshyModel(),
         enable_original_uv: true,
         enable_pbr: true,
-        image_style_url: styleImage.dataUrl,
         model_url: modelUrl,
+        multiview_image_urls: imageUrls,
         target_formats: ["glb"],
         texture_resolution: "2k",
       }),
@@ -117,6 +123,12 @@ export class MeshyRetextureProvider implements RetextureProvider {
       throw new UpstreamError("Meshy completed without a trusted GLB output");
     }
 
+    if (status === "succeeded" && !textureUrl) {
+      throw new UpstreamError(
+        "Meshy completed without a trusted target UV texture",
+      );
+    }
+
     return {
       ...(typeof task.consumed_credits === "number"
         ? { consumedCredits: task.consumed_credits }
@@ -129,10 +141,12 @@ export class MeshyRetextureProvider implements RetextureProvider {
       ...(task.expires_at
         ? { expiresAt: new Date(task.expires_at).toISOString() }
         : {}),
+      jobKind: "TARGET_RETEXTURE",
       kind: "task",
       progress: Math.round(task.progress ?? (status === "succeeded" ? 100 : 0)),
       provider: "MESHY",
       status,
+      usage: "TARGET_PREVIEW",
     };
   }
 
@@ -217,15 +231,7 @@ function buildDeployedMockupModelUrl() {
 }
 
 function readMeshyModel() {
-  const configured = process.env.MESHY_RETEXTURE_MODEL?.trim();
-  if (
-    configured === "meshy-5" ||
-    configured === "meshy-6" ||
-    configured === "meshy-7" ||
-    configured === "latest"
-  ) {
-    return configured;
-  }
+  // Meshy's multiview_image_urls contract currently requires Meshy 7.
   return "meshy-7";
 }
 
@@ -248,6 +254,15 @@ function trustedMeshyAssetUrl(value?: string) {
     return url.protocol === "https:" && trustedHost ? url.toString() : undefined;
   } catch {
     return undefined;
+  }
+}
+
+function isHttpsUrl(value: string) {
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" && !url.username && !url.password;
+  } catch {
+    return false;
   }
 }
 

@@ -258,7 +258,7 @@ export function MockupViewer({
 
       {textureState === "loading" && !modelFailed ? (
         <div className={styles.textureApplying} role="status">
-          원제품 텍스처를 목업에 적용하고 있습니다.
+          외관 소재를 여권 지갑 목업에 적용하고 있습니다.
         </div>
       ) : null}
 

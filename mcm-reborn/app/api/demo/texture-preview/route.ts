@@ -16,15 +16,16 @@ import {
 export const runtime = "nodejs";
 export const maxDuration = 180;
 
-const TEXTURE_REQUEST_BODY_LIMIT = 3_000_000;
-
 const CreateTexturePreviewRequestSchema = z
   .object({
     analysisId: z.string().uuid(),
     externalAiProcessingConsentAccepted: z.literal(true),
+    jobKind: z.enum([
+      "EXTERIOR_PLAN",
+      "SOURCE_MODEL",
+      "TARGET_RETEXTURE",
+    ]),
     privacyNoticeVersion: z.literal(TEXTURE_PRIVACY_NOTICE_VERSION),
-    provider: z.enum(["OPENAI", "MESHY"]),
-    styleImageDataUrl: z.string().min(32).max(2_800_000),
   })
   .strict();
 
@@ -40,7 +41,7 @@ export async function POST(request: Request): Promise<Response> {
     const user = await authenticate(request);
     requireRole(user, ["CUSTOMER"]);
     const input = CreateTexturePreviewRequestSchema.parse(
-      await readJsonBody(request, TEXTURE_REQUEST_BODY_LIMIT),
+      await readJsonBody(request),
     );
     const response = await createTexturePreview(
       {

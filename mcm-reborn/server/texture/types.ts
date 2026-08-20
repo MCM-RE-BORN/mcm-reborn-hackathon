@@ -1,21 +1,12 @@
-import type {
-  MeshyTextureTaskResponse,
-  TexturePreviewCreateResponse,
-} from "@/lib/texture-preview";
+import type { MeshyTextureTaskResponse } from "@/lib/texture-preview";
 
-export type TextureStyleImage = {
-  bytes: Buffer;
-  dataUrl: string;
-  mimeType: "image/jpeg" | "image/png";
+export type ExteriorSourceImage = {
+  assetId: string;
+  signedUrl: string;
+  view: "FRONT" | "RIGHT" | "REAR" | "LEFT";
 };
 
-export interface TextureImageProvider {
-  createTexture(
-    styleImage: TextureStyleImage,
-  ): Promise<Extract<TexturePreviewCreateResponse, { kind: "texture" }>>;
-}
-
 export interface RetextureProvider {
-  createTask(styleImage: TextureStyleImage): Promise<{ taskId: string }>;
+  createTask(imageUrls: readonly string[]): Promise<{ taskId: string }>;
   getTask(taskId: string): Promise<MeshyTextureTaskResponse>;
 }

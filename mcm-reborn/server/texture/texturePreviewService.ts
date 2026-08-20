@@ -16,7 +16,9 @@ import {
 import {
   TEXTURE_PRIVACY_NOTICE_VERSION,
   type ExternalTextureProvider,
+  type MeshyTaskKind,
   type MeshyTextureTaskResponse,
+  type TextureJobKind,
   type TexturePreviewCreateResponse,
   type TextureProviderCapabilities,
 } from "@/lib/texture-preview";
@@ -26,21 +28,27 @@ import {
   type AnalysisViewer,
 } from "@/server/analyses/analysisService";
 import {
+  ExteriorMaterialClassifier,
+  ExteriorMaterialPlanSchema,
+  isExteriorMaterialClassifierConfigured,
+} from "./ExteriorMaterialClassifier";
+import {
   MeshyRetextureProvider,
   isMeshyPollingConfigured,
   isMeshyRetextureConfigured,
 } from "./MeshyRetextureProvider";
 import {
-  OpenAiTextureProvider,
-  isOpenAiTextureConfigured,
-} from "./OpenAiTextureProvider";
-import { parseTextureStyleImage } from "./style-image";
-import type { TextureStyleImage } from "./types";
+  MeshySourceModelProvider,
+  isMeshySourceModelConfigured,
+} from "./MeshySourceModelProvider";
+import { getAnalysisSourceImageUrls } from "./analysisSourceImages";
 
 const TEXTURE_OPERATION = "createTexturePreview";
 const TEXTURE_DAILY_QUOTA_OPERATION = "createTexturePreviewDailyQuota";
 const MAX_DAILY_REQUESTS_PER_PROVIDER = 3;
 const MAX_GLOBAL_DAILY_REQUESTS_PER_PROVIDER = 5;
+const MAX_DAILY_SOURCE_MODEL_REQUESTS = 1;
+const MAX_GLOBAL_DAILY_SOURCE_MODEL_REQUESTS = 2;
 const TASK_TOKEN_TTL_MS = 72 * 60 * 60 * 1000;
 const MESHY_POLL_CACHE_TTL_MS = 2_500;
 const MAX_POLL_CACHE_ENTRIES = 1_000;
@@ -71,15 +79,13 @@ const meshyPollCache = new Map<string, PollCacheEntry>();
 
 const TexturePreviewCreateResponseSchema = z.discriminatedUnion("kind", [
   z.object({
-    dataUrl: z
-      .string()
-      .startsWith("data:image/jpeg;base64,")
-      .max(7_000_000),
-    kind: z.literal("texture"),
-    mimeType: z.literal("image/jpeg"),
+    jobKind: z.literal("EXTERIOR_PLAN"),
+    kind: z.literal("plan"),
+    plan: ExteriorMaterialPlanSchema,
     provider: z.literal("OPENAI"),
   }),
   z.object({
+    jobKind: z.enum(["SOURCE_MODEL", "TARGET_RETEXTURE"]),
     kind: z.literal("task"),
     progress: z.number().min(0).max(100),
     provider: z.literal("MESHY"),
@@ -91,6 +97,7 @@ const TexturePreviewCreateResponseSchema = z.discriminatedUnion("kind", [
 const MeshyTaskTokenPayloadSchema = z.object({
   analysisId: z.string().uuid(),
   expiresAt: z.number().int().positive(),
+  jobKind: z.enum(["SOURCE_MODEL", "TARGET_RETEXTURE"]),
   taskId: z.string().trim().min(1).max(160),
   userId: z.string().uuid(),
 });
@@ -99,22 +106,31 @@ export type CreateTexturePreviewInput = {
   analysisId: string;
   externalAiProcessingConsentAccepted: true;
   idempotencyKey: string;
+  jobKind: TextureJobKind;
   privacyNoticeVersion: typeof TEXTURE_PRIVACY_NOTICE_VERSION;
-  provider: ExternalTextureProvider;
-  styleImageDataUrl: string;
 };
 
 export function getTextureProviderCapabilities(): TextureProviderCapabilities {
   const enabled = process.env.ENABLE_TEXTURE_AI === "true";
-  const providers = {
-    MESHY:
+  const features = {
+    exteriorPlan: enabled && isExteriorMaterialClassifierConfigured(),
+    sourceModel:
+      enabled &&
+      process.env.ENABLE_MESHY_SOURCE_MODEL === "true" &&
+      isMeshySourceModelConfigured() &&
+      isMeshyTaskSigningConfigured(),
+    targetRetexture:
       enabled &&
       isMeshyRetextureConfigured() &&
       isMeshyTaskSigningConfigured(),
-    OPENAI: enabled && isOpenAiTextureConfigured(),
+  };
+  const providers = {
+    MESHY: features.sourceModel || features.targetRetexture,
+    OPENAI: features.exteriorPlan,
   };
   return {
     enabled: providers.MESHY || providers.OPENAI,
+    features,
     privacyNoticeVersion: TEXTURE_PRIVACY_NOTICE_VERSION,
     providers,
   };
@@ -126,14 +142,16 @@ export async function createTexturePreview(
 ): Promise<TexturePreviewCreateResponse> {
   await getAnalysisById(input.analysisId, viewer);
   assertExternalTextureConsent(input);
-  assertProviderEnabled(input.provider);
-  const styleImage = parseTextureStyleImage(input.styleImageDataUrl);
+  assertJobEnabled(input.jobKind);
+  const sourceImages = await getAnalysisSourceImageUrls(input.analysisId);
+  const provider = providerForJob(input.jobKind);
   const admin = createAdminSupabaseClient();
   const reservation = await reserveTextureOperation(
     admin,
     input,
     viewer.id,
-    styleImage.bytes,
+    provider,
+    sourceImages.assetIds,
   );
   if (reservation.cachedResponse) return reservation.cachedResponse;
 
@@ -159,10 +177,26 @@ export async function createTexturePreview(
 
   let response: TexturePreviewCreateResponse;
   try {
-    response =
-      input.provider === "OPENAI"
-        ? await new OpenAiTextureProvider().createTexture(styleImage)
-        : await createMeshyTaskResponse(input.analysisId, viewer.id, styleImage);
+    if (input.jobKind === "EXTERIOR_PLAN") {
+      response = {
+        jobKind: "EXTERIOR_PLAN",
+        kind: "plan",
+        plan: await new ExteriorMaterialClassifier().classify(
+          sourceImages.imageUrls.map((signedUrl, index) => ({
+            signedUrl,
+            view: (["FRONT", "RIGHT", "REAR", "LEFT"] as const)[index],
+          })),
+        ),
+        provider: "OPENAI",
+      };
+    } else {
+      response = await createMeshyTaskResponse(
+        input.analysisId,
+        viewer.id,
+        input.jobKind,
+        sourceImages.imageUrls,
+      );
+    }
   } catch (error) {
     await storeTextureOperationFailure(
       admin,
@@ -199,7 +233,7 @@ export async function getMeshyTextureTask(
   if (payload.analysisId !== analysisId || payload.userId !== viewer.id) {
     throw new ForbiddenError("This texture task does not belong to the viewer");
   }
-  return getCachedMeshyTask(payload.taskId, viewer.id);
+  return getCachedMeshyTask(payload.taskId, payload.jobKind, viewer.id);
 }
 
 function assertExternalTextureConsent(input: CreateTexturePreviewInput) {
@@ -213,11 +247,17 @@ function assertExternalTextureConsent(input: CreateTexturePreviewInput) {
   }
 }
 
-function assertProviderEnabled(provider: ExternalTextureProvider) {
+function assertJobEnabled(jobKind: TextureJobKind) {
   const capabilities = getTextureProviderCapabilities();
-  if (!capabilities.enabled || !capabilities.providers[provider]) {
+  const enabled =
+    jobKind === "EXTERIOR_PLAN"
+      ? capabilities.features.exteriorPlan
+      : jobKind === "SOURCE_MODEL"
+        ? capabilities.features.sourceModel
+        : capabilities.features.targetRetexture;
+  if (!capabilities.enabled || !enabled) {
     throw new ServiceUnavailableError(
-      `${provider} texture processing is not enabled for this deployment`,
+      `${jobKind} processing is not enabled for this deployment`,
       { retryable: false },
     );
   }
@@ -227,24 +267,28 @@ async function reserveTextureOperation(
   admin: SupabaseClient,
   input: CreateTexturePreviewInput,
   customerId: string,
-  styleBytes: Buffer,
+  provider: ExternalTextureProvider,
+  sourceAssetIds: readonly string[],
 ) {
   const storageKey = createHash("sha256")
     .update(
-      `${customerId}:${TEXTURE_OPERATION}:${input.provider}:${input.analysisId}`,
+      `${customerId}:${TEXTURE_OPERATION}:${provider}:${input.jobKind}:${input.analysisId}`,
     )
     .digest("hex");
-  const styleImageDigest = createHash("sha256").update(styleBytes).digest("hex");
+  const sourceAssetDigest = createHash("sha256")
+    .update(sourceAssetIds.join(":"))
+    .digest("hex");
   const requestHash = createHash("sha256")
     .update(
       JSON.stringify({
         analysisId: input.analysisId,
         customerId,
         idempotencyKey: input.idempotencyKey,
+        jobKind: input.jobKind,
         operation: TEXTURE_OPERATION,
         privacyNoticeVersion: input.privacyNoticeVersion,
-        provider: input.provider,
-        styleImageDigest,
+        provider,
+        sourceAssetDigest,
       }),
     )
     .digest("hex");
@@ -283,7 +327,7 @@ async function reserveTextureOperation(
   ) {
     throw new ConflictError(
       "TEXTURE_PROVIDER_LIMIT_REACHED",
-      "Only one paid texture request per provider and analysis is allowed in the demo",
+      "Only one paid texture request per job and analysis is allowed in the demo",
     );
   }
 
@@ -398,10 +442,19 @@ async function reserveDailyTextureBudget(
   requestHash: string,
 ): Promise<DailyQuotaReservation> {
   const utcDate = new Date().toISOString().slice(0, 10);
+  const provider = providerForJob(input.jobKind);
+  const userLimit =
+    input.jobKind === "SOURCE_MODEL"
+      ? MAX_DAILY_SOURCE_MODEL_REQUESTS
+      : MAX_DAILY_REQUESTS_PER_PROVIDER;
+  const globalLimit =
+    input.jobKind === "SOURCE_MODEL"
+      ? MAX_GLOBAL_DAILY_SOURCE_MODEL_REQUESTS
+      : MAX_GLOBAL_DAILY_REQUESTS_PER_PROVIDER;
   const userQuotaKey = await claimDailyQuotaSlot(
     admin,
-    `${customerId}:${input.provider}:${utcDate}`,
-    MAX_DAILY_REQUESTS_PER_PROVIDER,
+    `${customerId}:${provider}:${input.jobKind}:${utcDate}`,
+    userLimit,
     input,
     customerId,
     requestHash,
@@ -409,8 +462,8 @@ async function reserveDailyTextureBudget(
   try {
     const globalQuotaKey = await claimDailyQuotaSlot(
       admin,
-      `GLOBAL:${input.provider}:${utcDate}`,
-      MAX_GLOBAL_DAILY_REQUESTS_PER_PROVIDER,
+      `GLOBAL:${provider}:${input.jobKind}:${utcDate}`,
+      globalLimit,
       input,
       customerId,
       requestHash,
@@ -447,7 +500,7 @@ async function claimDailyQuotaSlot(
     }
   }
   throw new RateLimitError(
-    `Daily ${input.provider} texture preview limit reached`,
+    `Daily ${input.jobKind} preview limit reached`,
   );
 }
 
@@ -579,15 +632,20 @@ async function recordTextureConsent(
 async function createMeshyTaskResponse(
   analysisId: string,
   userId: string,
-  styleImage: TextureStyleImage,
+  jobKind: MeshyTaskKind,
+  imageUrls: readonly string[],
 ): Promise<TexturePreviewCreateResponse> {
-  const { taskId } = await new MeshyRetextureProvider().createTask(styleImage);
+  const { taskId } =
+    jobKind === "SOURCE_MODEL"
+      ? await new MeshySourceModelProvider().createTask(imageUrls)
+      : await new MeshyRetextureProvider().createTask(imageUrls);
   return {
+    jobKind,
     kind: "task",
     progress: 0,
     provider: "MESHY",
     status: "queued",
-    taskToken: createMeshyTaskToken({ analysisId, taskId, userId }),
+    taskToken: createMeshyTaskToken({ analysisId, jobKind, taskId, userId }),
   };
 }
 
@@ -599,7 +657,11 @@ function assertMeshyPollingAvailable() {
   }
 }
 
-async function getCachedMeshyTask(taskId: string, userId: string) {
+async function getCachedMeshyTask(
+  taskId: string,
+  jobKind: MeshyTaskKind,
+  userId: string,
+) {
   const now = Date.now();
   for (const [key, entry] of meshyPollCache) {
     if (entry.expiresAt <= now) meshyPollCache.delete(key);
@@ -609,12 +671,15 @@ async function getCachedMeshyTask(taskId: string, userId: string) {
   }
 
   const cacheKey = createHash("sha256")
-    .update(`${userId}:${taskId}`)
+    .update(`${userId}:${jobKind}:${taskId}`)
     .digest("hex");
   const cached = meshyPollCache.get(cacheKey);
   if (cached && cached.expiresAt > now) return cached.promise;
 
-  const promise = new MeshyRetextureProvider().getTask(taskId);
+  const promise =
+    jobKind === "SOURCE_MODEL"
+      ? new MeshySourceModelProvider().getTask(taskId)
+      : new MeshyRetextureProvider().getTask(taskId);
   meshyPollCache.set(cacheKey, {
     expiresAt: Number.POSITIVE_INFINITY,
     promise,
@@ -634,6 +699,7 @@ async function getCachedMeshyTask(taskId: string, userId: string) {
 
 function createMeshyTaskToken(input: {
   analysisId: string;
+  jobKind: MeshyTaskKind;
   taskId: string;
   userId: string;
 }) {
@@ -644,6 +710,10 @@ function createMeshyTaskToken(input: {
     }),
   ).toString("base64url");
   return `${payload}.${signTaskPayload(payload)}`;
+}
+
+function providerForJob(jobKind: TextureJobKind): ExternalTextureProvider {
+  return jobKind === "EXTERIOR_PLAN" ? "OPENAI" : "MESHY";
 }
 
 function verifyMeshyTaskToken(token: string) {

@@ -624,6 +624,23 @@
   color: var(--color-canvas);
 }
 
+.texturePipelineSteps li[data-state="active"] .textureStepNumber {
+  border-color: var(--color-ink);
+  color: var(--color-ink);
+}
+
+.texturePipelineSteps li[data-state="skipped"] {
+  background: color-mix(
+    in srgb,
+    var(--color-surface) 72%,
+    var(--color-canvas)
+  );
+}
+
+.texturePipelineSteps li[data-state="skipped"] .textureStepNumber {
+  border-style: dashed;
+}
+
 .texturePipelineSteps li[data-state="error"] {
   background: color-mix(
     in srgb,
@@ -645,6 +662,223 @@
 
 .textureError {
   color: var(--color-danger);
+}
+
+.exteriorSourceViews,
+.materialCandidates {
+  display: grid;
+  gap: var(--space-7);
+  padding: var(--space-9);
+  border: var(--border-thin) solid var(--color-divider);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+}
+
+.exteriorSourceViews > header,
+.materialCandidates > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-5);
+}
+
+.exteriorSourceViews > header > div,
+.materialCandidates > header > div {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.exteriorSourceViews h3,
+.materialCandidates h3 {
+  font-size: var(--font-size-control);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
+}
+
+.exteriorSourceViews > header p {
+  color: var(--color-ink-soft);
+  font-size: var(--font-size-caption);
+  line-height: var(--line-height-reading);
+}
+
+.exteriorSourceViews > header > span,
+.materialCandidates > header > span {
+  flex: none;
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-pill);
+  background: var(--color-canvas);
+  color: var(--color-ink-soft);
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-tight);
+}
+
+.exteriorViewList {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(var(--space-0), 1fr));
+  gap: var(--space-4);
+  margin: var(--space-0);
+  padding: var(--space-0);
+  list-style: none;
+}
+
+.exteriorViewList li {
+  display: grid;
+  grid-template-columns: var(--space-9) minmax(var(--space-0), 1fr);
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--touch-target-min);
+  padding: var(--space-4);
+  border: var(--border-hairline) solid var(--color-divider);
+  border-radius: var(--radius-control);
+  background: var(--color-canvas);
+}
+
+.exteriorViewList li > span {
+  display: grid;
+  grid-row: 1 / 3;
+  width: var(--space-9);
+  height: var(--space-9);
+  place-items: center;
+  border-radius: var(--radius-pill);
+  background: var(--color-ink);
+  color: var(--color-canvas);
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-semibold);
+}
+
+.exteriorViewList strong {
+  align-self: end;
+  color: var(--color-ink);
+  font-size: var(--font-size-label);
+  line-height: var(--line-height-tight);
+}
+
+.exteriorViewList small {
+  align-self: start;
+  color: var(--color-muted);
+  font-size: var(--font-size-caption);
+  line-height: var(--line-height-tight);
+}
+
+.exteriorViewNote,
+.materialWarnings {
+  color: var(--color-muted);
+  font-size: var(--font-size-caption);
+  line-height: var(--line-height-reading);
+}
+
+.exteriorProgress {
+  height: var(--space-2);
+  overflow: hidden;
+  border-radius: var(--radius-pill);
+  background: var(--color-divider);
+}
+
+.exteriorProgress > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--color-ink);
+  transition: width 240ms ease;
+}
+
+.materialCandidateGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(var(--space-0), 1fr));
+  gap: var(--space-4);
+}
+
+.materialCandidateCard {
+  display: grid;
+  align-content: start;
+  gap: var(--space-5);
+  min-width: var(--space-0);
+  padding: var(--space-5);
+  border: var(--border-hairline) solid var(--color-divider);
+  border-radius: var(--radius-control);
+  background: var(--color-canvas);
+}
+
+.materialCandidateCard > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.materialCandidateCard > header > div {
+  display: grid;
+  min-width: var(--space-0);
+  gap: var(--space-1);
+}
+
+.materialCandidateCard h4 {
+  color: var(--color-ink);
+  font-size: var(--font-size-label);
+  line-height: var(--line-height-tight);
+}
+
+.materialCandidateCard header small {
+  color: var(--color-muted);
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.04em;
+}
+
+.materialCandidateCard header span {
+  flex: none;
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  color: var(--color-ink-soft);
+  font-size: var(--font-size-caption);
+  line-height: var(--line-height-tight);
+}
+
+.materialCandidateCard[data-observation="PRESENT"] header span {
+  background: var(--color-ink);
+  color: var(--color-canvas);
+}
+
+.materialCandidateCard > p {
+  overflow-wrap: anywhere;
+  color: var(--color-ink-soft);
+  font-size: var(--font-size-caption);
+  line-height: var(--line-height-reading);
+}
+
+.materialCandidateCard dl,
+.materialCandidateCard dl > div {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.materialCandidateCard dl {
+  align-content: start;
+  gap: var(--space-4);
+  margin: var(--space-0);
+}
+
+.materialCandidateCard dt {
+  color: var(--color-muted);
+  font-size: var(--font-size-caption);
+  line-height: var(--line-height-tight);
+}
+
+.materialCandidateCard dd {
+  margin: var(--space-0);
+  overflow-wrap: anywhere;
+  color: var(--color-ink-soft);
+  font-size: var(--font-size-caption);
+  line-height: var(--line-height-reading);
+}
+
+.materialWarnings {
+  display: grid;
+  gap: var(--space-2);
+  margin: var(--space-0);
+  padding-left: var(--space-8);
 }
 
 .texturePreviewGrid {
@@ -741,6 +975,10 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(var(--space-0), 1fr));
   gap: var(--space-5);
+}
+
+.exteriorGenerateAction {
+  display: grid;
 }
 
 .textureProviderHint {
