@@ -82,6 +82,8 @@ export function TextureMockupStudio({ analysisId }: TextureMockupStudioProps) {
   const [pipelineRunning, setPipelineRunning] = useState(false);
   const [textureBlob, setTextureBlob] = useState<Blob | null>(null);
   const [textureEnabled, setTextureEnabled] = useState(true);
+  const [modelReady, setModelReady] = useState(false);
+  const [modelFailed, setModelFailed] = useState(false);
   const [viewerReady, setViewerReady] = useState(false);
   const pipelineInFlightRef = useRef(false);
   const pollInFlightRef = useRef<Record<MeshyTaskKind, boolean>>({
@@ -238,11 +240,18 @@ export function TextureMockupStudio({ analysisId }: TextureMockupStudioProps) {
         );
       } catch (error) {
         if (pollGenerationRef.current[jobKind] !== generation) return;
+        const taskTokenError = isMeshyTaskTokenError(error);
+        if (taskTokenError) {
+          providerTerminal = true;
+          window.sessionStorage.removeItem(
+            meshyTaskStorageKey(analysisId, jobKind),
+          );
+        }
         const message = readExternalError(error);
         updateTask(jobKind, {
           error: message,
           status: "failed",
-          terminal: providerTerminal,
+          terminal: providerTerminal || taskTokenError,
         });
         if (jobKind === "TARGET_RETEXTURE") {
           setExternalError(message);
@@ -419,6 +428,18 @@ export function TextureMockupStudio({ analysisId }: TextureMockupStudioProps) {
     [],
   );
 
+  const handleModelLoad = useCallback(() => {
+    setModelReady(true);
+    setModelFailed(false);
+  }, []);
+
+  const handleModelError = useCallback(() => {
+    setModelReady(false);
+    setModelFailed(true);
+    setViewerReady(false);
+    setApplicationState("error");
+  }, []);
+
   const overallProgress = useMemo(() => {
     if (viewerReady) return 100;
     if (targetTask.status === "running" || targetTask.status === "queued") {
@@ -434,13 +455,19 @@ export function TextureMockupStudio({ analysisId }: TextureMockupStudioProps) {
   const generationComplete = viewerReady && Boolean(textureBlob);
   const generationDisabled =
     !targetAvailable ||
+    !modelReady ||
+    modelFailed ||
     pipelineRunning ||
     targetTask.status === "queued" ||
     targetTask.status === "running" ||
     targetTask.terminal ||
     generationComplete;
   let generationButtonLabel = "외관 목업 생성";
-  if (pipelineRunning) {
+  if (modelFailed) {
+    generationButtonLabel = "3D 목업을 불러오지 못함";
+  } else if (!modelReady) {
+    generationButtonLabel = "3D 목업 준비 중";
+  } else if (pipelineRunning) {
     generationButtonLabel = `외관 목업 생성 중 ${overallProgress}%`;
   } else if (generationComplete) {
     generationButtonLabel = "외관 목업 생성 완료";
@@ -462,6 +489,9 @@ export function TextureMockupStudio({ analysisId }: TextureMockupStudioProps) {
     pipelineRunning,
   });
   const displayError =
+    (modelFailed
+      ? "3D 목업을 불러오지 못했습니다. 페이지를 새로고침해 다시 시도해 주세요."
+      : null) ??
     externalError ??
     (applicationState === "error" && textureBlob
       ? "외관 텍스처를 3D 목업에 적용하지 못했습니다."
@@ -478,6 +508,9 @@ export function TextureMockupStudio({ analysisId }: TextureMockupStudioProps) {
           data-visible={viewerReady}
         >
           <MockupViewer
+            key={analysisId}
+            onModelError={handleModelError}
+            onModelLoad={handleModelLoad}
             onTextureStateChange={handleTextureStateChange}
             textureBlob={textureEnabled ? (textureBlob ?? undefined) : undefined}
           />
@@ -486,14 +519,14 @@ export function TextureMockupStudio({ analysisId }: TextureMockupStudioProps) {
         {!viewerReady ? (
           <div className={styles.mockupPlaceholder}>
             <Image
-              alt="RE:BORN 여권 지갑 외관 목업 미리보기"
+              alt="RE:BORN 여권 지갑 제품 정면 이미지"
               fill
               priority
               sizes="(max-width: 768px) 100vw, 640px"
               src={PASSPORT_WALLET_FRONT_IMAGE}
             />
             {showProgress ? (
-              <div className={styles.mockupPlaceholderProgress} role="status">
+              <div className={styles.mockupPlaceholderProgress}>
                 <span>외관 목업 생성 중 {overallProgress}%</span>
                 <div
                   aria-label={`외관 목업 생성 진행률 ${overallProgress}%`}
@@ -597,9 +630,26 @@ function meshyTaskStatusLabel(task: MeshyTextureTaskResponse) {
 }
 
 function isConsentGuardError(error: unknown) {
-  if (error instanceof CustomerApiError && error.status === 403) return true;
   const message = error instanceof Error ? error.message.toLowerCase() : "";
-  return message.includes("consent") || message.includes("동의");
+  const matchesConsentMessage =
+    message.includes("consent") ||
+    message.includes("active external ai analysis and texture notice") ||
+    message.includes("동의");
+  if (error instanceof CustomerApiError) {
+    return error.status === 403 && matchesConsentMessage;
+  }
+  return matchesConsentMessage;
+}
+
+function isMeshyTaskTokenError(error: unknown) {
+  if (
+    !(error instanceof CustomerApiError) ||
+    (error.status !== 400 && error.status !== 403)
+  ) {
+    return false;
+  }
+  const message = error.message.toLowerCase();
+  return message.includes("texture task") || message.includes("texture asset");
 }
 
 function readExternalError(error: unknown) {
@@ -607,6 +657,9 @@ function readExternalError(error: unknown) {
   const normalized = message.toLowerCase();
   if (isConsentGuardError(error)) {
     return "분석 시 외관 목업 생성 동의를 확인하지 못했습니다.";
+  }
+  if (isMeshyTaskTokenError(error)) {
+    return "기존 외관 목업 작업의 복구 시간이 만료되었거나 작업을 인증할 수 없습니다.";
   }
   if (normalized.includes("credits")) {
     return "Meshy API credits가 부족합니다.";
