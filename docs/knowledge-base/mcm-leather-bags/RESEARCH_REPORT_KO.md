@@ -9,14 +9,14 @@
 1. **Visetos는 가죽명이 아니다.** MCM이 대표 Visetos를 설명할 때의 본체는 이탈리아산 코팅 캔버스이고, 가죽은 nappa·calf 등의 trim으로 결합되는 경우가 많다. 별도로 천연가죽에 Maxi Visetos를 엠보싱한 제품도 있다. [MCM Heritage](https://us.mcmworldwide.com/en_US/heritage-edit), `SRC-001`.
 2. 원형 시각 문법은 `MCM 문자 + 리본으로 묶인 월계수 + 다이아몬드`다. 월계수 잎은 좌 9개·우 8개라고 공식 설명된다.
 3. 패턴 계보는 `1976 Visetos → AW19 계절색 → 2021 Vintage Jacquard·Cubic → SS24 Lauretos → AW26 Disco Visetos·Diamond Jacquard 등`으로 확인된다.
-4. 다이아몬드 기원은 공식 자료끼리 충돌한다. 현행 설명은 바이에른 국기, 구 기업 페이지는 고대 프랑스 카드라고 한다. 둘 중 하나를 임의로 삭제할 수 없다.
+4. 다이아몬드 기원은 공식 자료끼리 충돌한다. 현행 글로벌 Heritage는 바이에른 국기, 현재 접근 가능한 지역 Corporate 페이지는 고대 프랑스 카드라고 한다. 지역 페이지의 콘텐츠 작성 시기는 확인되지 않았다.
 5. 가죽 관련 단어는 하나의 등급표가 아니다. `calf/lamb/goat`는 동물 종, `full grain`은 표면 구조, `nappa`는 부드러운 가죽 유형, `embossed/quilted/crushed/croco`는 표면·가공 효과다.
 6. 대표 제품은 본체·트림·안감·하드웨어가 다른 **복합 제품**이다. `microfiber with suede finish`는 동물성 suede가 아니다.
 7. 현재 제품 표본에서 확인된 완제품 생산국은 주로 한국과 이탈리아다. 소재 원산지, 제혁국, 최종 조립국은 서로 다른 값이다.
 8. MCM 공식 자료로 확인되는 패턴 구현법은 인쇄, 엠보싱, 자카드 직조, 퀼팅, 스터드, 도금이다.
 9. 2013년 MCM 주력 협력사 보도에는 재단, 배피, 기리메, 안감, 컴퓨터 미싱, 조립·봉제, 검품·포장이 나온다. 이는 당시 해당 공급사 스냅샷이며 현행 전 제품 공정이 아니다.
-10. MCM 2024 보고서는 2024년에 모든 가죽을 LWG Gold/Silver 제혁소에서 조달했다고 주장한다. 살아 있는 지속가능성 페이지의 최소 78% 문구와 충돌하므로 보고기간을 나눠 저장했다.
-11. LWG는 제품을 인증하는 제도가 아니라 **가죽 제조 시설을 감사**한다. “LWG 인증 가방”이라는 치환은 부정확하다. [LWG Claims Guidance](https://www.leatherworkinggroup.com/what-we-do/claims-guidance/), `SRC-017`.
+10. MCM 2024 보고서의 2024년 정확 보고값 `100%`와 살아 있는 지속가능성 페이지의 하한 `최소 78%`는 모순이 아니다. 보고기간과 값의 성격을 나눠 저장했다.
+11. LWG는 브랜드나 완제품 자체를 인증하지 않고 공급망 시설을 감사·인증한다. “LWG 인증 가방/브랜드”라는 치환은 부정확하다. [LWG Claims Guidance](https://www.leatherworkinggroup.com/what-we-do/claims-guidance/), `SRC-017`.
 12. 공개 자료에는 개별 SKU의 인쇄 잉크, 코팅 두께, 엠보싱 압력·온도, 실 규격·SPI, 접착제, 엣지코트 배합, 도금 두께, 패널·피할 두께, QC 허용치가 없다. 일반 공정을 MCM 고유 공정처럼 채우지 않았다.
 
 ## 2. 조사 범위와 판정법
@@ -72,7 +72,7 @@
 | 주장 | 상태 | 처리 |
 | --- | --- | --- |
 | 바이에른 국기의 lozenge | 현행 MCM 공식 서사 | `CLM-005`, `CONFLICT-001` |
-| 고대 프랑스 카드 문양 | 구 MCM Corporate 공식 서사 | `CLM-006`, `CONFLICT-001` |
+| 고대 프랑스 카드 문양 | 현재 접근 가능한 지역 MCM Corporate 서사, 콘텐츠 작성 시기 미상 | `CLM-006`, `CONFLICT-001` |
 
 패턴의 실제 시각 구조를 설명할 때는 사용할 수 있지만, 문화적 기원은 `contested`로 답해야 한다.
 
@@ -88,8 +88,8 @@
 | 표면 가공 | printed, embossed, croco-embossed, quilted, crushed, sequined, studded | croco-embossed는 악어가죽이 아님 |
 | 무두질 | metal-free, chrome-free 목표, 대부분 SKU 미표기 | metal-free와 chrome-free를 자동 동의어 처리하지 않음 |
 | 비가죽 본체 | Visetos coated canvas, jacquard, raffia jacquard, recycled nylon, MIRUM | 가죽 trim이 있어도 body 소재와 분리 |
-| 안감 | cotton twill, fabric, microfiber suede finish, faux nappa, lamb nappa | microfiber suede finish는 동물성 suede가 아님 |
-| 하드웨어 | 24K·18K·16K gold plated, cobalt, matte black, PVD 등 SKU별 표기 | 도금 두께·방식은 미공개 |
+| 안감 | cotton twill, fabric, microfiber suede finish, lamb nappa | microfiber suede finish는 동물성 suede가 아님 |
+| 하드웨어 | 24K gold plated, cobalt, matte black 등 SKU별 표기 | 도금 두께·방식은 미공개 |
 
 LWG의 2024 정의에서 full grain은 교정용 기계 가공으로 원래 grain을 제거하지 않은 가죽이고, Napa는 부드럽고 통염되며 가볍게 마감한 full-grain 계열 용어다. [LWG Definitions v1.1](https://www.leatherworkinggroup.com/fileadmin/uploads/lwg/Knowledge/LWG_List_of_Definitions_v1.1.pdf), `SRC-019`.
 
@@ -122,7 +122,7 @@ LWG의 2024 정의에서 full grain은 교정용 기계 가공으로 원래 grai
 | `MWREAAK01CO001` | Visetos canvas | Italian croco-embossed leather handle | diamond form | South Korea | `SRC-057` |
 | `MMLFSTA02BK001` | Italian recycled nylon | nappa, fabric | sling | South Korea | `SRC-058` |
 
-전체 부품 레코드는 `data/products.jsonl`에 있다. `null`은 “없음”이 아니라 “공개 근거로 확정하지 않음”이다.
+전체 부품 레코드는 `data/products.jsonl`에 있다. `attribute_state`의 `reported`, `unknown`, `not_applicable`을 함께 읽어야 하며, `null`만으로 “없음”을 뜻하지 않는다.
 
 ## 5. 코팅 캔버스: PVC·PU를 읽는 법
 
@@ -145,11 +145,11 @@ MCM 2024 보고서의 카테고리 로드맵은 다음과 같다.
 | Boston / Ella Boston | 2010-09에 이미 best-selling Boston | 부드러운 travel-trunk/Boston body, top handles, two-way zip, strap, hangtag | Boston의 최초 출시는 2010 이전이지만 정확한 날짜 미확인. Ella 현행 명칭과 분리 |
 | Stark | 2013-05-25 이전 존재 | backpack, front/side pockets, laptop sleeve, studded variants | 리테일러 재입고는 최초 출시일 아님 |
 | Liz / New Liz | 과거 Liz 정확한 출시 미확인 | lightweight/reversible shopper, side drawstring, detachable pouch | 현행 New Liz 구조만 고신뢰 |
-| Tracy | SS21 이전 존재 단서 | satchel, flap, Laurel Lock, zip compartment, convertible strap | 초기 시점은 보존 카탈로그 수준 |
-| Toni | 2021-07 이전 존재 단서 | small geometric shopper, top zip, short handles, detachable strap | 정확한 출시일 미확인 |
+| Tracy | SS21 최소 존재 단서 | satchel, flap, Laurel Lock, zip compartment, convertible strap | 제3자 보존 카탈로그 인덱스 `SRC-062`; 정확한 출시일 아님 |
+| Toni | 2021-07 최소 존재 단서 | small geometric shopper, top zip, short handles, detachable strap | 동시기 시장 보고서 `SRC-063`; 정확한 출시일 아님 |
 | Mode Travia | 2022-01-26 SS22 소개 | full-grain/nappa leather, logo hardware, trapezoid·satchel | 2023 New Mode Travia는 리뉴얼로 별도 저장 |
-| Aren | 2022-09 상표 우선권 이후 카탈로그 확인 | crossbody·tote·hobo·backpack을 포괄, modular 변형 | 상표일은 출시일 아님 |
-| Himmel | 2023-11-03 Lauretos 판매와 함께 확인 | Lauretos shopper/crossbody, diamond tag, pouch; MIRUM 변형 | 2019 동명 footwear 상표와 무관 |
+| Aren | 2022-09-09 상표 우선권 / 2023-01-11 카탈로그 최소 확인 | crossbody·tote·hobo·backpack을 포괄, modular 변형 | 제3자 법적 집계·카탈로그 `SRC-064`, `SRC-062`; 상표일은 출시일 아님 |
+| Himmel | 2023-11-03 Lauretos 판매와 함께 확인 | Lauretos shopper/crossbody, diamond tag, pouch; MIRUM 변형 | 공식 판매 `SRC-005`; 가방 상표 우선권 `SRC-065`와 동명 footwear를 구분 |
 | Pina | AW26 | circular Tambourine, stud pattern, tassel, belt/crossbody conversion | 해당 시즌 SKU 스냅샷 |
 
 초기 제품군 연대는 `launch_or_release`와 `first_verified_presence`를 나눴다. 상표 출원일은 제품이 이미 판매된 뒤일 수 있다.
@@ -199,18 +199,18 @@ UNIDO의 전통적인 leather-goods 순서는 다음과 같다.
 | 2022 스냅샷 | 원피: EU·한국·남아공·미국; 주요 제혁소: 스페인·이탈리아·한국; Tier-1: 이탈리아·한국 | MCM 2022 보고서, `SRC-010` |
 | 2023 실적 | 가죽 78%가 최소 LWG Silver 제혁소 | MCM 2024 보고서 |
 | 2024 실적 | 가죽 100%를 LWG Gold/Silver 제혁소에서 조달했다고 보고 | MCM 2024 보고서의 기업 주장 |
-| 2026-08-21 페이지 | 100% LWG manufacturer, 최소 78% Gold/Silver 문구 | 살아 있는 페이지 값으로 `CONFLICT-002`에 보존 |
+| 2026-08-21 페이지 | 100% LWG manufacturer, 최소 78% Gold/Silver 문구 | 기간 미표기 하한의 별도 살아 있는 페이지 스냅샷. 2024 정확값 100%와 논리적으로 양립 |
 | 2024 실적 | SS25 leather goods 18,690개 chrome-free, 범주의 2.24% | MCM 2024 보고서 pp. 55–56 |
 | 2025·2026·2030 | chrome-free 50%·80%·100% 목표 | 달성값 아님 |
 | 2024 실적 | MIRUM shopper 422개 | 기업 보고 수치 |
 | 2024 실적 | ECONYL 제품 150,119개; GOTS 공급자 유기 소재 제품 15,899개; 인증 재생 polyester 제품 4,820개 | 가방만의 수치로 축소 금지 |
 
-LWG가 실제로 인증하는 주체와 주장 범위는 [LWG FAQ](https://www.leatherworkinggroup.com/learn-more/faqs/)와 [Claims Framework v2.2](https://www.leatherworkinggroup.com/fileadmin/uploads/lwg/Claims_and_Labelling/LWG_Claims_Framework_V2.2.pdf)에 따라 저장했다. 시설 인증은 제품 전체의 환경성, 농장·도축장 동물복지, 완제품 화학 안전성을 포괄 보증하지 않는다.
+LWG가 실제로 인증하는 주체와 주장 범위는 [LWG FAQ](https://www.leatherworkinggroup.com/learn-more/faqs/)와 [Claims Framework v2.2](https://www.leatherworkinggroup.com/fileadmin/uploads/lwg/Claims_and_Labelling/LWG_Claims_Framework_V2.2.pdf)에 따라 저장했다. v2.2의 제품 로고 자격은 leather가 제품 중량의 50% 이상이고 제품에 쓰인 leather 전량이 LWG 인증 제혁소에서 제조됐을 것을 요구하지만, 소비자 문구에서 특정 제품 가죽이 인증 또는 특정 등급 제혁소산이라고 표현하는 것은 제한한다. 시설 인증은 제품 전체의 환경성, 농장·도축장 동물복지, 완제품 화학 안전성을 포괄 보증하지 않는다.
 
 ## 9. 법적 기록
 
 - 캐나다 `VISETOS` 문자상표 1829192: 2017-03-24 출원, 2019-08-12 등록, 2029-08-12 만료 예정. [CIPO](https://ised-isde.canada.ca/cipo/trademark-search/1829192), `SRC-026`.
-- 미국 반복 MCM·월계수·리본·다이아몬드 패턴 등록 4,843,488: 2015-11-03 등록. [USPTO TTAB filing](https://ttabvue.uspto.gov/ttabvue/ttabvue-91244898-OPP-1.pdf), `SRC-027`.
+- 미국 반복 MCM·월계수·리본·다이아몬드 패턴 등록 4,701,887: 2015-03-17 등록. 바로 다음 레코드의 4,843,488은 단일 MCM·월계수 로고 표장이므로 구분한다. [USPTO TTAB filing](https://ttabvue.uspto.gov/ttabvue/ttabvue-91244898-OPP-1.pdf), pp. 10–12, `SRC-027`.
 
 법적 등록일은 패턴의 최초 창작일이나 제품 출시일이 아니다. 시각 유사성만으로 정품 판정을 수행하는 근거도 아니다.
 
@@ -219,6 +219,8 @@ LWG가 실제로 인증하는 주체와 주장 범위는 [LWG FAQ](https://www.l
 - Visetos 기재 직물의 정확한 섬유 조성, 직조 조직, 중량
 - 개별 Visetos SKU의 PVC/PU 조성, 혼합비, 코팅 두께·도포 횟수
 - Visetos 인쇄 방식, 잉크, 인쇄와 topcoat의 순서
+- 반복 타일의 실측 치수, 모티프 간격·배율, 패널별 방향·배치, 봉제선 패턴 정합 규칙
+- 정품 제작용 벡터 마스터, Pantone·잉크값
 - 개별 leather SKU의 chrome·vegetable·aldehyde·metal-free tannage
 - 엠보싱 금형 깊이, 온도, 압력, dwell time
 - 실 소재·호수·SPI, 손봉제·기계봉제 여부
@@ -251,12 +253,13 @@ LWG가 실제로 인증하는 주체와 주장 범위는 [LWG FAQ](https://www.l
 | `embossed leather` | 엠보싱 가죽 | full-grain, 특정 동물 종 |
 | `microfiber with suede finish` | 스웨이드 촉감의 마이크로화이버 | 동물성 suede leather |
 | `Made in Italy` | 완제품 생산국 Italy | 원피·제혁·모든 소재가 Italy |
-| `LWG Silver` 제품 문구 | 인증 제혁소 조달 claim | 제품 자체의 LWG 인증·전체 친환경성 |
+| `LWG Silver` 제품 문구 | 페이지의 원문 마케팅 문구로 보존하고 적격성·규정 준수는 `unknown` | 인증 제혁소 조달 확정, 제품·브랜드 자체의 LWG 인증·전체 친환경성 |
 
 ### 이미지 분석용 표현
 
 - 패턴이 보이면 `visually consistent with` 또는 `후보`로 표현한다.
 - Visetos 유사 프린트만으로 소재 수지, 진위, 연식, 정확한 SKU를 확정하지 않는다.
+- 공개 로고·상표 설명만으로 정품 반복 타일, 벡터 마스터, 정확한 모티프 비율·간격·색상값을 재구성하지 않는다.
 - 그레인·광택·주름은 표면 관찰값으로 저장하고 tannage·동물 종으로 바로 변환하지 않는다.
 - 손상 사진에서 구조를 추론할 때 `visible`, `likely`, `unknown`을 분리한다.
 
@@ -264,4 +267,4 @@ LWG가 실제로 인증하는 주체와 주장 범위는 [LWG FAQ](https://www.l
 
 이 버전은 공개 웹에서 확인 가능한 정보의 폭넓은 스냅샷이지 브랜드 내부 PLM·BOM·CAD·공장 SOP의 전수본이 아니다. MCM의 지역별 동적 페이지와 2024 보고서 원문은 직접 비인증 요청에서 Cloudflare 차단이 발생해 검색 인덱스·공개 렌더 경로와 페이지 위치로 교차 확인했다.
 
-업데이트 시에는 기존 값을 덮어쓰기보다 새 `source_id`, `observed_at`, `valid_time`을 추가한다. 수치가 달라지면 `conflict_group_id`로 묶고 어떤 값이 최신 보고기간인지 설명한다.
+업데이트 시에는 기존 값을 덮어쓰기보다 새 `source_id`, `observed_at`, `valid_time`을 추가한다. 수치가 다르더라도 상·하한, 보고기간, 범위가 양립 가능한지 먼저 판정하고, 서로 양립할 수 없는 주장만 `conflict_group_id`로 묶는다.

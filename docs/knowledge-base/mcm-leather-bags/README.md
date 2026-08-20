@@ -39,10 +39,13 @@
 - `valid_time`: 주장 자체가 가리키는 연도·시즌·기간
 - `published_at`: 출처가 실제 공개된 날짜. 확인할 수 없으면 `null`
 - `observed_at`: 조사자가 공개 페이지를 마지막으로 확인한 날짜
-- `date_precision`: `day`, `month`, `year`, `season`, `range`, `unknown`
-- `temporal_status`: 현재 스냅샷, 역사적 스냅샷, 목표, 최초 확인일 등을 구분
+- 출처의 `date_precision`: `day`, `month`, `year`, `unknown`
+- claim의 `valid_time.precision`: `day`, `month`, `year`, `season`, `range`, `unknown`
+- claim의 `valid_time.status`: 현재·역사적 스냅샷, 보고기간, 목표, 법적 사건, 표준 버전, 최초 확인일 등을 구분
 
-제품 페이지처럼 발행일이 없는 살아 있는 문서는 `published_at: null`을 유지하고 `observed_at`만 기록한다. 상표 출원일이나 최초 검색일은 제품 출시일로 승격하지 않는다.
+월·연도까지만 알려진 `published_at`은 각각 그 달 또는 해의 첫날을 정규화 앵커로 저장하고 `date_precision`으로 정확도를 제한한다. 시즌 claim은 시즌명이 속한 달력 연도의 시작·끝을 검색용 외피로 기록하며, 이 범위를 실제 판매기간으로 해석하지 않는다. 제품 페이지처럼 발행일이 없는 살아 있는 문서는 `published_at: null`을 유지하고 `observed_at`만 기록한다. 상표 출원일이나 최초 검색일은 제품 출시일로 승격하지 않는다.
+
+제품은 `product_snapshot`이며 `(style_number, market, observed_at)` 조합으로 구분한다. 부품 속성의 `attribute_state`는 `reported`, `unknown`, `not_applicable`을 분리하므로 `null` 하나를 모두 같은 의미로 읽지 않는다.
 
 ## 근거 모델
 
@@ -86,8 +89,9 @@
 
 ## 대표적인 충돌·보류 규칙
 
-- MCM 다이아몬드 모티프의 기원은 현행 공식 페이지의 `바이에른 국기`와 구 공식 기업 페이지의 `고대 프랑스 카드`가 충돌한다. 두 값을 모두 유지한다.
-- 2024 보고서는 2024년 가죽을 100% LWG Gold/Silver 제혁소에서 조달했다고 주장하지만, 현재 지속가능성 페이지에는 최소 78%라는 값이 함께 남아 있다. `conflict_group_id`로 묶고 덮어쓰지 않는다.
+- MCM 다이아몬드 모티프의 기원은 현행 글로벌 Heritage 페이지의 `바이에른 국기`와 현재 접근 가능한 지역 Corporate 페이지의 `고대 프랑스 카드`가 충돌한다. 지역 페이지의 콘텐츠 작성 시기는 확인되지 않았으므로 두 값을 모두 유지한다.
+- MCM Heritage가 Haus가 `Leather Working Group certification`을 받은 것처럼 표현한 문구와, 브랜드·완제품 자체를 LWG-certified라고 부르지 못하게 하는 LWG 지침을 `CONFLICT-002`로 함께 보존한다.
+- 2024 보고서의 정확 보고값 `100%`와 현재 지속가능성 페이지의 하한 `최소 78%`는 논리적 충돌이 아니다. 보고기간과 값의 성격이 달라 각각 보존한다.
 - 2024 소재 로드맵은 코팅 캔버스를 과거 표준 PVC, 2024년 lower-impact PU로 설명하지만 개별 SKU의 코팅 수지는 보통 공개하지 않는다.
 - 일반 공정은 가능한 공정 지식일 뿐, 개별 MCM SKU의 확정 라우팅이나 BOM이 아니다.
 

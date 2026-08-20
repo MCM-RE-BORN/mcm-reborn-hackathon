@@ -34,7 +34,8 @@
             "reporting_period",
             "target",
             "legal_event",
-            "timeless_definition",
+            "standard_version",
+            "reference_snapshot",
             "unknown"
           ]
         }
@@ -85,7 +86,8 @@
             "industry_press",
             "major_press",
             "retailer_or_catalog",
-            "legal_filing"
+            "legal_filing",
+            "legal_aggregator"
           ]
         },
         "authority_grade": { "enum": ["A", "S", "B", "C", "D"] },
@@ -94,7 +96,13 @@
         "observed_at": { "type": "string", "format": "date" },
         "language": { "type": "string", "pattern": "^[a-z]{2}(-[A-Z]{2})?$" },
         "access_status": {
-          "enum": ["open", "indexed_only", "pdf_indexed", "blocked_direct_fetch"]
+          "enum": [
+            "open",
+            "indexed_only",
+            "pdf_indexed",
+            "blocked_direct_fetch",
+            "indexed_and_direct_fetch_blocked"
+          ]
         },
         "notes": { "type": "string" }
       }
@@ -174,8 +182,52 @@
       "additionalProperties": false,
       "required": [
         "role",
+        "material_class",
         "material_label",
         "animal_species",
+        "leather_type",
+        "grain_structure",
+        "surface_finish",
+        "tannage",
+        "substrate_fiber",
+        "coating_polymer",
+        "material_origin_country",
+        "attribute_state"
+      ],
+      "properties": {
+        "role": {
+          "enum": ["body", "trim", "lining", "handle", "strap", "reinforcement", "hardware", "decoration", "pouch"]
+        },
+        "material_class": {
+          "enum": [
+            "leather",
+            "coated_canvas",
+            "textile",
+            "metal",
+            "mixed",
+            "alternative_material",
+            "decoration",
+            "unknown"
+          ]
+        },
+        "material_label": { "type": "string", "minLength": 1 },
+        "animal_species": { "type": ["string", "null"] },
+        "leather_type": { "type": ["string", "null"] },
+        "grain_structure": { "type": ["string", "null"] },
+        "surface_finish": { "type": ["string", "null"] },
+        "tannage": { "type": ["string", "null"] },
+        "substrate_fiber": { "type": ["string", "null"] },
+        "coating_polymer": { "type": ["string", "null"] },
+        "material_origin_country": { "type": ["string", "null"] },
+        "attribute_state": { "$ref": "#/$defs/attributeState" }
+      }
+    },
+    "attributeState": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "animal_species",
+        "leather_type",
         "grain_structure",
         "surface_finish",
         "tannage",
@@ -184,17 +236,14 @@
         "material_origin_country"
       ],
       "properties": {
-        "role": {
-          "enum": ["body", "trim", "lining", "handle", "strap", "reinforcement", "hardware", "decoration", "pouch"]
-        },
-        "material_label": { "type": "string", "minLength": 1 },
-        "animal_species": { "type": ["string", "null"] },
-        "grain_structure": { "type": ["string", "null"] },
-        "surface_finish": { "type": ["string", "null"] },
-        "tannage": { "type": ["string", "null"] },
-        "substrate_fiber": { "type": ["string", "null"] },
-        "coating_polymer": { "type": ["string", "null"] },
-        "material_origin_country": { "type": ["string", "null"] }
+        "animal_species": { "enum": ["reported", "unknown", "not_applicable"] },
+        "leather_type": { "enum": ["reported", "unknown", "not_applicable"] },
+        "grain_structure": { "enum": ["reported", "unknown", "not_applicable"] },
+        "surface_finish": { "enum": ["reported", "unknown", "not_applicable"] },
+        "tannage": { "enum": ["reported", "unknown", "not_applicable"] },
+        "substrate_fiber": { "enum": ["reported", "unknown", "not_applicable"] },
+        "coating_polymer": { "enum": ["reported", "unknown", "not_applicable"] },
+        "material_origin_country": { "enum": ["reported", "unknown", "not_applicable"] }
       }
     },
     "product": {
@@ -207,22 +256,29 @@
         "name",
         "family",
         "collection_or_season",
+        "market",
         "pattern_family",
         "silhouette",
         "components",
         "product_made_in",
         "observed_at",
         "source_ids",
+        "evidence",
         "confidence",
         "notes"
       ],
       "properties": {
-        "record_type": { "const": "product" },
-        "product_id": { "type": "string", "pattern": "^PRD-[0-9]{3}$" },
+        "record_type": { "const": "product_snapshot" },
+        "product_id": {
+          "type": "string",
+          "pattern": "^PRD-[0-9]{3}$",
+          "description": "Unique snapshot record ID; style_number may repeat across market and observed_at."
+        },
         "style_number": { "type": "string", "minLength": 1 },
         "name": { "type": "string", "minLength": 1 },
         "family": { "type": ["string", "null"] },
         "collection_or_season": { "type": ["string", "null"] },
+        "market": { "type": "string", "pattern": "^[A-Z]{2}$" },
         "pattern_family": { "type": ["string", "null"] },
         "silhouette": { "type": "string", "minLength": 1 },
         "components": {
@@ -234,6 +290,11 @@
           "type": "array",
           "items": { "type": "string", "minLength": 1 }
         },
+        "composition_claims": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "minItems": 1
+        },
         "product_made_in": { "type": ["string", "null"] },
         "observed_at": { "type": "string", "format": "date" },
         "source_ids": {
@@ -241,6 +302,11 @@
           "items": { "type": "string", "pattern": "^SRC-[0-9]{3}$" },
           "minItems": 1,
           "uniqueItems": true
+        },
+        "evidence": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/evidenceRef" },
+          "minItems": 1
         },
         "confidence": { "enum": ["high", "medium", "low", "unknown"] },
         "notes": { "type": "string" }

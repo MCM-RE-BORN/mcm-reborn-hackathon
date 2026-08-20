@@ -131,7 +131,7 @@
     "date_precision": "unknown",
     "observed_at": "2026-08-21",
     "language": "en",
-    "access_status": "blocked_direct_fetch",
+    "access_status": "indexed_and_direct_fetch_blocked",
     "notes": "검색 인덱스와 공개 PDF 페이지 위치로 확인. 보고기간은 2024, MCM 타임라인은 2025 공개로 표시하나 정확한 공개일은 미확인."
   },
   {
@@ -162,7 +162,7 @@
     "observed_at": "2026-08-21",
     "language": "en-US",
     "access_status": "open",
-    "notes": "지속가능성 연혁과 현행 LWG 조달 문구. 보고서와 값이 충돌할 수 있는 살아 있는 페이지."
+    "notes": "지속가능성 연혁과 현행 LWG 조달 문구. 기간 미표기 하한은 보고서의 기간별 정확값과 별도 스냅샷으로 해석한다."
   },
   {
     "record_type": "source",
@@ -322,12 +322,12 @@
     "url": "https://www.leatherworkinggroup.com/fileadmin/uploads/lwg/Claims_and_Labelling/LWG_Claims_Framework_V2.2.pdf",
     "source_class": "standards_body",
     "authority_grade": "A",
-    "published_at": null,
-    "date_precision": "unknown",
+    "published_at": "2022-03-01",
+    "date_precision": "month",
     "observed_at": "2026-08-21",
     "language": "en",
     "access_status": "pdf_indexed",
-    "notes": "제품 주장·라벨 기준과 LWG-certified tannery라는 올바른 인증 주체."
+    "notes": "March 2022. 제품 로고의 leather 50% 중량·leather 전량 인증 제혁소 요건, 제품별 인증·등급·특정 출처 표현 금지와 승인 문구를 함께 규정한다."
   },
   {
     "record_type": "source",
@@ -402,7 +402,7 @@
     "observed_at": "2026-08-21",
     "language": "en",
     "access_status": "pdf_indexed",
-    "notes": "반복 패턴 구성과 등록번호를 담은 법적 제출물. 당사자 주장과 등록 사실을 구분해야 한다."
+    "notes": "반복 패턴 등록 4,701,887(2015-03-17)은 PDF pp. 10–11, 다음 단일 로고 표장 4,843,488은 pp. 11–12에 나온다. 당사자 주장과 등록 사실을 구분해야 한다."
   },
   {
     "record_type": "source",
@@ -888,7 +888,7 @@
     "record_type": "source",
     "source_id": "SRC-060",
     "publisher": "MCM UK",
-    "title": "Corporate Legacy",
+    "title": "Corporate",
     "url": "https://uk.mcmworldwide.com/en_GB/ca-corporate/ca-corporate.html",
     "source_class": "mcm_official",
     "authority_grade": "S",
@@ -897,7 +897,7 @@
     "observed_at": "2026-08-21",
     "language": "en-GB",
     "access_status": "open",
-    "notes": "다이아몬드가 고대 프랑스 카드에서 유래했다는 구형 공식 문구. 현행 Heritage의 바이에른 국기 주장과 충돌."
+    "notes": "2026-08-21 현재 접근 가능한 지역 Corporate 페이지. 콘텐츠 작성 시기는 미상이며, 다이아몬드가 고대 프랑스 카드에서 유래했다는 문구가 글로벌 Heritage의 바이에른 국기 주장과 충돌한다."
   },
   {
     "record_type": "source",
@@ -913,5 +913,125 @@
     "language": "en-US",
     "access_status": "open",
     "notes": "2026-08-21 현재 267개 결과를 보인 동적 카탈로그. 수량과 재고는 영속 사실이 아니다."
+  },
+  {
+    "record_type": "source",
+    "source_id": "SRC-062",
+    "publisher": "PP Glam",
+    "title": "MCM E-Catalog Archive Index",
+    "url": "https://ppglam.com/mcm_e-catalog/",
+    "source_class": "retailer_or_catalog",
+    "authority_grade": "C",
+    "published_at": null,
+    "date_precision": "unknown",
+    "observed_at": "2026-08-21",
+    "language": "en",
+    "access_status": "open",
+    "notes": "SS21 Tracy와 2023-01 Aren 파일명의 최소 존재 시점을 보조하는 제3자 카탈로그 인덱스. 출시일 근거가 아니다."
+  },
+  {
+    "record_type": "source",
+    "source_id": "SRC-063",
+    "publisher": "Re-Hub",
+    "title": "The Rise of High-end Luxury E-commerce in China",
+    "url": "https://uploads-ssl.webflow.com/64d98acaa41eea2aec8ccbed/64d98acaa41eea2aec8cd004_Re-Hub%20The%20Rise%20of%20High-end%20Luxury%20e-commerce%20in%20China%20July%202021%281%29.pdf",
+    "source_class": "industry_press",
+    "authority_grade": "B",
+    "published_at": "2021-07-01",
+    "date_precision": "month",
+    "observed_at": "2026-08-21",
+    "language": "en",
+    "access_status": "pdf_indexed",
+    "notes": "July 2021 시장 보고서에 Toni Visetos mini shopper가 등장한다. Toni 최초 출시일은 아니다."
+  },
+  {
+    "record_type": "source",
+    "source_id": "SRC-064",
+    "publisher": "Justia Trademarks",
+    "title": "AREN trademark 79362712",
+    "url": "https://trademarks.justia.com/793/62/aren-79362712.html",
+    "source_class": "legal_aggregator",
+    "authority_grade": "C",
+    "published_at": null,
+    "date_precision": "unknown",
+    "observed_at": "2026-08-21",
+    "language": "en",
+    "access_status": "open",
+    "notes": "AREN 표장의 2022-09-09 우선권·2022-10-10 출원을 보여 주는 제3자 법적 레코드 집계. 제품 출시일이 아니다."
+  },
+  {
+    "record_type": "source",
+    "source_id": "SRC-065",
+    "publisher": "Justia Trademarks",
+    "title": "HIMMEL trademark 79393297",
+    "url": "https://trademarks.justia.com/793/93/himmel-79393297.html",
+    "source_class": "legal_aggregator",
+    "authority_grade": "C",
+    "published_at": null,
+    "date_precision": "unknown",
+    "observed_at": "2026-08-21",
+    "language": "en",
+    "access_status": "open",
+    "notes": "가방 관련 HIMMEL 표장의 2023-08-23 우선권·2024-02-08 출원을 보여 주는 제3자 집계. 2019 동명 신발류 표장과 구분한다."
+  },
+  {
+    "record_type": "source",
+    "source_id": "SRC-066",
+    "publisher": "MCM",
+    "title": "Travia Studded Shoulder Bag in Crushed Leather — MWSDALM01BK001",
+    "url": "https://us.mcmworldwide.com/en_US/women/bags/shoulder-crossbody-bags/travia-studded-shoulder-bag-in-crushed-leather/MWSDALM01BK001.html",
+    "source_class": "mcm_official",
+    "authority_grade": "S",
+    "published_at": null,
+    "date_precision": "unknown",
+    "observed_at": "2026-08-21",
+    "language": "en-US",
+    "access_status": "open",
+    "notes": "crushed lambskin, distressed finish와 bandana-inspired studs의 공식 SKU 근거."
+  },
+  {
+    "record_type": "source",
+    "source_id": "SRC-067",
+    "publisher": "MCM",
+    "title": "Aren Bags",
+    "url": "https://us.mcmworldwide.com/en_US/mcm-icons/aren-bags",
+    "source_class": "mcm_official",
+    "authority_grade": "S",
+    "published_at": null,
+    "date_precision": "unknown",
+    "observed_at": "2026-08-21",
+    "language": "en-US",
+    "access_status": "open",
+    "notes": "Aren 제품군의 현행 공식 구조·소재 변형 설명."
+  },
+  {
+    "record_type": "source",
+    "source_id": "SRC-068",
+    "publisher": "MCM",
+    "title": "Tracy Shoulder Bag in Visetos — MWSCAXT01BK001",
+    "url": "https://us.mcmworldwide.com/en_US/women/bags/shoulder-crossbody-bags/tracy-shoulder-bag-in-visetos/MWSCAXT01BK001.html",
+    "source_class": "mcm_official",
+    "authority_grade": "S",
+    "published_at": null,
+    "date_precision": "unknown",
+    "observed_at": "2026-08-21",
+    "language": "en-US",
+    "access_status": "open",
+    "notes": "Visetos, Vachetta, Laurel Lock과 수납 구조의 현행 공식 SKU."
+  },
+  {
+    "record_type": "source",
+    "source_id": "SRC-069",
+    "publisher": "MCM",
+    "title": "Toni Top-Zip Shopper in Visetos — MWPFAMT07K8001",
+    "url": "https://us.mcmworldwide.com/en_US/women/bags/totes-shoppers/toni-top-zip-shopper-in-visetos/MWPFAMT07K8001.html",
+    "source_class": "mcm_official",
+    "authority_grade": "S",
+    "published_at": null,
+    "date_precision": "unknown",
+    "observed_at": "2026-08-21",
+    "language": "en-US",
+    "access_status": "open",
+    "notes": "Toni의 top zip, handles, detachable strap과 Visetos 구조의 현행 공식 SKU."
   }
 ]

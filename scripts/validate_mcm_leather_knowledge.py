@@ -30,6 +30,9 @@ SOURCE_ID_RE = re.compile(r"^SRC-[0-9]{3}$")
 CLAIM_ID_RE = re.compile(r"^CLM-[0-9]{3}$")
 PRODUCT_ID_RE = re.compile(r"^PRD-[0-9]{3}$")
 CONFLICT_ID_RE = re.compile(r"^CONFLICT-[0-9]{3}$")
+ISO_DATE_RE = re.compile(r"^[0-9]{4}-[0-9]{2}-[0-9]{2}$")
+LANGUAGE_RE = re.compile(r"^[a-z]{2}(-[A-Z]{2})?$")
+MARKET_RE = re.compile(r"^[A-Z]{2}$")
 
 SOURCE_REQUIRED = {
     "record_type",
@@ -70,19 +73,34 @@ PRODUCT_REQUIRED = {
     "name",
     "family",
     "collection_or_season",
+    "market",
     "pattern_family",
     "silhouette",
     "components",
     "product_made_in",
     "observed_at",
     "source_ids",
+    "evidence",
     "confidence",
     "notes",
 }
 COMPONENT_REQUIRED = {
     "role",
+    "material_class",
     "material_label",
     "animal_species",
+    "leather_type",
+    "grain_structure",
+    "surface_finish",
+    "tannage",
+    "substrate_fiber",
+    "coating_polymer",
+    "material_origin_country",
+    "attribute_state",
+}
+ATTRIBUTE_FIELDS = {
+    "animal_species",
+    "leather_type",
     "grain_structure",
     "surface_finish",
     "tannage",
@@ -100,6 +118,20 @@ FACT_SCOPES = {
     "industry_general",
     "legal_record",
 }
+TOPICS = {
+    "history",
+    "pattern",
+    "design",
+    "material",
+    "leather_type",
+    "construction",
+    "process",
+    "sourcing",
+    "sustainability",
+    "care",
+    "legal",
+    "unknown",
+}
 EVIDENCE_MODES = {"direct", "derived", "inferred", "unknown"}
 CONFIDENCE_LEVELS = {"high", "medium", "low", "unknown"}
 AI_USES = {"grounding", "context_only", "negative_constraint", "exclude"}
@@ -113,9 +145,54 @@ TIME_STATUSES = {
     "reporting_period",
     "target",
     "legal_event",
-    "timeless_definition",
+    "standard_version",
+    "reference_snapshot",
     "unknown",
 }
+SOURCE_CLASSES = {
+    "mcm_official",
+    "mcm_report",
+    "group_official",
+    "public_registry",
+    "standards_body",
+    "intergovernmental",
+    "industry_press",
+    "major_press",
+    "retailer_or_catalog",
+    "legal_filing",
+    "legal_aggregator",
+}
+AUTHORITY_GRADES = {"A", "S", "B", "C", "D"}
+SOURCE_DATE_PRECISIONS = {"day", "month", "year", "unknown"}
+ACCESS_STATUSES = {
+    "open",
+    "indexed_only",
+    "pdf_indexed",
+    "blocked_direct_fetch",
+    "indexed_and_direct_fetch_blocked",
+}
+COMPONENT_ROLES = {
+    "body",
+    "trim",
+    "lining",
+    "handle",
+    "strap",
+    "reinforcement",
+    "hardware",
+    "decoration",
+    "pouch",
+}
+MATERIAL_CLASSES = {
+    "leather",
+    "coated_canvas",
+    "textile",
+    "metal",
+    "mixed",
+    "alternative_material",
+    "decoration",
+    "unknown",
+}
+ATTRIBUTE_STATES = {"reported", "unknown", "not_applicable"}
 
 
 def load_json(path: Path, errors: list[str]) -> Any:
@@ -156,6 +233,9 @@ def check_date(value: Any, label: str, errors: list[str], allow_null: bool = Fal
     if not isinstance(value, str):
         errors.append(f"{label}: expected ISO date string")
         return
+    if not ISO_DATE_RE.fullmatch(value):
+        errors.append(f"{label}: expected strict YYYY-MM-DD date, got {value!r}")
+        return
     try:
         date.fromisoformat(value)
     except ValueError:
@@ -170,8 +250,23 @@ def check_required(
         errors.append(f"{label}: missing fields: {', '.join(missing)}")
 
 
+def check_allowed(
+    record: dict[str, Any], allowed: set[str], label: str, errors: list[str]
+) -> None:
+    unexpected = sorted(record.keys() - allowed)
+    if unexpected:
+        errors.append(f"{label}: unexpected fields: {', '.join(unexpected)}")
+
+
+def check_non_empty_string(value: Any, label: str, errors: list[str]) -> None:
+    if not isinstance(value, str) or not value.strip():
+        errors.append(f"{label}: expected non-empty string")
+
+
 def check_unique(values: list[Any], label: str, errors: list[str]) -> None:
-    duplicates = sorted(value for value, count in Counter(values).items() if count > 1)
+    duplicates = sorted(
+        (value for value, count in Counter(values).items() if count > 1), key=str
+    )
     if duplicates:
         errors.append(f"{label}: duplicate values: {', '.join(map(str, duplicates))}")
 
@@ -188,6 +283,7 @@ def validate_sources(sources: Any, errors: list[str]) -> set[str]:
             errors.append(f"{label}: expected object")
             continue
         check_required(source, SOURCE_REQUIRED, label, errors)
+        check_allowed(source, SOURCE_REQUIRED, label, errors)
         source_id = source.get("source_id")
         if not isinstance(source_id, str) or not SOURCE_ID_RE.fullmatch(source_id):
             errors.append(f"{label}: invalid source_id {source_id!r}")
@@ -195,6 +291,8 @@ def validate_sources(sources: Any, errors: list[str]) -> set[str]:
             source_ids.append(source_id)
         if source.get("record_type") != "source":
             errors.append(f"{label}: record_type must be 'source'")
+        check_non_empty_string(source.get("publisher"), f"{label}.publisher", errors)
+        check_non_empty_string(source.get("title"), f"{label}.title", errors)
         url = source.get("url")
         if not isinstance(url, str):
             errors.append(f"{label}: url must be a string")
@@ -204,6 +302,25 @@ def validate_sources(sources: Any, errors: list[str]) -> set[str]:
                 errors.append(f"{label}: url must be an absolute HTTPS URL")
         check_date(source.get("published_at"), f"{label}.published_at", errors, True)
         check_date(source.get("observed_at"), f"{label}.observed_at", errors)
+        if source.get("source_class") not in SOURCE_CLASSES:
+            errors.append(f"{label}: invalid source_class {source.get('source_class')!r}")
+        if source.get("authority_grade") not in AUTHORITY_GRADES:
+            errors.append(
+                f"{label}: invalid authority_grade {source.get('authority_grade')!r}"
+            )
+        if source.get("date_precision") not in SOURCE_DATE_PRECISIONS:
+            errors.append(
+                f"{label}: invalid date_precision {source.get('date_precision')!r}"
+            )
+        if source.get("access_status") not in ACCESS_STATUSES:
+            errors.append(
+                f"{label}: invalid access_status {source.get('access_status')!r}"
+            )
+        language = source.get("language")
+        if not isinstance(language, str) or not LANGUAGE_RE.fullmatch(language):
+            errors.append(f"{label}: invalid language tag {language!r}")
+        if not isinstance(source.get("notes"), str):
+            errors.append(f"{label}: notes must be a string")
 
     check_unique(source_ids, "source_id", errors)
     return set(source_ids)
@@ -214,6 +331,8 @@ def validate_time(value: Any, label: str, errors: list[str]) -> None:
         errors.append(f"{label}: expected object")
         return
     check_required(value, TIME_REQUIRED, label, errors)
+    check_allowed(value, TIME_REQUIRED, label, errors)
+    check_non_empty_string(value.get("label"), f"{label}.label", errors)
     check_date(value.get("start"), f"{label}.start", errors, True)
     check_date(value.get("end"), f"{label}.end", errors, True)
     start = value.get("start")
@@ -235,6 +354,7 @@ def validate_claims(
     for index, claim in enumerate(claims, start=1):
         label = f"claim[{index}]"
         check_required(claim, CLAIM_REQUIRED, label, errors)
+        check_allowed(claim, CLAIM_REQUIRED, label, errors)
         claim_id = claim.get("claim_id")
         if not isinstance(claim_id, str) or not CLAIM_ID_RE.fullmatch(claim_id):
             errors.append(f"{label}: invalid claim_id {claim_id!r}")
@@ -242,6 +362,13 @@ def validate_claims(
             claim_ids.append(claim_id)
         if claim.get("record_type") != "claim":
             errors.append(f"{label}: record_type must be 'claim'")
+        if claim.get("topic") not in TOPICS:
+            errors.append(f"{label}: invalid topic {claim.get('topic')!r}")
+        check_non_empty_string(claim.get("subject"), f"{label}.subject", errors)
+        check_non_empty_string(claim.get("claim_ko"), f"{label}.claim_ko", errors)
+        check_non_empty_string(
+            claim.get("claim_owner"), f"{label}.claim_owner", errors
+        )
         if claim.get("fact_scope") not in FACT_SCOPES:
             errors.append(f"{label}: invalid fact_scope {claim.get('fact_scope')!r}")
         if claim.get("evidence_mode") not in EVIDENCE_MODES:
@@ -263,6 +390,7 @@ def validate_claims(
                     errors.append(f"{evidence_label}: expected object")
                     continue
                 check_required(item, EVIDENCE_REQUIRED, evidence_label, errors)
+                check_allowed(item, EVIDENCE_REQUIRED, evidence_label, errors)
                 if item.get("source_id") not in source_ids:
                     errors.append(
                         f"{evidence_label}: unknown source_id {item.get('source_id')!r}"
@@ -271,6 +399,9 @@ def validate_claims(
                     errors.append(
                         f"{evidence_label}: invalid support {item.get('support')!r}"
                     )
+                check_non_empty_string(
+                    item.get("locator"), f"{evidence_label}.locator", errors
+                )
 
         conflict_id = claim.get("conflict_group_id")
         if conflict_id is not None:
@@ -299,23 +430,40 @@ def validate_products(
     products: list[dict[str, Any]], source_ids: set[str], errors: list[str]
 ) -> None:
     product_ids: list[str] = []
-    style_numbers: list[str] = []
+    snapshot_keys: list[tuple[str, str, str]] = []
 
     for index, product in enumerate(products, start=1):
         label = f"product[{index}]"
         check_required(product, PRODUCT_REQUIRED, label, errors)
+        check_allowed(
+            product,
+            PRODUCT_REQUIRED | {"construction_features", "composition_claims"},
+            label,
+            errors,
+        )
         product_id = product.get("product_id")
         if not isinstance(product_id, str) or not PRODUCT_ID_RE.fullmatch(product_id):
             errors.append(f"{label}: invalid product_id {product_id!r}")
         else:
             product_ids.append(product_id)
         style_number = product.get("style_number")
-        if not isinstance(style_number, str) or not style_number:
-            errors.append(f"{label}: style_number must be non-empty")
-        else:
-            style_numbers.append(style_number)
-        if product.get("record_type") != "product":
-            errors.append(f"{label}: record_type must be 'product'")
+        check_non_empty_string(style_number, f"{label}.style_number", errors)
+        market = product.get("market")
+        if not isinstance(market, str) or not MARKET_RE.fullmatch(market):
+            errors.append(f"{label}: invalid market {market!r}")
+        observed_at = product.get("observed_at")
+        if (
+            isinstance(style_number, str)
+            and isinstance(market, str)
+            and isinstance(observed_at, str)
+        ):
+            snapshot_keys.append((style_number, market, observed_at))
+        if product.get("record_type") != "product_snapshot":
+            errors.append(f"{label}: record_type must be 'product_snapshot'")
+        check_non_empty_string(product.get("name"), f"{label}.name", errors)
+        check_non_empty_string(
+            product.get("silhouette"), f"{label}.silhouette", errors
+        )
         if product.get("confidence") not in CONFIDENCE_LEVELS:
             errors.append(f"{label}: invalid confidence {product.get('confidence')!r}")
         check_date(product.get("observed_at"), f"{label}.observed_at", errors)
@@ -330,6 +478,35 @@ def validate_products(
             if len(product_sources) != len(set(product_sources)):
                 errors.append(f"{label}: duplicate source_ids")
 
+        product_evidence = product.get("evidence")
+        evidence_source_ids: list[str] = []
+        if not isinstance(product_evidence, list) or not product_evidence:
+            errors.append(f"{label}: evidence must be a non-empty array")
+        else:
+            for evidence_index, item in enumerate(product_evidence, start=1):
+                evidence_label = f"{label}.evidence[{evidence_index}]"
+                if not isinstance(item, dict):
+                    errors.append(f"{evidence_label}: expected object")
+                    continue
+                check_required(item, EVIDENCE_REQUIRED, evidence_label, errors)
+                check_allowed(item, EVIDENCE_REQUIRED, evidence_label, errors)
+                source_id = item.get("source_id")
+                if source_id not in source_ids:
+                    errors.append(f"{evidence_label}: unknown source_id {source_id!r}")
+                elif isinstance(source_id, str):
+                    evidence_source_ids.append(source_id)
+                if item.get("support") not in SUPPORT_TYPES:
+                    errors.append(
+                        f"{evidence_label}: invalid support {item.get('support')!r}"
+                    )
+                check_non_empty_string(
+                    item.get("locator"), f"{evidence_label}.locator", errors
+                )
+        if isinstance(product_sources, list) and set(product_sources) != set(
+            evidence_source_ids
+        ):
+            errors.append(f"{label}: source_ids and evidence source IDs must match")
+
         components = product.get("components")
         if not isinstance(components, list) or not components:
             errors.append(f"{label}: components must be a non-empty array")
@@ -340,9 +517,93 @@ def validate_products(
                     errors.append(f"{component_label}: expected object")
                     continue
                 check_required(component, COMPONENT_REQUIRED, component_label, errors)
+                check_allowed(component, COMPONENT_REQUIRED, component_label, errors)
+                if component.get("role") not in COMPONENT_ROLES:
+                    errors.append(
+                        f"{component_label}: invalid role {component.get('role')!r}"
+                    )
+                material_class = component.get("material_class")
+                if material_class not in MATERIAL_CLASSES:
+                    errors.append(
+                        f"{component_label}: invalid material_class {material_class!r}"
+                    )
+                check_non_empty_string(
+                    component.get("material_label"),
+                    f"{component_label}.material_label",
+                    errors,
+                )
+                attribute_state = component.get("attribute_state")
+                if not isinstance(attribute_state, dict):
+                    errors.append(f"{component_label}.attribute_state: expected object")
+                else:
+                    check_required(
+                        attribute_state,
+                        ATTRIBUTE_FIELDS,
+                        f"{component_label}.attribute_state",
+                        errors,
+                    )
+                    check_allowed(
+                        attribute_state,
+                        ATTRIBUTE_FIELDS,
+                        f"{component_label}.attribute_state",
+                        errors,
+                    )
+                    for field in sorted(ATTRIBUTE_FIELDS):
+                        value = component.get(field)
+                        state = attribute_state.get(field)
+                        if value is not None and not isinstance(value, str):
+                            errors.append(
+                                f"{component_label}.{field}: expected string or null"
+                            )
+                        if state not in ATTRIBUTE_STATES:
+                            errors.append(
+                                f"{component_label}.attribute_state.{field}: "
+                                f"invalid state {state!r}"
+                            )
+                        elif value is None and state == "reported":
+                            errors.append(
+                                f"{component_label}.{field}: null value cannot be reported"
+                            )
+                        elif value is not None and state != "reported":
+                            errors.append(
+                                f"{component_label}.{field}: non-null value must be reported"
+                            )
+                grain = component.get("grain_structure")
+                if isinstance(grain, str) and "nappa" in grain.lower():
+                    errors.append(
+                        f"{component_label}: nappa belongs in leather_type, not grain_structure"
+                    )
+
+        construction_features = product.get("construction_features")
+        if construction_features is not None:
+            if not isinstance(construction_features, list):
+                errors.append(f"{label}: construction_features must be an array")
+            else:
+                for feature_index, feature in enumerate(
+                    construction_features, start=1
+                ):
+                    check_non_empty_string(
+                        feature,
+                        f"{label}.construction_features[{feature_index}]",
+                        errors,
+                    )
+
+        composition_claims = product.get("composition_claims")
+        if composition_claims is not None:
+            if not isinstance(composition_claims, list) or not composition_claims:
+                errors.append(f"{label}: composition_claims must be a non-empty array")
+            else:
+                for claim_index, composition_claim in enumerate(
+                    composition_claims, start=1
+                ):
+                    check_non_empty_string(
+                        composition_claim,
+                        f"{label}.composition_claims[{claim_index}]",
+                        errors,
+                    )
 
     check_unique(product_ids, "product_id", errors)
-    check_unique(style_numbers, "style_number", errors)
+    check_unique(snapshot_keys, "(style_number, market, observed_at)", errors)
 
 
 def main() -> int:
