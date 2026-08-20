@@ -19,6 +19,7 @@
 11. LWG는 브랜드나 완제품 자체를 인증하지 않고 공급망 시설을 감사·인증한다. “LWG 인증 가방/브랜드”라는 치환은 부정확하다. [LWG Claims Guidance](https://www.leatherworkinggroup.com/what-we-do/claims-guidance/), `SRC-017`.
 12. 공개 자료에는 개별 SKU의 인쇄 잉크, 코팅 두께, 엠보싱 압력·온도, 실 규격·SPI, 접착제, 엣지코트 배합, 도금 두께, 패널·피할 두께, QC 허용치가 없다. 일반 공정을 MCM 고유 공정처럼 채우지 않았다.
 13. `Resetos regenerated leather`는 공식 제품명·본체 표기지만 정확한 재생 함량, 결합재, 동물종, tannage와 coating 조성은 공개되지 않았다. 일반 `Responsible materials` 배지만으로 비건·베지터블 태닝·생분해성을 확정하지 않는다. [MCM Resetos Toni](https://jp.mcmworldwide.com/en_JP/women/bags/totes-shoppers/toni-top-zip-shopper-in-resetos-leather/MWPFAMT09Q5001.html), `SRC-093`.
+14. 공식 제품 표본을 넓히면 patent, crushed·distressed, suede, perforation, flocking, fishnet cut-out, studding, quilting이 각각 다른 소재·표면·구조 축으로 나타난다. 사진의 질감만으로 이 축을 tannage나 동물 종으로 치환하지 않았다.
 
 ## 2. 조사 범위와 판정법
 
@@ -84,9 +85,9 @@
 | 축 | 확인된 값 | 해석 주의 |
 | --- | --- | --- |
 | 동물 종 | calf, lamb, goat, 종 미표기 leather | nappa만으로 종을 알 수 없음 |
-| 그레인 구조 | full grain, split/suede 가능성, 미표기 | embossed는 full grain 여부가 아님 |
-| 촉감·유형 | nappa/napa, grained leather | natural leather는 tannage 명칭이 아님 |
-| 표면 가공 | printed, embossed, croco-embossed, quilted, crushed, sequined, studded | croco-embossed는 악어가죽이 아님 |
+| 그레인 구조 | full grain, grained, 미표기 | embossed는 full grain 여부가 아님 |
+| 상품 소재명·유형 | nappa/napa, Vachetta, suede, patent leather, crushed leather | natural·Vachetta·patent만으로 tannage·동물 종·코팅 수지를 확정하지 않음 |
+| 표면·구조 가공 | printed, embossed, croco-embossed, perforated, cut-out, flocked, quilted, crushed/distressed, sequined, studded | croco-embossed는 악어가죽이 아니며 각 가공 축을 분리 |
 | 무두질 | metal-free, chrome-free 목표, 대부분 SKU 미표기 | metal-free와 chrome-free를 자동 동의어 처리하지 않음 |
 | 재생가죽 표현 | Resetos regenerated leather | 정확한 재생 함량·결합재·동물종·무두질·코팅 조성 및 비건 여부 미표기 |
 | 비가죽 본체 | Visetos coated canvas, jacquard, raffia jacquard, recycled nylon, MIRUM | 가죽 trim이 있어도 body 소재와 분리 |
@@ -126,6 +127,17 @@ LWG의 2024 정의에서 full grain은 교정용 기계 가공으로 원래 grai
 | `MWREAAK01CO001` | Visetos canvas | Italian croco-embossed leather handle | diamond form | South Korea | `SRC-057` |
 | `MMLFSTA02BK001` | Italian recycled nylon | nappa, fabric | sling | South Korea | `SRC-058` |
 | `MWPFAMT09Q5001` | Resetos regenerated leather | leather handles·strap, fabric lining | Visetos motif, top zip, back/slip/card pockets | South Korea | `SRC-093` |
+| `MWSCAXT01BK001` | Visetos monogram canvas | Vachetta leather, microfiber suede-finish | Laurel Lock satchel, zip compartment | South Korea | `SRC-068` |
+| `MWRFSAC01BK001` | patent leather | nappa, microfiber suede-finish | embossed Laurel flap, dual compartment | Italy | `SRC-094` |
+| `MWSCSLM03BK001` | crushed leather | microfiber suede-finish | distressed surface, geometric quilting | Italy | `SRC-095` |
+| `MWTFABO01K9001` | Italian suede leather | Italian calfskin, Visetos sides, microfiber | Mega Herringbone motif, tote | Italy | `SRC-096` |
+| `MWTGSMA01BK001` | grained leather | natural nappa, microfiber | structured tote; 이전 URL은 redirect provenance만 보존 | Italy | `SRC-097` |
+| `MWPGSAC01L8001` | Spanish calfskin leather | — | Bavarian diamond perforation, shopper | Italy | `SRC-098` |
+| `MWPFSTA03WT001` | grained / embossed leather + Visetos print | natural nappa, cotton twill pouch | abstract fishnet cut-out, shopper | South Korea | `SRC-099` |
+| `MWPGALR02BK001` | full-grain leather / grained nappa 요약 | leather pouch, microfiber | embossed Visetos, New Liz shopper | Italy | `SRC-100` |
+| `MWSGSAK01BK001` | 100% lambskin | microfiber suede-finish | Galactic Gala studs, angular double zip | South Korea | `SRC-101` |
+| `MMKGATA01BK001` | nappa leather | recycled cotton | Bavarian diamond quilting, laptop backpack | Italy | `SRC-102` |
+| `MWREAAC01VC001` | cotton canvas + Laurel flocking | leather trim·flap, cotton-linen | 제목은 grained leather, 상세 본체는 canvas | Italy | `SRC-103` |
 
 전체 부품 레코드는 `data/products.jsonl`에 있다. `attribute_state`의 `reported`, `unknown`, `not_applicable`을 함께 읽어야 하며, `null`만으로 “없음”을 뜻하지 않는다.
 
@@ -167,11 +179,14 @@ MCM 2024 보고서의 카테고리 로드맵은 다음과 같다.
 | --- | --- | --- |
 | 2007 한국 사업 보도 | 수입 가죽·Visetos PVC·부자재, 본사 재단, 하청 생산 | 당시 역사적 공급망만 설명 |
 | 2013 MCM 주력 협력사 | 자재 → 재단 → 배피 → 기리메 → 안감 → 컴퓨터 미싱 → 조립·봉제 → 검품·포장 | 해당 공장의 당시 공정. 현행 전 SKU에 일반화 금지 |
+| 2022 MCM 보고서의 재생가죽 설명 | 작은 leather cut-off를 재생가죽으로 처리할 수 있고, shaving scrap을 pulverize → compress → coat/finish해 새 가죽과 유사한 소재로 만든다고 설명 | 기업 수준 폐기물·공정 설명. Resetos나 특정 가방 본체의 배합·공정 증거가 아님 |
 | 현행 공식 패턴·SKU | print, emboss, jacquard weaving, quilting, studs, plating | 방식·조건·설비값은 미공개 |
 | 2024 보고 | LWG 조달, chrome-free·metal-free 로드맵, 공급사 감사 | 제품별 tannage는 대부분 미공개 |
 | 일부 스타일 | NFC/Aura Digital Product Passport가 소재 원산·제조 정보 제공 | 모든 제품에 적용되지 않음 |
 
 역사적 공급사 근거: [한국섬유신문 2013](https://www.ktnews.com/news/articleView.html?idxno=80093), `SRC-016`.
+
+재생가죽 공정 설명: [MCM Sustainability Report 2022](https://www.mcmworldwide.com/information/Press/MCM_2022_Sustainability%20Report_Final.pdf), `SRC-010`. 이 설명과 `Resetos regenerated leather` 상품 표기는 서로 직접 연결되지 않으므로 제품 수준으로 전파하지 않는다.
 
 ### 7.2 업계 일반 제혁 공정
 
@@ -234,6 +249,8 @@ LWG가 실제로 인증하는 주체와 주장 범위는 [LWG FAQ](https://www.l
 - 정품 제작용 벡터 마스터, Pantone·잉크값
 - 개별 leather SKU의 chrome·vegetable·aldehyde·metal-free tannage
 - Resetos의 정확한 재생 가죽 함량·결합재·동물종·무두질·코팅 조성 및 비건·생분해성 여부
+- Vachetta의 동물종·grain 구조·vegetable tannage 여부와 patent leather의 코팅 수지·도포 공정
+- crushed·distressed 표면의 생성 조건, perforation·cut-out의 금형·공구·공차, flocking의 섬유·접착제 조성
 - 엠보싱 금형 깊이, 온도, 압력, dwell time
 - 실 소재·호수·SPI, 손봉제·기계봉제 여부
 - 접착제 종류
@@ -283,10 +300,10 @@ LWG가 실제로 인증하는 주체와 주장 범위는 [LWG FAQ](https://www.l
 
 ## 13. 패턴·소재 이미지 레지스트리
 
-공식 MCM 편집·상품 페이지에서 패턴 이미지 92개, 특정 패턴 증거로 사용하지 않는 AW26 편집 맥락 4개, 13개 소재 SKU의 상품 이미지 89개, 합계 185개 참조를 확인했다. 자산 ID를 기준으로 반응형 리사이즈와 DOM 중복을 제거하고, 확인된 동일 응답 바이트 중복 1개도 제거했으며 이미지 파일은 저장소에 복제하지 않았다.
+공식 MCM 편집·상품 페이지에서 패턴 이미지 92개, 특정 패턴 증거로 사용하지 않는 AW26 편집 맥락 4개, 24개 소재 SKU의 상품 이미지 167개, 합계 263개 참조를 확인했다. 자산 ID를 기준으로 반응형 리사이즈와 DOM 중복을 제거하고, 확인된 동일 응답 바이트 중복 1개도 제거했으며 이미지 파일은 저장소에 복제하지 않았다. 별도 당일 감사에서 소재 167개의 같은 요청 조건 GET 응답 SHA-256을 대조해 바이트 중복이 없음을 확인했지만, 레지스트리에 해시·바이트 수까지 보존한 것은 85개다.
 
 - 패턴: Visetos·AW19 변형, Vintage Monogram Jacquard, Cubic, Lauretos, Maxi Monogram Leather, Disco Visetos, Diamond Jacquard
-- 소재·표면: coated canvas+calf nappa, calf nappa, full-grain leather, goatskin, quilted nappa, raffia jacquard, MIRUM, Resetos regenerated leather, recycled nylon, lambskin, studded calfskin, croco emboss, sequin lambskin
+- 소재·표면: coated canvas+calf nappa, Vachetta trim, calf nappa, full-grain leather, grained calfskin·goatskin, patent, crushed·distressed, suede+Mega Herringbone, perforated calfskin, printed·embossed·cut-out leather, quilted nappa, raffia jacquard, Laurel flocked cotton canvas+leather flap, MIRUM, Resetos regenerated leather, recycled nylon, lambskin, studded calfskin, croco emboss, sequin lambskin
 - 전체 메타데이터: `data/pattern_image_references.jsonl`, `data/material_image_references.jsonl`
 - 탐색용 대표 갤러리: [IMAGE_INDEX_KO.md](IMAGE_INDEX_KO.md)
 

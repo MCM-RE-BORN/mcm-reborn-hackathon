@@ -24,10 +24,10 @@
 | 패턴 | AW26 Disco Visetos | 12 |
 | 패턴 | AW26 Diamond Jacquard | 18 |
 | 편집 맥락 | AW26 컬렉션 이미지, 특정 패턴 증거 아님 | 4 |
-| 소재 | 13개 공식 SKU 갤러리 | 89 |
-| 합계 | 이미지 참조 레코드 | **185** |
+| 소재 | 24개 공식 SKU 갤러리 | 167 |
+| 합계 | 이미지 참조 레코드 | **263** |
 
-확인일 기준 185개 모두 공식 CDN에서 `HTTP 200`으로 응답했으며 기본 클라이언트 헤더에서 178개는 JPEG, 7개는 WebP였다. 자산 ID가 달랐지만 응답 바이트가 같았던 1개는 제거했다. 전체 응답 바이트 해시는 저장하지 않았으므로 합계는 법적·시각적으로 서로 다른 저작물의 수가 아니라 레지스트리 레코드 수다. 이 접근성 검사는 향후 링크의 영구 보존을 보장하지 않는다.
+확인일 기준 263개 모두 공식 CDN에서 `HTTP 200`으로 응답했으며 기본 클라이언트 헤더에서 256개는 JPEG, 7개는 WebP였다. 별도 당일 감사에서 소재 레퍼런스 167개의 같은 요청 조건 GET 응답 SHA-256을 대조해 바이트 중복이 없음을 확인했지만, 레지스트리에 해시·바이트 수까지 보존한 것은 그중 85개다. 앞선 수집에서 자산 ID가 달랐지만 응답 바이트가 같았던 1개는 제거했다. 패턴 레퍼런스 전부의 응답 해시를 저장한 것도 아니므로 합계는 법적·시각적으로 서로 다른 저작물의 수가 아니라 레지스트리 레코드 수다. 이 접근성 검사는 향후 링크의 영구 보존을 보장하지 않는다.
 
 ## 패턴 대표 이미지
 
@@ -158,6 +158,86 @@
 [Diamond Bag `MWRFSAK01BK001`](https://us.mcmworldwide.com/en_US/women/bags/shoulder-crossbody-bags/diamond-bag-in-sequin-lambskin/MWRFSAK01BK001.html)
 
 ![Sequin lambskin](https://images.mcmworldwide.com/i/mcmworldwide/MWRFSAK01BK001_01?fmt=auto&qlt=default)
+
+### Vachetta leather trim
+
+[Tracy Shoulder Bag `MWSCAXT01BK001`](https://us.mcmworldwide.com/en_US/women/bags/shoulder-crossbody-bags/tracy-shoulder-bag-in-visetos/MWSCAXT01BK001.html)
+
+![Visetos canvas with Vachetta leather trim](https://images.mcmworldwide.com/i/mcmworldwide/MWSCAXT01BK001_01?&fmt=auto&qlt=default)
+
+`Vachetta` 표기만으로 vegetable tannage, full-grain 여부나 동물 종을 확정하지 않는다.
+
+### Patent leather와 Laurel emboss
+
+[Himmel Laurel Crossbody `MWRFSAC01BK001`](https://au.mcmworldwide.com/en_AU/women/bags/shoulder-crossbody-bags/himmel-laurel-crossbody-in-patent-leather/MWRFSAC01BK001.html)
+
+![Patent leather with embossed Laurel flap](https://images.mcmworldwide.com/i/mcmworldwide/MWRFSAC01BK001_01?&fmt=auto&qlt=default)
+
+Patent 표면의 코팅 수지와 도포 공정은 공개되지 않았다.
+
+### Crushed·distressed leather와 geometric quilting
+
+[Travia Quilted Shoulder Bag `MWSCSLM03BK001`](https://us.mcmworldwide.com/en_US/women/bags/shoulder-crossbody-bags/travia-quilted-shoulder-bag-in-crushed-leather/MWSCSLM03BK001.html)
+
+![Crushed and distressed leather with geometric quilting](https://images.mcmworldwide.com/i/mcmworldwide/MWSCSLM03BK001_01?&fmt=auto&qlt=default)
+
+### Italian suede와 Mega Herringbone
+
+[München Tote `MWTFABO01K9001`](https://my.mcmworldwide.com/en_MY/women/bags/totes-shoppers/m%C3%BCnchen-tote-in-mega-herringbone-suede/MWTFABO01K9001.html)
+
+![Mega Herringbone motif on Italian suede](https://images.mcmworldwide.com/i/mcmworldwide/MWTFABO01K9001_01?&fmt=auto&qlt=default)
+
+`Italian`은 공식 소재명 수식어로 보존하며 원피 원산지나 제혁소 위치로 확정하지 않는다.
+
+### Grained leather와 이전 redirect 경로
+
+[Milla Tote `MWTGSMA01BK001`](https://uk.mcmworldwide.com/en_GB/women/bags/totes-shoppers/milla-tote-in-grained-leather/MWTGSMA01BK001.html)
+
+![Milla grained leather](https://images.mcmworldwide.com/i/mcmworldwide/MWTGSMA01BK001_01?&fmt=auto&qlt=default)
+
+현행 canonical과 상세 소재는 `grained leather`다. `source_page_redirected_from`은 이름에 `Spanish embossed leather`가 포함된 이전 URL의 이동만 보존하며, 당시 상세 소재 문구나 시점을 입증하지 않는다.
+
+### Perforated calfskin과 Bavarian diamond
+
+[Himmel Shopper `MWPGSAC01L8001`](https://nz.mcmworldwide.com/en_NZ/women/bags/totes-shoppers/himmel-shopper-in-perforated-calfskin-leather/MWPGSAC01L8001.html)
+
+![Perforated calfskin with Bavarian diamond motif](https://images.mcmworldwide.com/i/mcmworldwide/MWPGSAC01L8001_01?&fmt=auto&qlt=default)
+
+### Grained leather·Visetos print·emboss·fishnet cut-out
+
+[Aren Shopper `MWPFSTA03WT001`](https://jp.mcmworldwide.com/en_JP/women/bags/totes-shoppers/aren-shopper-in-monogram-print-leather/MWPFSTA03WT001.html)
+
+![Embossed leather with Visetos print and fishnet cut-out](https://images.mcmworldwide.com/i/mcmworldwide/MWPFSTA03WT001_01?&fmt=auto&qlt=default)
+
+공식 요약의 `grained leather`와 본체 상세의 인쇄, 엠보싱, cut-out을 서로 다른 표면·구조 축으로 저장했다.
+
+### Full-grain leather와 embossed Visetos
+
+[New Liz Shopper `MWPGALR02BK001`](https://nz.mcmworldwide.com/en_NZ/women/bags/totes-shoppers/new-liz-shopper-in-embossed-monogram-leather/MWPGALR02BK001.html)
+
+![Full-grain leather with embossed Visetos](https://images.mcmworldwide.com/i/mcmworldwide/MWPGALR02BK001_01?&fmt=auto&qlt=default)
+
+공식 페이지 안의 `grained nappa` 요약과 `full-grain leather` 상세를 모두 보존했다.
+
+### Galactic Gala studded lambskin
+
+[Diamant 3D Shoulder Bag `MWSGSAK01BK001`](https://us.mcmworldwide.com/en_US/women/bags/shoulder-crossbody-bags/diamant-3d-shoulder-bag-in-galactic-gala-lambskin/MWSGSAK01BK001.html)
+
+![Lambskin with Galactic Gala metal studs](https://images.mcmworldwide.com/i/mcmworldwide/MWSGSAK01BK001_01?&fmt=auto&qlt=default)
+
+### Bavarian diamond-quilted nappa
+
+[Aren Backpack `MMKGATA01BK001`](https://ca.mcmworldwide.com/en_CA/men/bags/backpacks/aren-backpack-in-diamond-quilted-leather/MMKGATA01BK001.html)
+
+![Nappa leather with Bavarian diamond quilting](https://images.mcmworldwide.com/i/mcmworldwide/MMKGATA01BK001_01?&fmt=auto&qlt=default)
+
+### Laurel flocked cotton canvas와 leather flap
+
+[Himmel Crossbody `MWREAAC01VC001`](https://cn.mcmworldwide.com/en_CN/women/bags/shoulder-%26-crossbody-bags/himmel-crossbody-in-grained-leather-and-laurel-flocking/MWREAAC01VC001.html)
+
+![Laurel flocked cotton canvas with embossed leather flap](https://images.mcmworldwide.com/i/mcmworldwide/MWREAAC01VC001_01?&fmt=auto&qlt=default)
+
+공식 제목은 `grained leather`를 언급하지만 상세 본체는 cotton canvas다. 제목만으로 본체 소재를 가죽으로 덮어쓰지 않는다.
 
 ## 전체 레지스트리 사용법
 
