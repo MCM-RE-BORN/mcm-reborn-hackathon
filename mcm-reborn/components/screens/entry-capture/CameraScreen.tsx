@@ -33,6 +33,7 @@ type CameraScreenProps = {
 };
 
 type CameraRuntimeState =
+  | "choose"
   | "starting"
   | "ready"
   | "permission"
@@ -177,6 +178,7 @@ function ForcedCameraState({
 
 type RuntimeCameraStateProps = {
   description?: string;
+  onChooseCamera: () => void;
   onChooseFile: () => void;
   onRetry: () => void;
   runtimeState: Exclude<CameraRuntimeState, "ready">;
@@ -184,64 +186,87 @@ type RuntimeCameraStateProps = {
 
 function RuntimeCameraState({
   description,
+  onChooseCamera,
   onChooseFile,
   onRetry,
   runtimeState,
 }: RuntimeCameraStateProps) {
+  const isChoose = runtimeState === "choose";
   const isStarting = runtimeState === "starting";
   const isPermission = runtimeState === "permission";
   const isEmpty = runtimeState === "empty";
   const isUnsupported = runtimeState === "unsupported";
 
-  const defaultDescription = isStarting
-    ? "후면 카메라를 연결하고 있어요."
-    : isPermission
-      ? "브라우저 설정에서 카메라 접근을 허용하거나 기기 카메라로 촬영해주세요."
-      : isEmpty
-        ? "사용 가능한 카메라를 찾지 못했어요. 기기 카메라나 앨범의 사진을 선택해주세요."
-        : isUnsupported
-          ? "안전한 연결에서 다시 열거나 기기 카메라로 사진을 선택해주세요."
-          : "카메라가 다른 앱에서 사용 중일 수 있어요. 잠시 후 다시 시도해주세요.";
+  const defaultDescription = isChoose
+    ? "카메라로 직접 촬영하거나 기기에 저장된 사진을 선택할 수 있어요."
+    : isStarting
+      ? "후면 카메라를 연결하고 있어요."
+      : isPermission
+        ? "브라우저 설정에서 카메라 접근을 허용하거나 기기 카메라로 촬영해주세요."
+        : isEmpty
+          ? "사용 가능한 카메라를 찾지 못했어요. 기기 카메라나 앨범의 사진을 선택해주세요."
+          : isUnsupported
+            ? "안전한 연결에서 다시 열거나 기기 카메라로 사진을 선택해주세요."
+            : "카메라가 다른 앱에서 사용 중일 수 있어요. 잠시 후 다시 시도해주세요.";
 
   return (
     <div className={styles.cameraState}>
       <StatusPanel
         action={
           <div className={styles.cameraStatusActions}>
-            {!isStarting && !isUnsupported ? (
-              <Button fullWidth onClick={onRetry} variant="outline">
-                카메라 다시 시도
+            {isChoose ? (
+              <>
+                <Button fullWidth onClick={onChooseCamera} variant="primary">
+                  카메라로 촬영
+                </Button>
+                <Button fullWidth onClick={onChooseFile} variant="outline">
+                  앨범에서 선택
+                </Button>
+              </>
+            ) : !isStarting && !isUnsupported ? (
+              <>
+                <Button fullWidth onClick={onRetry} variant="outline">
+                  카메라 다시 시도
+                </Button>
+                <Button fullWidth onClick={onChooseFile} variant="primary">
+                  기기에서 사진 선택
+                </Button>
+              </>
+            ) : (
+              <Button
+                fullWidth
+                onClick={onChooseFile}
+                variant={isStarting ? "outline" : "primary"}
+              >
+                기기에서 사진 선택
               </Button>
-            ) : null}
-            <Button
-              fullWidth
-              onClick={onChooseFile}
-              variant={isStarting ? "outline" : "primary"}
-            >
-              기기에서 사진 선택
-            </Button>
+            )}
           </div>
         }
         description={description ?? defaultDescription}
         title={
-          isStarting
-            ? "카메라를 준비하는 중"
-            : isPermission
-              ? "카메라 권한이 필요해요"
-              : isEmpty
-                ? "사용 가능한 카메라가 없어요"
-                : isUnsupported
-                  ? "카메라를 바로 열 수 없어요"
-                  : "카메라를 열지 못했어요"
+          isChoose
+            ? "사진을 촬영하거나 선택해주세요"
+            : isStarting
+              ? "카메라를 준비하는 중"
+              : isPermission
+                ? "카메라 권한이 필요해요"
+                : isEmpty
+                  ? "사용 가능한 카메라가 없어요"
+                  : isUnsupported
+                    ? "카메라를 바로 열 수 없어요"
+                    : "카메라를 열지 못했어요"
         }
         tone={
-          isStarting
-            ? "loading"
-            : isPermission
-              ? "permission"
-              : isEmpty
-                ? "empty"
-                : "error"
+          isChoose
+            ? "success"
+            : isStarting
+              ? "loading"
+              : isPermission
+                ? "permission"
+                : isEmpty
+                  ? "empty"
+                  : "error"
         }
       />
     </div>
@@ -262,7 +287,7 @@ export function CameraScreen({
   const fallbackInputRef = useRef<HTMLInputElement>(null);
   const [draft, setDraft] = useState<CaptureDraft | null>(null);
   const [runtimeState, setRuntimeState] =
-    useState<CameraRuntimeState>("starting");
+    useState<CameraRuntimeState>("choose");
   const [runtimeDescription, setRuntimeDescription] = useState<string>();
   const [retryKey, setRetryKey] = useState(0);
   const [isCapturing, setIsCapturing] = useState(false);
@@ -301,7 +326,7 @@ export function CameraScreen({
   }, []);
 
   useEffect(() => {
-    if (state !== "normal" || draft) {
+    if (state !== "normal" || draft || runtimeState === "choose") {
       return;
     }
 
@@ -376,7 +401,7 @@ export function CameraScreen({
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       stopCurrentStream();
     };
-  }, [draft, retryKey, state, stopCurrentStream]);
+  }, [draft, retryKey, runtimeState, state, stopCurrentStream]);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -389,6 +414,12 @@ export function CameraScreen({
       }
     };
   }, []);
+
+  const handleChooseCamera = () => {
+    setRuntimeDescription(undefined);
+    setRuntimeState("starting");
+    setRetryKey((value) => value + 1);
+  };
 
   const handleRetry = () => {
     stopCurrentStream();
@@ -608,6 +639,7 @@ export function CameraScreen({
       ) : (
         <RuntimeCameraState
           description={runtimeDescription}
+          onChooseCamera={handleChooseCamera}
           onChooseFile={() => fallbackInputRef.current?.click()}
           onRetry={handleRetry}
           runtimeState={runtimeState}
