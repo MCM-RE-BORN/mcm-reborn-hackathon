@@ -2,7 +2,7 @@
 
 > 계약 버전: **2.0.0 (BREAKING)**
 >
-> 기준일: 2026-08-18
+> 기준일: 2026-08-21
 >
 > 목적: 서비스 시연·데모 MVP의 프론트엔드, Route Handler, Mock, Supabase 구현 기준
 >
@@ -40,9 +40,9 @@
 | 파일당 최대 크기 | `10485760` bytes (10 MiB) |
 | 용도 | `SOURCE_FRONT`, `SOURCE_SIDE`, `INTERIOR`, `ENGRAVING` |
 | Presign 1회 요청 | 1~4개 |
-| 분석 생성에 연결할 사진 | 정면·후면·상단·하단·좌측면·우측면·일련번호 7개 |
+| 분석 생성에 연결할 사진 | 정면·후면·상단·하단·좌측면·우측면 6개 |
 
-`POST /uploads/presign`은 점진 업로드를 위해 한 번에 1~4개 사진을 요청할 수 있습니다. 최종 `POST /analyses`에서는 업로드가 완료된 서로 다른 자산 7개를 정면·후면·상단·하단·좌측면·우측면·일련번호 순서로 전달해야 합니다. 촬영 방향은 프런트 세션과 배열 순서로 관리하며 기존 Storage `purpose` enum을 방향별로 확장하지 않습니다. Route Handler를 구현할 때는 자산 소유자, 업로드 완료 여부, MIME, 크기, 목적을 다시 검증해야 합니다.
+`POST /uploads/presign`은 점진 업로드를 위해 한 번에 1~4개 사진을 요청할 수 있습니다. 최종 `POST /analyses`에서는 업로드가 완료된 서로 다른 자산 6개를 정면·후면·상단·하단·좌측면·우측면 순서로 전달해야 합니다. 선택 촬영한 일련번호 사진은 `imageAssetIds`에 포함하지 않으며, 일련번호 문자열은 선택 필드인 `serialNumber`로만 전달합니다. 촬영 방향은 프런트 세션과 배열 순서로 관리하며 기존 Storage `purpose` enum을 방향별로 확장하지 않습니다. Route Handler를 구현할 때는 자산 소유자, 업로드 완료 여부, MIME, 크기, 목적을 다시 검증해야 합니다.
 
 `mock-data.json.primaryScenario.source.images`의 WebP 경로는 앱에 번들된 표시용 Fixture입니다. 고객이 Presign으로 올리는 소스 파일의 허용 MIME에는 WebP가 포함되지 않습니다.
 
@@ -71,8 +71,7 @@
     "90000000-0000-4000-8000-000000000003",
     "90000000-0000-4000-8000-000000000004",
     "90000000-0000-4000-8000-000000000005",
-    "90000000-0000-4000-8000-000000000006",
-    "90000000-0000-4000-8000-000000000007"
+    "90000000-0000-4000-8000-000000000006"
   ],
   "category": "BACKPACK",
   "purchaseYear": 2019,
@@ -360,7 +359,7 @@ Supabase RPC `submit_physical_inspection`은 같은 트랜잭션에서 만든 `c
 
 ## 10. 구현·검증 체크리스트
 
-- [x] Presign은 요청당 1~4개, 분석 생성은 정확히 7개 제한을 서로 다르게 적용한다.
+- [x] Presign은 요청당 1~4개, 분석 생성은 정확히 6개 제한을 서로 다르게 적용한다.
 - [x] 소스 업로드는 JPG/PNG와 파일당 10 MiB만 허용한다.
 - [x] 분석 요청의 제품 정보 필수·선택 필드를 구분한다.
 - [x] 분석 enum을 OpenAPI, TypeScript, SQL, Mock에서 동일하게 사용한다.
@@ -385,11 +384,12 @@ Supabase RPC `submit_physical_inspection`은 같은 트랜잭션에서 만든 `c
 - 다음으로 `supabase/migrations/202608180004_backend_v2_runtime.sql`을 적용합니다. 004는 네 제품의 canonical Product3D JSON을 보존하되 실제 자산 준비 전 `model_3d_ready=false`로 두고, 상태가 맞지 않는 PAID 결제를 원자적으로 거부하며, 고객 변경안 결정이 RLS를 우회해 권한을 넓히지 않도록 `auth.uid()`·소유권·`PENDING`을 재검증하는 `SECURITY DEFINER` trigger를 설치합니다. 또한 이벤트 enum·server-only INSERT·rate-limit index, matching `PENDING` metadata가 필요한 Storage 정책, 외부 AI 동의 증적, `applications.analysis_id` unique·terms 제약과 여권지갑 optionGroups를 정합화합니다.
 - 이어서 `supabase/migrations/202608190005_shipment_conflict_hotfix.sql`을 적용합니다. 005는 lifecycle RPC의 배송 upsert에서 `application_id` 출력 변수와 컬럼이 충돌하지 않도록 `mock_shipments_application_id_key` 명명 제약조건을 사용하며, HTTP 계약이나 업무 데이터는 변경하지 않습니다.
 - 이어서 `supabase/migrations/202608190006_customer_decision_gate.sql`을 적용합니다. 006은 실물 검수 결과가 `CHANGE_REQUIRED`일 때 고객의 `APPROVED` 결정이 저장되기 전에는 `PRODUCTION_READY`로 우회 전환할 수 없도록 lifecycle RPC와 DB transition trigger를 함께 보강합니다.
+- 저장소 migration 순서에 따라 `supabase/migrations/202608200007_generic_source_pattern_copy.sql` 다음 `supabase/migrations/202608210008_capture_six_views.sql`을 적용합니다. 008은 기존 `display_order=6` 일련번호 사진 연결을 private backup에 보존한 뒤 분석에서 해제하고, `analysis_images.display_order`를 0~5로 제한하며 상태 전이 시 여섯 방향 사진이 정확히 6장인지 강제합니다. 원본 `media_assets`와 private Storage 객체는 삭제하지 않습니다.
 - legacy 동의 키의 자동 변환은 정확히 모두 `true`인 `PRIMARY_SCENARIO` 데모 행으로 제한합니다. 기존 주문에 최초 이력이 없으면 `created_at` 시각의 `PENDING_PAYMENT`를 `MIGRATION_BACKFILL_INITIAL_STATUS` 표식으로 보완합니다.
 - 증명할 수 없는 동의·변경안·기존 보증서가 있으면 migration은 값을 만들어 내지 않고 중단합니다. 운영자가 해당 행을 검토한 뒤 재실행해야 합니다.
 - 구조 롤백은 쓰기를 중지한 뒤 `supabase/rollbacks/202608180001_lifecycle_integrity.sql`을 사용합니다. migration 뒤 생성된 주문이 있으면 자동 롤백을 중단하므로 별도 매핑 또는 point-in-time restore가 필요합니다.
-- 최신 7장 사진 계약만 되돌릴 때는 `supabase/rollbacks/202608180003_capture_seven_views.sql`을 먼저 적용합니다. 0~6 순서를 사용하는 행이 있으면 롤백은 삭제 대신 중단하며 수동 처리 후 정확히 4장 guard로 복원합니다. 이어서 002까지 되돌릴 때만 `supabase/rollbacks/202608180002_capture_four_views.sql`을 적용해 기존 3~4장 guard를 복원합니다.
-- 전체 롤백은 `supabase/rollbacks/202608190006_customer_decision_gate.sql`부터 시작한 뒤 `supabase/rollbacks/202608190005_shipment_conflict_hotfix.sql`, `supabase/rollbacks/202608180004_backend_v2_runtime.sql` 순서로 적용합니다. 006 rollback은 고객 승인 전 제작 진행 우회를 다시 만들므로 앱도 함께 되돌릴 때만 사용합니다. 005 rollback은 배송 시작 결함을 다시 만들므로 앱도 함께 되돌릴 때만 사용합니다. 004 rollback은 migration 당시 private backup으로 제품 JSON·trigger·정책·권한을 복원하며, migration 뒤 해당 값이 바뀌었거나 실제 LIVE 동의 증적 행이 있으면 덮어쓰거나 증적을 삭제하지 않고 중단합니다.
+- 6장 사진 계약을 되돌릴 때는 앱·API도 함께 중지한 뒤 `supabase/rollbacks/202608210008_capture_six_views.sql`을 먼저 적용합니다. 008 rollback은 백업한 일련번호 사진 연결을 복구하고 `display_order` 0~6, 정확히 7장 guard로 되돌립니다. 백업 대상 분석이나 미디어가 삭제됐거나 연결이 충돌하면 값을 만들거나 덮어쓰지 않고 중단합니다. 더 이전의 4장 계약까지 되돌릴 때만 `supabase/rollbacks/202608180003_capture_seven_views.sql`과 `supabase/rollbacks/202608180002_capture_four_views.sql`을 차례로 적용합니다.
+- 전체 롤백은 `supabase/rollbacks/202608210008_capture_six_views.sql`, `supabase/rollbacks/202608200007_generic_source_pattern_copy.sql`, `supabase/rollbacks/202608190006_customer_decision_gate.sql`, `supabase/rollbacks/202608190005_shipment_conflict_hotfix.sql`, `supabase/rollbacks/202608180004_backend_v2_runtime.sql` 순서로 적용합니다. 008 rollback은 분석 계약을 정확히 7장으로 되돌리므로 앱·API도 함께 되돌릴 때만 사용합니다. 006 rollback은 고객 승인 전 제작 진행 우회를 다시 만들므로 앱도 함께 되돌릴 때만 사용합니다. 005 rollback은 배송 시작 결함을 다시 만들므로 앱도 함께 되돌릴 때만 사용합니다. 004 rollback은 migration 당시 private backup으로 제품 JSON·trigger·정책·권한을 복원하며, migration 뒤 해당 값이 바뀌었거나 실제 LIVE 동의 증적 행이 있으면 덮어쓰거나 증적을 삭제하지 않고 중단합니다.
 
 ## 11. v1 → v2 마이그레이션 이력
 

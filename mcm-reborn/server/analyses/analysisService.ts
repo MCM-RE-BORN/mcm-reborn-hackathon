@@ -678,8 +678,8 @@ async function readOrderedUploadedAssets(
   input: CreateAnalysisInput,
   admin: SupabaseClient,
 ): Promise<MediaAssetRow[]> {
-  if (input.imageAssetIds.length !== 7 || new Set(input.imageAssetIds).size !== 7) {
-    throw new ValidationError('Exactly seven unique imageAssetIds are required');
+  if (input.imageAssetIds.length !== 6 || new Set(input.imageAssetIds).size !== 6) {
+    throw new ValidationError('Exactly six unique imageAssetIds are required');
   }
   if (!input.accessToken) {
     throw new ForbiddenError('A customer access token is required');
@@ -713,7 +713,7 @@ async function readOrderedUploadedAssets(
 
   // Signed uploads do not have a completion callback in the current contract.
   // Reconcile PENDING metadata against private Storage before the DB trigger
-  // evaluates the exact-seven UPLOADED invariant.
+  // evaluates the exact-six UPLOADED invariant.
   await Promise.all(
     ownedAssets.map(async (asset) => {
       const { data: exists, error: storageError } = await admin.storage
@@ -723,7 +723,7 @@ async function readOrderedUploadedAssets(
         throw new ServiceUnavailableError('Uploaded image could not be verified');
       }
       if (!exists) {
-        throw new ValidationError('All seven image assets must be uploaded before analysis', {
+        throw new ValidationError('All six image assets must be uploaded before analysis', {
           assetId: asset.id,
           uploadStatus: asset.upload_status,
         });

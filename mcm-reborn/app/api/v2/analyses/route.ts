@@ -13,7 +13,7 @@ import { readJsonBody } from '@/server/http/json';
 export const runtime = 'nodejs';
 
 const CreateAnalysisRequestSchema = z.object({
-  imageAssetIds: z.array(z.string().uuid()).length(7).refine(
+  imageAssetIds: z.array(z.string().uuid()).length(6).refine(
     (ids) => new Set(ids).size === ids.length,
     'imageAssetIds must be unique',
   ),
