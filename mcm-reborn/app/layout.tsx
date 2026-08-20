@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { CaptureSessionProvider } from "@/components/screens/entry-capture/CaptureSessionProvider";
+import { CustomerDataProvider } from "@/components/screens/order-certificate/CustomerDataProvider";
 import { OrderDraftProvider } from "@/components/screens/order-certificate/OrderDraftProvider";
 import "./globals.css";
 
@@ -8,7 +9,7 @@ export const metadata: Metadata = {
     default: "MCM RE:BORN",
     template: "%s | MCM RE:BORN",
   },
-  description: "MCM 제품의 다음 쓰임을 만드는 공식 업사이클링 서비스",
+  description: "MCM 제품의 새로운 여정을 만드는 공식 업사이클링 서비스",
 };
 
 export const viewport: Viewport = {
@@ -51,9 +52,11 @@ export default function RootLayout({
       </head>
       {/* Browser extensions such as Grammarly may inject body attributes before hydration. */}
       <body suppressHydrationWarning>
-        <CaptureSessionProvider>
-          <OrderDraftProvider>{children}</OrderDraftProvider>
-        </CaptureSessionProvider>
+        <CustomerDataProvider>
+          <CaptureSessionProvider>
+            <OrderDraftProvider>{children}</OrderDraftProvider>
+          </CaptureSessionProvider>
+        </CustomerDataProvider>
       </body>
     </html>
   );

@@ -4,6 +4,7 @@ import { readRecord } from "@/lib/json";
 import type { OrderStage } from "./demo-state";
 
 const CUSTOMER_SESSION_KEY = "mcm.reborn.customer.session";
+const CUSTOMER_SESSION_EVENT = "mcm.reborn.customer-session-change";
 
 export type CustomerSession = {
   accessToken: string;
@@ -227,7 +228,13 @@ export class CustomerApiError extends Error {
 export function clearCustomerSession() {
   if (typeof window !== "undefined") {
     window.sessionStorage.removeItem(CUSTOMER_SESSION_KEY);
+    window.dispatchEvent(new Event(CUSTOMER_SESSION_EVENT));
   }
+}
+
+export function subscribeCustomerSession(listener: () => void) {
+  window.addEventListener(CUSTOMER_SESSION_EVENT, listener);
+  return () => window.removeEventListener(CUSTOMER_SESSION_EVENT, listener);
 }
 
 export async function loginCustomerCredentials(
@@ -380,6 +387,7 @@ function parseCustomerSession(payload: unknown): CustomerSession {
 
 function storeCustomerSession(session: CustomerSession) {
   window.sessionStorage.setItem(CUSTOMER_SESSION_KEY, JSON.stringify(session));
+  window.dispatchEvent(new Event(CUSTOMER_SESSION_EVENT));
 }
 
 function readStoredSession(): CustomerSession | null {

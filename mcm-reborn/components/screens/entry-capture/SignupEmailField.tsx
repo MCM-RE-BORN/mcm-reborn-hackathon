@@ -24,9 +24,24 @@ export function SignupEmailField({ hasError = false }: SignupEmailFieldProps) {
         <input
           aria-describedby={hasError ? "signup-email-error" : undefined}
           aria-invalid={hasError ? true : undefined}
+          // Chrome's non-password ("profile") autofill heuristic looks at
+          // this input's name/id and the nearby "이메일 주소" label, decides
+          // both boxes are "the email field", and — since it can't tell
+          // they're two halves of one address — fills the full address
+          // into both when a suggestion is picked. Chromium deliberately
+          // ignores plain autoComplete="off" for this non-password autofill
+          // system (a known, long-standing Chrome behavior), so "off" alone
+          // does not stop it. autoComplete="new-password" is the practical
+          // workaround: Chrome/Firefox never autofill "new-password"
+          // fields, so it reliably opts this input out. It's safe to use on
+          // a plain text field — it does not turn the input into a
+          // password field, and this form already has real password
+          // fields, so it does not change the browser's save-password
+          // prompt behavior for this form.
+          autoComplete="new-password"
           className={`${fieldStyles.input} ${fieldStyles["input-compact"]}`}
           id="signup-email-local"
-          name="signup-email-local"
+          name="signup-account-local"
           placeholder="example"
           required
           type="text"
@@ -37,9 +52,10 @@ export function SignupEmailField({ hasError = false }: SignupEmailFieldProps) {
         <input
           aria-describedby={hasError ? "signup-email-error" : undefined}
           aria-invalid={hasError ? true : undefined}
+          autoComplete="new-password"
           className={`${fieldStyles.input} ${fieldStyles["input-compact"]}`}
           id="signup-email-domain"
-          name="signup-email-domain"
+          name="signup-account-domain"
           placeholder="email.com"
           required
           type="text"

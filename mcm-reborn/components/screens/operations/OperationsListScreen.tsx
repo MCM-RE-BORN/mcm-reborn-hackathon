@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Card } from "@/components/ui/Card";
+import { StatusPanel } from "@/components/ui/StatusPanel";
 import { formatApiDate, formatKrw } from "@/lib/formatters";
 import {
   hasConfirmedInspection,
@@ -98,7 +99,13 @@ export function OperationsListScreen({
           <span>{visibleApplications.length}건</span>
         </div>
 
-        {visibleApplications.length === 0 ? (
+        {liveApplications === null && !connectionError ? (
+          <StatusPanel
+            description="운영 API에서 최신 신청 상태를 확인하고 있습니다."
+            title="신청 목록을 불러오는 중입니다"
+            tone="loading"
+          />
+        ) : visibleApplications.length === 0 ? (
           <>
             {connectionError ? (
               <OperatorLoginPanel

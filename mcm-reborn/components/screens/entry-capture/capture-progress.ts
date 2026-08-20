@@ -1,4 +1,8 @@
-import { CAPTURE_SLOTS, type CaptureSlotId } from "./capture-config";
+import {
+  CAPTURE_SLOTS,
+  GENERAL_CAPTURE_SLOTS,
+  type CaptureSlotId,
+} from "./capture-config";
 import type { CaptureAssets } from "./CaptureSessionProvider";
 
 type CaptureSlot = (typeof CAPTURE_SLOTS)[number];
@@ -33,16 +37,19 @@ export function captureCount(
   captures: CaptureAssets,
   capturedSlots: CaptureSlotId[],
 ) {
-  return completedCaptureSlotIds(captures, capturedSlots).length;
+  const capturedSlotSet = new Set(capturedSlots);
+  return GENERAL_CAPTURE_SLOTS.filter((slot) =>
+    isCaptureSlotCompleted(captures, capturedSlotSet, slot),
+  ).length;
 }
 
-/** 아직 비어 있는 첫 슬롯. 앨범에서 고른 사진을 넣을 자리를 정할 때 쓴다. */
+/** 아직 비어 있는 첫 필수 슬롯. 앨범 사진은 일반 6면 슬롯에만 넣는다. */
 export function nextEmptyCaptureSlot(
   captures: CaptureAssets,
   capturedSlots: CaptureSlotId[],
 ) {
   const capturedSlotSet = new Set(capturedSlots);
-  return CAPTURE_SLOTS.find(
+  return GENERAL_CAPTURE_SLOTS.find(
     (slot) => !isCaptureSlotCompleted(captures, capturedSlotSet, slot),
   );
 }

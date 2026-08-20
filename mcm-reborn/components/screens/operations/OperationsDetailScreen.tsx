@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { Button, ButtonLink } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { KeyValueList } from "@/components/ui/KeyValueList";
+import { StatusPanel } from "@/components/ui/StatusPanel";
 import { formatKrw } from "@/lib/formatters";
 import {
   hasConfirmedInspection,
@@ -116,30 +117,34 @@ export function OperationsDetailScreen({
   }
 
   if (!liveDetail) {
+    if (!liveError) {
+      return (
+        <OperationsShell>
+          <StatusPanel
+            description="운영 API에서 최신 신청 상태를 확인하고 있습니다."
+            title="신청 정보를 불러오는 중입니다"
+            tone="loading"
+          />
+        </OperationsShell>
+      );
+    }
+
     return (
       <OperationsShell>
         <Card className={styles.notFoundState} tone="outline">
-          <span>{liveError ? "오류" : "조회 중"}</span>
-          <h1>{liveError ? "신청 정보를 불러오지 못했습니다." : "신청 정보를 불러오는 중입니다."}</h1>
-          <p>
-            {liveError
-              ? "운영자 인증과 Supabase 연결을 확인한 뒤 다시 시도해 주세요."
-              : "Supabase에서 최신 신청 정보를 확인하고 있습니다."}
-          </p>
-          {liveError ? (
-            <>
-              <OperatorLoginPanel
-                onAuthenticated={() => {
-                  setLiveError(false);
-                  setLiveDetail(null);
-                  setReloadToken((value) => value + 1);
-                }}
-              />
-              <ButtonLink href={`/operations/${applicationId}`} size="medium">
-                다시 시도
-              </ButtonLink>
-            </>
-          ) : null}
+          <span>오류</span>
+          <h1>신청 정보를 불러오지 못했습니다.</h1>
+          <p>운영자 인증과 Supabase 연결을 확인한 뒤 다시 시도해 주세요.</p>
+          <OperatorLoginPanel
+            onAuthenticated={() => {
+              setLiveError(false);
+              setLiveDetail(null);
+              setReloadToken((value) => value + 1);
+            }}
+          />
+          <ButtonLink href={`/operations/${applicationId}`} size="medium">
+            다시 시도
+          </ButtonLink>
         </Card>
       </OperationsShell>
     );
@@ -596,14 +601,13 @@ export function OperationsDetailScreen({
                 <Button
                   fullWidth
                   size="large"
-                  disabled={isActionPending}
+                  loading={isActionPending}
+                  loadingLabel="처리 중"
                   onClick={handleAdvance}
                 >
-                  {isActionPending
-                    ? "처리 중..."
-                    : transition.mode === "inspection-api"
-                      ? "실물 검수 저장"
-                      : transition.label}
+                  {transition.mode === "inspection-api"
+                    ? "실물 검수 저장"
+                    : transition.label}
                 </Button>
                 <small>
                   {transition.mode === "inspection-api"

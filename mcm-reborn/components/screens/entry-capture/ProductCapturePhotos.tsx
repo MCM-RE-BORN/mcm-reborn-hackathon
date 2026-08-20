@@ -4,8 +4,12 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRef, useState, type ChangeEvent } from "react";
 import { Button } from "@/components/ui/Button";
-import { CAPTURE_SLOTS, type CaptureSlotId } from "./capture-config";
 import {
+  GENERAL_CAPTURE_SLOTS,
+  type CaptureSlotId,
+} from "./capture-config";
+import {
+  captureCount,
   completedCaptureSlotIds,
   isCaptureSlotCompleted,
   nextEmptyCaptureSlot,
@@ -13,6 +17,7 @@ import {
 import { useCaptureSession } from "./CaptureSessionProvider";
 import styles from "./entry-capture.module.css";
 import { normalizeSelectedImage } from "./image-processing";
+import { SerialNumberCapture } from "./SerialNumberCapture";
 
 type ProductCapturePhotosProps = {
   capturedSlots: CaptureSlotId[];
@@ -31,7 +36,7 @@ export function ProductCapturePhotos({
   const [isProcessing, setIsProcessing] = useState(false);
   const capturedSlotSet = new Set(capturedSlots);
   const completedSlotIds = completedCaptureSlotIds(captures, capturedSlots);
-  const completedCount = completedSlotIds.length;
+  const completedCount = captureCount(captures, capturedSlots);
   const nextAlbumSlot = nextEmptyCaptureSlot(captures, capturedSlots);
   const completedQuery = completedSlotIds.length
     ? `&completed=${completedSlotIds.join(",")}`
@@ -72,15 +77,15 @@ export function ProductCapturePhotos({
   return (
     <section aria-labelledby="capture-guide-title" className={styles.captureGuide}>
       <h2 className={styles.visuallyHidden} id="capture-guide-title">
-        제품 사진 {completedCount}/{CAPTURE_SLOTS.length}
+        제품 사진 {completedCount}/{GENERAL_CAPTURE_SLOTS.length}
       </h2>
       <p className={styles.visuallyHidden}>
-        정면, 후면, 상단, 하단, 좌측면, 우측면, 일련번호를 차례로
-        등록해주세요. 일곱 사진이 모두 필요합니다.
+        정면, 후면, 상단, 하단, 좌측면, 우측면 사진을 차례로 등록해주세요.
+        여섯 사진이 필요하며 시리얼 번호 사진은 선택 사항입니다.
       </p>
 
       <div className={styles.captureGrid}>
-        {CAPTURE_SLOTS.map((slot) => {
+        {GENERAL_CAPTURE_SLOTS.map((slot) => {
           const sessionCapture = captures[slot.id];
           const isCompleted = isCaptureSlotCompleted(
             captures,
@@ -115,15 +120,6 @@ export function ProductCapturePhotos({
                 <span aria-hidden="true" className={styles.captureCompletedMark}>
                   ✓
                 </span>
-              ) : slot.id === "serialNumber" ? (
-                <Image
-                  alt=""
-                  aria-hidden="true"
-                  className={styles.captureBarcode}
-                  height={31}
-                  src="/assets/mvp-beta/icon-barcode.svg"
-                  width={50}
-                />
               ) : (
                 <span aria-hidden="true" className={styles.captureAddMark}>
                   +
@@ -144,17 +140,17 @@ export function ProductCapturePhotos({
 
       <div className={styles.captureSecondaryAction}>
         <Button
-          aria-describedby="album-selection-note"
-          disabled={isProcessing || !nextAlbumSlot}
+          aria-describedby="capture-upload-rule capture-storage-note"
+          disabled={!nextAlbumSlot}
           fullWidth
+          loading={isProcessing}
+          loadingLabel="사진 준비 중"
           onClick={() => albumInputRef.current?.click()}
           variant="outline"
         >
-          {isProcessing
-            ? "사진 준비 중"
-            : nextAlbumSlot
-              ? `앨범에서 ${nextAlbumSlot.label} 선택`
-              : `사진 ${CAPTURE_SLOTS.length}장 등록 완료`}
+          {nextAlbumSlot
+            ? `앨범에서 ${nextAlbumSlot.label} 사진 선택`
+            : `사진 ${GENERAL_CAPTURE_SLOTS.length}장 등록 완료`}
         </Button>
         <input
           accept="image/jpeg,image/png"
@@ -163,19 +159,26 @@ export function ProductCapturePhotos({
           ref={albumInputRef}
           type="file"
         />
-        <p
-          aria-live="polite"
-          className={albumMessage ? styles.captureAlbumMessage : undefined}
-          id="album-selection-note"
-        >
-          {albumMessage ??
-            "촬영본은 제품 등록을 마칠 때까지 브라우저에만 임시 보관됩니다."}
-        </p>
+        <div className={styles.captureUploadNotes}>
+          <p className={styles.captureRule} id="capture-upload-rule">
+            JPG, PNG 6장 · 파일당 최대 10MB
+          </p>
+          <p id="capture-storage-note">
+            촬영본은 제품 등록을 마칠 때까지 브라우저에만 임시 보관됩니다.
+          </p>
+        </div>
+        {albumMessage ? (
+          <p
+            aria-live="polite"
+            className={styles.captureAlbumMessage}
+            id="album-selection-message"
+          >
+            {albumMessage}
+          </p>
+        ) : null}
       </div>
-      <p className={styles.captureRule}>
-        정면, 후면, 상단, 하단, 좌측면, 우측면, 일련번호 필수 · JPG, PNG
-        7장 · 파일당 최대 10MB
-      </p>
+
+      <SerialNumberCapture completedSlotIds={completedSlotIds} />
     </section>
   );
 }

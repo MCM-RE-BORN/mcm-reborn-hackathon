@@ -12,10 +12,12 @@ import {
 } from "react";
 import { AppShell } from "@/components/layout/AppShell";
 import { Button, ButtonLink } from "@/components/ui/Button";
+import { LoadingIndicator } from "@/components/ui/LoadingIndicator";
 import { StatusPanel } from "@/components/ui/StatusPanel";
 import { selectOneXCameraDevice } from "./camera-device-selection";
 import {
   CAPTURE_SLOTS,
+  GENERAL_CAPTURE_SLOTS,
   getCaptureSlot,
   type CaptureSlotId,
 } from "./capture-config";
@@ -285,6 +287,7 @@ function ForcedCameraState({
 
 type RuntimeCameraStateProps = {
   description?: string;
+  isProcessing: boolean;
   onChooseFile: () => void;
   onRetry: () => void;
   runtimeState: Exclude<CameraRuntimeState, "ready">;
@@ -292,6 +295,7 @@ type RuntimeCameraStateProps = {
 
 function RuntimeCameraState({
   description,
+  isProcessing,
   onChooseFile,
   onRetry,
   runtimeState,
@@ -317,12 +321,19 @@ function RuntimeCameraState({
         action={
           <div className={styles.cameraStatusActions}>
             {!isStarting && !isUnsupported ? (
-              <Button fullWidth onClick={onRetry} variant="outline">
+              <Button
+                disabled={isProcessing}
+                fullWidth
+                onClick={onRetry}
+                variant="outline"
+              >
                 카메라 다시 시도
               </Button>
             ) : null}
             <Button
               fullWidth
+              loading={isProcessing}
+              loadingLabel="사진 준비 중"
               onClick={onChooseFile}
               variant={isStarting ? "outline" : "primary"}
             >
@@ -375,7 +386,9 @@ export function CameraScreen({
   const [retryKey, setRetryKey] = useState(0);
   const [isCapturing, setIsCapturing] = useState(false);
   const slotConfig = getCaptureSlot(slot);
-  const slotIndex = CAPTURE_SLOTS.findIndex((item) => item.id === slot);
+  const slotIndex = GENERAL_CAPTURE_SLOTS.findIndex(
+    (item) => item.id === slot,
+  );
 
   const stopCurrentStream = useCallback(() => {
     stopStream(streamRef.current);
@@ -552,6 +565,7 @@ export function CameraScreen({
       return;
     }
 
+    setIsCapturing(true);
     setRuntimeDescription(undefined);
 
     try {
@@ -574,6 +588,10 @@ export function CameraScreen({
           : "사진을 읽지 못했습니다. 다른 사진을 선택해주세요.",
       );
       setRuntimeState("error");
+    } finally {
+      if (mountedRef.current) {
+        setIsCapturing(false);
+      }
     }
   };
 
@@ -688,6 +706,7 @@ export function CameraScreen({
             <span>{slotConfig.label}</span>
             <button
               aria-label={`${slotConfig.label} 사진 촬영`}
+              aria-busy={isCapturing || undefined}
               className={styles.cameraShutter}
               disabled={isCapturing}
               onClick={() => void handleCapture()}
@@ -707,15 +726,21 @@ export function CameraScreen({
                 sizes="52px"
                 src="/assets/mvp-beta/camera-shutter-background.svg"
               />
+              {isCapturing ? (
+                <LoadingIndicator className={styles.cameraShutterLoading} />
+              ) : null}
             </button>
             <span>
-              {slotIndex + 1} / {CAPTURE_SLOTS.length}
+              {slot === "serialNumber"
+                ? "선택"
+                : `${slotIndex + 1} / ${GENERAL_CAPTURE_SLOTS.length}`}
             </span>
           </div>
         </>
       ) : (
         <RuntimeCameraState
           description={runtimeDescription}
+          isProcessing={isCapturing}
           onChooseFile={() => fallbackInputRef.current?.click()}
           onRetry={handleRetry}
           runtimeState={runtimeState}

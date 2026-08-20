@@ -133,6 +133,10 @@
   font-size: var(--font-size-control);
 }
 
+.pageHeading h1 + span {
+  margin-top: var(--space-10);
+}
+
 .summaryMetric {
   display: flex;
   align-items: baseline;
@@ -187,7 +191,7 @@
 }
 
 .loginPanel p {
-  margin-top: var(--space-5);
+  margin-top: var(--space-14);
   color: var(--color-muted);
   line-height: var(--line-height-reading);
 }
@@ -347,11 +351,10 @@
 
 .productCell span {
   max-width: 13rem;
-  overflow: hidden;
   color: var(--color-muted);
   font-size: var(--font-size-label);
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: break-word;
+  white-space: normal;
 }
 
 .statusBadge {
@@ -364,7 +367,8 @@
   color: var(--color-canvas);
   font-size: var(--font-size-label);
   font-weight: var(--font-weight-semibold);
-  white-space: nowrap;
+  text-align: center;
+  white-space: normal;
 }
 
 .tableAction {
@@ -399,6 +403,11 @@
 .emptyState p,
 .notFoundState p {
   color: var(--color-muted);
+}
+
+.emptyState strong + p,
+.notFoundState h1 + p {
+  margin-top: var(--space-8);
 }
 
 .emptyState a {
@@ -446,6 +455,10 @@
 .detailHeading h1,
 .detailHeading p {
   grid-column: 2;
+}
+
+.detailHeading h1 + p {
+  margin-top: var(--space-10);
 }
 
 .ownerBadge {
@@ -505,6 +518,10 @@
   color: var(--color-muted);
 }
 
+.detailProductCopy h2 + span {
+  margin-top: var(--space-10);
+}
+
 .compactKeyValues {
   margin-top: var(--space-9);
 }
@@ -528,7 +545,7 @@
 }
 
 .infoCard h2 {
-  margin-bottom: var(--space-9);
+  margin-bottom: var(--space-14);
   font-size: var(--font-size-control);
 }
 
@@ -608,6 +625,10 @@
   line-height: var(--line-height-reading);
 }
 
+.progressHeader h2 + span {
+  margin-top: var(--space-10);
+}
+
 .miniTimeline {
   display: grid;
 }
@@ -682,6 +703,11 @@
   line-height: var(--line-height-reading);
 }
 
+.nextAction > strong + p,
+.nextAction > strong + small {
+  margin-top: var(--space-10);
+}
+
 .nextAction > a {
   margin-top: var(--space-7);
 }
@@ -707,6 +733,10 @@
 .completeState p {
   color: var(--color-muted);
   font-size: var(--font-size-label);
+}
+
+.completeState strong + p {
+  margin-top: var(--space-8);
 }
 
 .visuallyHidden {
