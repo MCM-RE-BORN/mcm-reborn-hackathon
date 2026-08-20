@@ -39,9 +39,13 @@ export function StatusPanel({
       className={[styles.statusPanel, styles[`statusPanel-${tone}`]].join(" ")}
       role={isUrgent ? "alert" : "status"}
     >
-      <span aria-hidden="true" className={styles.statusMark}>
-        {MARKS[tone]}
-      </span>
+      {isLoading ? (
+        <span aria-hidden="true" className={styles.statusSpinner} />
+      ) : (
+        <span aria-hidden="true" className={styles.statusMark}>
+          {MARKS[tone]}
+        </span>
+      )}
       <div className={styles.statusCopy}>
         <h2>{title}</h2>
         <p>{description}</p>

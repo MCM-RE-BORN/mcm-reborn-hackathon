@@ -337,9 +337,14 @@
   color: var(--color-danger);
 }
 
-.statusPanel-loading .statusMark {
-  animation: statusPulse var(--duration-standard) var(--ease-standard) infinite
-    alternate;
+.statusSpinner {
+  display: inline-block;
+  width: var(--control-height-xl);
+  height: var(--control-height-xl);
+  border: var(--border-focus) solid var(--color-divider);
+  border-top-color: var(--color-ink);
+  border-radius: var(--radius-pill);
+  animation: statusSpin 0.9s linear infinite;
 }
 
 .statusCopy {
@@ -423,12 +428,8 @@
   text-align: center;
 }
 
-@keyframes statusPulse {
-  from {
-    opacity: var(--opacity-disabled);
-  }
-
+@keyframes statusSpin {
   to {
-    opacity: 100%;
+    transform: rotate(360deg);
   }
 }
