@@ -18,6 +18,14 @@ export default async function AnalysisPage({
   const analysisId = Array.isArray(query.analysisId)
     ? query.analysisId[0]
     : query.analysisId;
+  const from = Array.isArray(query.from) ? query.from[0] : query.from;
+  const backHref = from === "orders-analyses" ? "/orders?view=analyses" : undefined;
 
-  return <AnalysisResultScreen analysisId={analysisId} state={readDemoState(state)} />;
+  return (
+    <AnalysisResultScreen
+      analysisId={analysisId}
+      backHref={backHref}
+      state={readDemoState(state)}
+    />
+  );
 }

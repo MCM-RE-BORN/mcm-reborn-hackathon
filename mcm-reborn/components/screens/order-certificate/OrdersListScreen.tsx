@@ -197,7 +197,7 @@ function AnalysisListItem({
       <Link
         aria-label={`${sourceCategoryLabel(analysis.sourceCategory)} AI 분석 결과 보기`}
         className={styles.ordersListCard}
-        href={`/submissions/demo/analysis?analysisId=${encodeURIComponent(analysis.id)}`}
+        href={`/submissions/demo/analysis?analysisId=${encodeURIComponent(analysis.id)}&from=orders-analyses`}
       >
         <div className={styles.ordersListCardMeta}>
           <span>{hasApplication ? "신청 완료" : "AI 분석 완료"}</span>

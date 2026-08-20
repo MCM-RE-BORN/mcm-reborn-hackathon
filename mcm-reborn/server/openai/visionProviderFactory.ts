@@ -5,7 +5,7 @@ import type { VisionProvider } from './types';
 
 /** Create the provider selected by the v2 analysis mode configuration. */
 export function createVisionProvider(): VisionProvider {
-  const mode = (process.env.AI_MODE ?? 'DEMO_FIXTURE').toUpperCase();
+  const mode = (process.env.AI_MODE ?? 'DEMO_FIXTURE').trim().toUpperCase();
 
   switch (mode) {
     case 'DEMO_FIXTURE':
