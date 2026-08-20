@@ -34,6 +34,7 @@
 | `examples/Product3DViewer.tsx` | 실제 GLB 자산이 준비된 뒤 사용할 수 있는 3D 뷰어 참고 예시 |
 | `examples/model-viewer.d.ts` | React JSX custom element 타입 예시 |
 | `validate_package.py` | OpenAPI·Mock·AI 예시·핵심 SQL 보안 불변조건 검증 |
+| `demo-images/` | AI 분석 접수 시 슬롯별로 업로드하는 시연용 백팩 6면 JPEG |
 | `mcm-reborn/` | Next.js 16 웹 앱, Fixture 고객·운영 UI, v2 Route Handler·서비스와 npm 스크립트 |
 
 ## 확정된 UX 계약
@@ -62,6 +63,21 @@
 8. `LIVE`를 시험할 때는 외부 AI opt-in·privacy notice·요청별 동의·증적 저장을 먼저 구성하고, 기본 데모는 `DEMO_FIXTURE`로 유지합니다.
 9. `mock-data.json`의 중앙 시나리오 `MCM_BACKPACK_CHANGE_APPROVED_20260817`와 단일 대표 주문 `RB-20260817-0001`에 연결된 상태 이력·검수·변경안·보증서를 Seed합니다.
 10. 대표 주문, 저품질 재촬영, `INELIGIBLE` 사진 보완, AI 장애 폴백, 실물 검수 후 변경 승인 흐름을 각각 리허설합니다.
+
+## AI 분석 접수용 시연 이미지
+
+카메라 촬영 대신 저장소의 [`demo-images/`](demo-images/) 폴더에 있는 사진 6장을 사용해 AI 분석 접수 흐름을 시연할 수 있습니다. 제품 사진 등록 화면에서 각 슬롯에 다음 파일을 한 장씩 등록합니다.
+
+| 등록 슬롯 | 사용할 파일 |
+|---|---|
+| 정면 | [`정면.jpeg`](demo-images/정면.jpeg) |
+| 후면 | [`후면.jpeg`](demo-images/후면.jpeg) |
+| 상단 | [`상단.jpeg`](demo-images/상단.jpeg) |
+| 하단 | [`하단.jpeg`](demo-images/하단.jpeg) |
+| 좌측면 | [`좌측면.jpeg`](demo-images/좌측면.jpeg) |
+| 우측면 | [`우측면.jpeg`](demo-images/우측면.jpeg) |
+
+사진 6장과 필수 제품 정보, 영문과 숫자를 조합한 11자리 시리얼 번호를 입력한 뒤 `AI 분석 접수하기`를 누릅니다. 시리얼 번호 사진은 선택 사항이므로 이 폴더에는 포함하지 않았습니다. 이 사진은 서비스 시연용 입력 자료로만 사용합니다.
 
 ## 의존성
 
