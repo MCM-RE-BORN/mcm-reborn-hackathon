@@ -111,7 +111,7 @@ export function LoginScreen({ state }: AuthScreenProps) {
     setIsSubmitting(true);
     try {
       await loginCustomerCredentials(email, password);
-      router.push("/home");
+      router.replace("/?bootstrap=customer");
     } catch (error) {
       setLoginError(
         error instanceof Error

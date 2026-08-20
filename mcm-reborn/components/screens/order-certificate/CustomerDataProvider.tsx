@@ -112,6 +112,7 @@ export function CustomerDataProvider({ children }: { children: ReactNode }) {
       session = await getCustomerSession();
     } catch (error) {
       setStatus("error");
+      window.location.replace("/login?reason=session-expired");
       throw error;
     }
     const cached = dataRef.current;

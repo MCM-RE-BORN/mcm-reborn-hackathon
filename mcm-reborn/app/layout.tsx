@@ -9,7 +9,7 @@ export const metadata: Metadata = {
     default: "MCM RE:BORN",
     template: "%s | MCM RE:BORN",
   },
-  description: "MCM 제품의 다음 쓰임을 만드는 공식 업사이클링 서비스",
+  description: "MCM 제품의 새로운 여정을 만드는 공식 업사이클링 서비스",
 };
 
 export const viewport: Viewport = {

@@ -45,7 +45,7 @@
 .startTagline {
   position: absolute;
   right: var(--layout-gutter);
-  bottom: calc(var(--safe-area-bottom) + var(--space-16));
+  bottom: calc(var(--safe-area-bottom) + var(--space-21));
   left: var(--layout-gutter);
   color: var(--color-canvas);
   font-size: var(--font-size-caption);
@@ -54,9 +54,38 @@
   text-align: center;
 }
 
-.startScreen:focus-visible {
-  outline-color: var(--color-canvas);
-  outline-offset: calc(var(--space-2) * -1);
+.startTransitionStatus {
+  position: absolute;
+  right: var(--layout-gutter);
+  bottom: calc(var(--safe-area-bottom) + var(--space-9));
+  left: var(--layout-gutter);
+  display: flex;
+  min-height: var(--space-9);
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+  color: rgb(255 255 255 / 82%);
+  font-size: var(--font-size-caption);
+  line-height: var(--line-height-tight);
+  text-align: center;
+}
+
+.startLoadingIndicator {
+  width: var(--space-7);
+  height: var(--space-7);
+  border-width: var(--border-thin);
+  border-color: rgb(255 255 255 / 38%);
+  border-top-color: var(--color-canvas);
+}
+
+.startRetryButton {
+  padding: var(--space-0);
+  border: var(--space-0);
+  border-bottom: var(--border-thin) solid currentcolor;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
 }
 
 .introContent {
@@ -113,6 +142,41 @@
   font-size: var(--font-size-body);
   font-weight: var(--font-weight-light);
   line-height: var(--line-height-reading);
+}
+
+.introScrollCue {
+  display: grid;
+  width: fit-content;
+  justify-items: center;
+  gap: var(--space-4);
+  margin: calc(var(--space-13) * -1) auto var(--space-0);
+  color: var(--color-muted);
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-tight);
+  text-decoration: none;
+}
+
+.introScrollCue i {
+  width: var(--space-5);
+  height: var(--space-5);
+  border-right: var(--border-thin) solid currentcolor;
+  border-bottom: var(--border-thin) solid currentcolor;
+  animation: intro-scroll-cue 1.6s ease-in-out infinite;
+  transform: rotate(45deg);
+}
+
+@keyframes intro-scroll-cue {
+  0%,
+  100% {
+    translate: 0 calc(var(--space-1) * -1);
+    opacity: 0.5;
+  }
+
+  50% {
+    translate: 0 var(--space-2);
+    opacity: 1;
+  }
 }
 
 .introSteps {
@@ -1024,6 +1088,10 @@
 @media (prefers-reduced-motion: reduce) {
   .homeHeroMedia {
     display: none;
+  }
+
+  .introScrollCue i {
+    animation: none;
   }
 }
 
