@@ -2,6 +2,7 @@ import Image from "next/image";
 import { AppShell } from "@/components/layout/AppShell";
 import { ButtonLink } from "@/components/ui/Button";
 import { StatusPanel } from "@/components/ui/StatusPanel";
+import { IntroScrollOverlay } from "./IntroScrollOverlay";
 import type { PageState } from "./page-state";
 import styles from "./entry-capture.module.css";
 
@@ -112,11 +113,6 @@ export function IntroScreen({ state }: IntroScreenProps) {
             </p>
           </section>
 
-          <a className={styles.introScrollCue} href="#intro-actions">
-            <span>스크롤하고 시작하기</span>
-            <i aria-hidden="true" />
-          </a>
-
           <ol className={styles.introSteps} aria-label="서비스 이용 순서">
             {STEPS.map((step) => (
               <li key={step.index}>
@@ -135,6 +131,8 @@ export function IntroScreen({ state }: IntroScreenProps) {
             뒤 제작 조건이 달라지면 고객의 승인을 먼저 받습니다. 사진 사전 확인은
             공식 정품 판정을 대신하지 않습니다.
           </aside>
+
+          <IntroScrollOverlay />
         </>
       ) : (
         <>

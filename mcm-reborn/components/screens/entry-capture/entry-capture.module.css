@@ -154,13 +154,6 @@
 
 .introHero {
   display: grid;
-  min-height: max(
-    26rem,
-    calc(
-      100dvh - 12rem - var(--safe-area-top) - var(--safe-area-bottom)
-    )
-  );
-  align-content: center;
   gap: var(--space-9);
   padding-block: var(--space-21) var(--space-17);
   border-block: var(--border-thin) solid var(--color-divider);
@@ -192,39 +185,40 @@
   margin-top: var(--space-6);
 }
 
+.introScrollOverlay {
+  position: fixed;
+  z-index: var(--z-sticky);
+  bottom: var(--space-0);
+  left: 50%;
+  display: grid;
+  width: min(100%, var(--layout-shell-max));
+  min-height: var(--space-29);
+  align-content: end;
+  justify-items: center;
+  padding: var(--space-21) var(--layout-gutter)
+    calc(var(--safe-area-bottom) + var(--space-7));
+  background: linear-gradient(
+    to top,
+    var(--color-canvas) 35%,
+    var(--color-transparent) 100%
+  );
+  pointer-events: none;
+  transform: translateX(-50%);
+}
+
 .introScrollCue {
-  position: relative;
-  z-index: 1;
   display: grid;
   width: fit-content;
   min-height: var(--touch-target-min);
   align-content: center;
   justify-items: center;
   gap: var(--space-4);
-  margin: calc(var(--space-13) * -1) auto var(--space-0);
   color: var(--color-muted);
   font-size: var(--font-size-caption);
   font-weight: var(--font-weight-medium);
   line-height: var(--line-height-tight);
+  pointer-events: auto;
   text-decoration: none;
-  isolation: isolate;
-}
-
-.introScrollCue::before {
-  position: absolute;
-  z-index: var(--z-behind);
-  bottom: calc(var(--space-9) * -1);
-  left: 50%;
-  width: min(100vw, var(--layout-shell-max));
-  height: var(--space-29);
-  background: linear-gradient(
-    to top,
-    var(--color-canvas) 35%,
-    var(--color-transparent) 100%
-  );
-  content: "";
-  pointer-events: none;
-  transform: translateX(-50%);
 }
 
 .introScrollCue i {
