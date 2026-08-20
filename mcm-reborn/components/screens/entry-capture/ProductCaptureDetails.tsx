@@ -84,17 +84,6 @@ export function ProductCaptureDetails() {
       </label>
 
       <TextField
-        hint="제품 내부 라벨 또는 보증서의 번호가 있다면 입력해주세요."
-        id="product-serial"
-        label="시리얼 번호 (선택)"
-        onChange={(event) =>
-          updateProductDetails({ serialNumber: event.currentTarget.value })
-        }
-        placeholder="시리얼 번호 입력"
-        value={productDetails.serialNumber}
-      />
-
-      <TextField
         id="product-note"
         label="현재 상태 메모 (선택)"
         onChange={(event) =>

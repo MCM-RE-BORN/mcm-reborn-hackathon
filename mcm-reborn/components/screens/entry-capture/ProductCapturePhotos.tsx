@@ -4,7 +4,11 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRef, useState, type ChangeEvent } from "react";
 import { Button } from "@/components/ui/Button";
-import { CAPTURE_SLOTS, type CaptureSlotId } from "./capture-config";
+import {
+  CAPTURE_SLOTS,
+  GENERAL_CAPTURE_SLOTS,
+  type CaptureSlotId,
+} from "./capture-config";
 import {
   completedCaptureSlotIds,
   isCaptureSlotCompleted,
@@ -13,6 +17,7 @@ import {
 import { useCaptureSession } from "./CaptureSessionProvider";
 import styles from "./entry-capture.module.css";
 import { normalizeSelectedImage } from "./image-processing";
+import { SerialNumberCapture } from "./SerialNumberCapture";
 
 type ProductCapturePhotosProps = {
   capturedSlots: CaptureSlotId[];
@@ -75,12 +80,12 @@ export function ProductCapturePhotos({
         제품 사진 {completedCount}/{CAPTURE_SLOTS.length}
       </h2>
       <p className={styles.visuallyHidden}>
-        정면, 후면, 상단, 하단, 좌측면, 우측면, 일련번호를 차례로
+        정면, 후면, 상단, 하단, 좌측면, 우측면, 시리얼번호를 차례로
         등록해주세요. 일곱 사진이 모두 필요합니다.
       </p>
 
       <div className={styles.captureGrid}>
-        {CAPTURE_SLOTS.map((slot) => {
+        {GENERAL_CAPTURE_SLOTS.map((slot) => {
           const sessionCapture = captures[slot.id];
           const isCompleted = isCaptureSlotCompleted(
             captures,
@@ -115,15 +120,6 @@ export function ProductCapturePhotos({
                 <span aria-hidden="true" className={styles.captureCompletedMark}>
                   ✓
                 </span>
-              ) : slot.id === "serialNumber" ? (
-                <Image
-                  alt=""
-                  aria-hidden="true"
-                  className={styles.captureBarcode}
-                  height={31}
-                  src="/assets/mvp-beta/icon-barcode.svg"
-                  width={50}
-                />
               ) : (
                 <span aria-hidden="true" className={styles.captureAddMark}>
                   +
@@ -141,6 +137,8 @@ export function ProductCapturePhotos({
           );
         })}
       </div>
+
+      <SerialNumberCapture completedSlotIds={completedSlotIds} />
 
       <div className={styles.captureSecondaryAction}>
         <Button
@@ -173,7 +171,7 @@ export function ProductCapturePhotos({
         </p>
       </div>
       <p className={styles.captureRule}>
-        정면, 후면, 상단, 하단, 좌측면, 우측면, 일련번호 필수 · JPG, PNG
+        정면, 후면, 상단, 하단, 좌측면, 우측면, 시리얼번호 필수 · JPG, PNG
         7장 · 파일당 최대 10MB
       </p>
     </section>
