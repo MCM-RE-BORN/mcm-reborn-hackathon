@@ -13,6 +13,7 @@ import {
 import { AppShell } from "@/components/layout/AppShell";
 import { Button, ButtonLink } from "@/components/ui/Button";
 import { StatusPanel } from "@/components/ui/StatusPanel";
+import { selectOneXCameraDevice } from "./camera-device-selection";
 import {
   CAPTURE_SLOTS,
   getCaptureSlot,
@@ -68,7 +69,7 @@ function errorName(error: unknown) {
   return error instanceof DOMException ? error.name : "";
 }
 
-async function requestCameraStream() {
+async function requestRearCameraStream() {
   let stream: MediaStream;
 
   try {
@@ -101,7 +102,6 @@ async function requestCameraStream() {
     }
   }
 
-  await configureCameraStream(stream);
   return stream;
 }
 
@@ -144,6 +144,50 @@ async function configureCameraStream(stream: MediaStream) {
   } catch {
     // Zoom is optional in browsers without Image Capture/PTZ permission.
   }
+}
+
+async function preferOneXCameraStream(stream: MediaStream) {
+  if (typeof navigator.mediaDevices.enumerateDevices !== "function") {
+    return stream;
+  }
+
+  let devices: MediaDeviceInfo[];
+  try {
+    devices = await navigator.mediaDevices.enumerateDevices();
+  } catch {
+    return stream;
+  }
+
+  const currentTrack = stream.getVideoTracks()[0];
+  const currentDeviceId =
+    currentTrack?.getSettings().deviceId ??
+    devices.find(
+      (device) =>
+        device.kind === "videoinput" && device.label === currentTrack?.label,
+    )?.deviceId;
+  const oneXDevice = selectOneXCameraDevice(devices, currentDeviceId);
+
+  if (!oneXDevice || oneXDevice.deviceId === currentDeviceId) {
+    return stream;
+  }
+
+  stopStream(stream);
+  try {
+    return await navigator.mediaDevices.getUserMedia({
+      audio: false,
+      video: { deviceId: { exact: oneXDevice.deviceId } },
+    });
+  } catch {
+    // A stale or browser-private device ID must not break camera access.
+    return requestRearCameraStream();
+  }
+}
+
+async function requestCameraStream() {
+  const initialStream = await requestRearCameraStream();
+  const stream = await preferOneXCameraStream(initialStream);
+  await configureCameraStream(stream);
+  return stream;
 }
 
 function captureFileName(slot: CaptureSlotId) {
