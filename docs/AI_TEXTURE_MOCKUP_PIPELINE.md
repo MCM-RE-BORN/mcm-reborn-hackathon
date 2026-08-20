@@ -6,15 +6,19 @@
 
 ```text
 정면·후면·상단·하단·좌측면·우측면 촬영/업로드
-  -> 분석 접수 화면에서 OpenAI 분석 + 이후 Meshy 외관 생성 통합 동의
-  -> OpenAI 구조화 비전 분석 또는 재현 가능한 Fixture
+  -> 분석 접수 화면에서 R5 OpenAI 분석 + 이후 Meshy 외관 생성 통합 동의
+  -> LIVE는 각 이미지 앞의 명시적 VIEW 라벨과 함께 OpenAI에 6장을 한 번 전송
+       ├─ 사진 품질·소재·손상·상태 분석
+       └─ BODY/TRIM/STRAP/HARDWARE 외관 소재 profile 동시 생성
+          (PDF V1 + 공개 KB V1의 선별 claim fingerprint로 grounding)
+     또는 재현 가능한 non-LIVE Fixture
   -> 규칙 기반 재사용량·추천
   -> 목업 화면은 여권 지갑 전면 이미지 placeholder 표시
-  -> 사용자가 외관 목업 생성 버튼을 누르면 외관 4면 선택
-       정면 -> 우측면 -> 후면 -> 좌측면
-       ├─ OpenAI: BODY/TRIM/STRAP/HARDWARE 외관 소재 계획
+  -> 사용자가 외관 목업 생성 버튼을 누르면
+       ├─ 현재 LIVE: private provider_result의 저장 profile을 소재 계획으로 결정론적 변환
+       ├─ non-LIVE profile 부재: 외관 4면 OpenAI classifier 호환 폴백
        ├─ 선택 Meshy: 원제품 3D/PBR 생성(참고용, 비차단)
-       └─ Meshy 7: 여권 지갑 기존 UV를 유지한 목표 atlas 생성
+       └─ 외관 4면 Meshy 7: 여권 지갑 기존 UV를 유지한 목표 atlas 생성
   -> 검토된 exterior-mask와 stitch-preserve-mask로 PNG 합성
   -> 합성 atlas 적용이 끝난 뒤에만 @google/model-viewer 3D 공개
 ```
@@ -23,15 +27,30 @@ MVP의 최종 대상은 `RE:BORN 여권 지갑` 외관 하나다. `BODY`가 필�
 
 ## 2. 분석과 추천
 
-`LIVE` 분석은 공식 OpenAI JavaScript SDK와 Zod Structured Outputs를 사용한다. 6장 순서는 정면, 후면, 상단, 하단, 좌측면, 우측면이다. 모델은 관찰 가능한 카테고리, 소재, 상태, 손상, 이미지 품질과 연속 영역 신호만 반환하며 재사용률, 면적, 추천 점수, 가격과 탄소 수치는 애플리케이션 규칙이 계산한다.
+`LIVE` 분석은 공식 OpenAI JavaScript SDK와 Zod Structured Outputs를 사용한다. 6장 순서와 user message 라벨은 `0 FRONT`, `1 REAR`, `2 TOP`, `3 BOTTOM`, `4 LEFT`, `5 RIGHT`로 고정하고 각 `IMAGE_INDEX`/`VIEW` 텍스트 바로 다음에 해당 이미지를 둬 시점과 배열 위치가 어긋나지 않게 한다. 모델은 관찰 가능한 카테고리, 소재, 상태, 손상, 이미지 품질과 연속 영역 신호만 반환하며 재사용률, 면적, 추천 점수, 가격과 탄소 수치는 애플리케이션 규칙이 계산한다.
 
-`MCM_REUSE_GUIDE_2026_08_21_V1`은 전달받은 소재·구성·재사용 참고 자료를 정규화한 prompt grounding이다. 사진 증거를 대체하거나 제품 계열, 진위, 숨은 소재를 추정하는 근거로 사용하지 않는다. 자세한 기준은 [`AI_ANALYSIS_DOMAIN_KNOWLEDGE.md`](./AI_ANALYSIS_DOMAIN_KNOWLEDGE.md)에 기록한다.
+첫 LIVE 요청은 다음 두 지식 묶음을 같은 developer prompt에 넣는다.
+
+- 전달받은 `AI 학습 파일.pdf`를 런타임 규칙으로 정규화한 `MCM_REUSE_GUIDE_2026_08_21_V1`
+- 공개 조사 KB `MCM_LEATHER_BAGS_PUBLIC_RESEARCH_2026_08_21_V1`에서 build-time으로 선별한 16개 atomic claim. canonical claim SHA-256은 `1027b306a500b3f9b348f5e9db3489d65ba2114b1eb6d7ed4bb6920af07be03f`다.
+
+결합 지식 버전은 `MCM_REUSE_GUIDE_2026_08_21_V1+MCM_LEATHER_BAGS_PUBLIC_RESEARCH_2026_08_21_V1@1027b306a500b3f9b348f5e9db3489d65ba2114b1eb6d7ed4bb6920af07be03f`이며 분석 request hash와 private `provider_result` provenance에 기록한다. 공개 KB의 URL·참고 이미지는 고객 요청 때 가져오지 않고, 생성된 claim ID·의역문만 사용한다. 두 묶음 모두 사진 증거를 대체하거나 제품 계열, 진위, 숨은 소재를 추정하는 근거가 아니다. 자세한 PDF 기준은 [`AI_ANALYSIS_DOMAIN_KNOWLEDGE.md`](./AI_ANALYSIS_DOMAIN_KNOWLEDGE.md), 공개 KB와 생성 절차는 [`knowledge-base/mcm-leather-bags/README.md`](./knowledge-base/mcm-leather-bags/README.md)에 기록한다.
+
+같은 Structured Output에서 `exteriorMaterialProfile`도 한 번에 생성한다. 정확히 `BODY`, `TRIM`, `STRAP`, `HARDWARE` 네 키를 사용하며 외관 근거 index는 FRONT `0`, REAR `1`, LEFT `4`, RIGHT `5`만 허용한다. 품질이 `ACCEPTABLE`인 LIVE 성공 결과는 `BODY=PRESENT`와 하나 이상의 직접 사진 근거를 가진 non-null profile이 필수다. profile은 외관 appearance 증거일 뿐 UV mask, mesh label, 재단 패턴 또는 픽셀 분할이 아니다.
+
+profile, 결합 knowledge version, 공개 KB version·claim ID 목록·fingerprint는 DB의 `analyses.provider_result`에 저장한다. 이 값은 목업 서버 경로만 읽는 private runtime context이며 고객용 `Analysis` 응답에는 직렬화하지 않는다. 분석의 요약·손상·예상치·추천 narrative는 기존 분석/추천 UI에서 별도로 보여 주고 목업 화면에는 반복하지 않는다.
 
 추천은 제품의 필수 면적을 hard gate로 사용하고 면적 여유, 상태, 손상, 패턴 노출, 긴 스트립, 잔여 조각과 고객 희망 용도를 설명 가능한 점수로 합산한다. 이는 제작 BOM과 재단 패턴을 푸는 생산 최적화 ML이 아니라 시연용 휴리스틱이다.
 
 ## 3. 외관 4면과 소재 계획
 
-브라우저는 촬영 `Blob`이나 base64 이미지를 다시 전송하지 않는다. 사용자가 목업 화면의 `외관 목업 생성` 버튼을 누르면 인증된 CUSTOMER가 내부 `/api/demo/texture-preview`에 `analysisId`와 `jobKind`만 보내고, 서버가 분석 소유권과 분석 접수 시 연결된 통합 동의를 먼저 확인한 뒤 `analysis_images`와 `media_assets`를 읽는다. 분석 완료만으로 이 작업을 자동 시작하지 않는다.
+브라우저는 촬영 `Blob`이나 base64 이미지를 다시 전송하지 않는다. 사용자가 목업 화면의 `외관 목업 생성` 버튼을 누르면 인증된 CUSTOMER가 내부 `/api/demo/texture-preview`에 `analysisId`, `jobKind`, 동의 버전과 멱등 메타데이터만 보내고, 서버가 분석 소유권과 분석 접수 시 연결된 R5 통합 동의를 먼저 확인한다. 분석 완료만으로 이 작업을 자동 시작하지 않는다.
+
+현재 지식 버전과 fingerprint로 검증된 LIVE `exteriorMaterialProfile`이 있으면 `EXTERIOR_PLAN`은 이를 애플리케이션 규칙으로 즉시 변환한다. 이 경로는 외관 사진 signed URL 생성, idempotency/quota 예약과 추가 OpenAI 요청을 모두 건너뛰므로 OpenAI 호출이나 `EXTERIOR_PLAN` quota를 추가로 소비하지 않는다. 응답의 `provider: OPENAI`는 저장 profile의 출처 표기이지 두 번째 provider 호출을 뜻하지 않는다.
+
+`modeUsed=LIVE`인데 현재 profile이 없거나 과거 knowledge version인 기존 분석은 `409 EXTERIOR_MATERIAL_PROFILE_MISSING`으로 종료하고 새 6면 분석을 안내한다. 이 경우 목업 단계에서 OpenAI classifier로 자동 복구하거나 비용을 다시 발생시키지 않는다. `ExteriorMaterialClassifier`가 4면을 OpenAI로 다시 분류하는 호환 경로는 저장 profile이 없는 non-LIVE `DEMO_FIXTURE`/`SEEDED_ESTIMATE` 분석에만 사용한다. LIVE provider 장애 뒤 `modeUsed=DEMO_FIXTURE`로 저장된 데모 폴백도 이 non-LIVE 경계에 포함된다.
+
+Meshy 작업 또는 non-LIVE classifier 폴백이 실제 외관 사진을 필요로 할 때만 서버가 `analysis_images`와 `media_assets`를 읽는다.
 
 | Meshy/OpenAI 순서 | `display_order` | 촬영 슬롯 |
 |---|---:|---|
@@ -42,14 +61,14 @@ MVP의 최종 대상은 `RE:BORN 여권 지갑` 외관 하나다. `BODY`가 필�
 
 서버는 정확히 네 개의 서로 다른 `UPLOADED` JPEG/PNG, 고객 소유자, `source-products` bucket, 목적과 고객 폴더 경로를 검증하고 15분 signed URL을 만든다. 상단·하단은 제품 상태 분석에는 유지하지만 4-view 외관 생성에서는 제외한다.
 
-`EXTERIOR_PLAN`은 OpenAI Structured Outputs로 정확히 `BODY`, `TRIM`, `STRAP`, `HARDWARE` 네 부위를 반환한다. 각 부위에는 관찰 상태, 신뢰도, 근거 시점, 색·패턴·마감 설명과 적용 모드가 있다. 이 계획은 외관 appearance 계획이지 UV pixel mask나 mesh-face label이 아니다. 모든 결과는 다음 한계를 명시한다.
+`EXTERIOR_PLAN`은 저장 profile 변환 또는 허용된 non-LIVE OpenAI fallback에서 정확히 `BODY`, `TRIM`, `STRAP`, `HARDWARE` 네 부위를 반환한다. 각 부위에는 관찰 상태, 신뢰도, 근거 시점, 색·패턴·마감 설명과 적용 모드가 있다. `BODY`는 필수이며 항상 `GENERATE_SWATCH`다. `TRIM`은 충분히 관찰된 경우만 별도 swatch 후보, `STRAP`은 여권 지갑에서 제외, `HARDWARE`는 목표 PBR을 유지한다. 이 계획은 외관 appearance 계획이지 UV pixel mask나 mesh-face label이 아니다. 모든 결과는 다음 한계를 명시한다.
 
 ```text
 semanticMask.status = UNAVAILABLE
 semanticMask.reason = MESHY_DOES_NOT_RETURN_SEMANTIC_MASK
 ```
 
-따라서 원제품 Meshy UV에서 부위를 픽셀 단위로 자동 분리했다고 설명하면 안 된다.
+따라서 원제품 Meshy UV에서 부위를 픽셀 단위로 자동 분리했다고 설명하면 안 된다. 실제 배치의 유일한 semantic placement 기준은 아래의 사전 제작·검토된 canonical target UV mask 자산이며 AI가 런타임에 선택하거나 수정하지 않는다.
 
 ## 4. Meshy 작업 두 종류
 
@@ -97,7 +116,7 @@ public/assets/models/reborn-passport-wallet/
 
 `exterior-mask.png`와 `stitch-preserve-mask.png`는 모두 2048×2048 UV와 정렬된다. 외관 마스크의 흰색은 교체 후보 외피이고, 스티치 보존 마스크의 흰색은 원본 base-color의 스티치와 인접한 어두운 디테일을 강제로 유지한다. 두 마스크가 중복되더라도 스티치 보존 마스크가 우선한다. 현재 source GLB, 원본 PBR map, 두 mask와 material ID map의 checksum 및 각 coverage는 `material-assets.json`에 기록한다. 생성 스크립트는 `mcm-reborn/scripts/build-passport-wallet-material-assets.py`이며 2048 정렬, checksum, GLB 구조와 검토된 coverage 범위가 달라지면 실패한다.
 
-브라우저 합성은 AI가 적용 부위를 임의로 고르지 못하게 다음 식을 항상 적용한다.
+브라우저 합성은 AI가 적용 부위를 임의로 고르지 못하게 결정론적 target 자산을 사용해 다음 식을 항상 적용한다.
 
 ```text
 effectiveMask = exteriorMask * (1 - stitchPreserveMask)
@@ -109,25 +128,26 @@ finalBaseColor = generatedTargetAtlas * effectiveMask
 
 ## 6. UI 상태와 복구
 
-사용자는 AI 제공자별 버튼 대신 `외관 목업 생성` 버튼 하나를 사용한다. 분석 결과 카드, 외관 4면 목록, 소재 분류와 5단계 절차 설명은 목업 화면에 표시하지 않는다. 버튼을 누르기 전, 생성 중, 원격 작업 또는 로컬 적용 실패 상태에는 모두 여권 지갑 전면 이미지 placeholder를 유지한다. 생성 중에는 placeholder 위의 진행률과 최소 상태 문구만 표시한다.
+사용자는 AI 제공자별 버튼 대신 `외관 목업 생성` 버튼 하나를 사용한다. 분석 결과 카드, 외관 4면 목록, 소재 분류와 5단계 절차 설명은 목업 화면에 표시하지 않는다. 분석 요약·손상·예상치·추천 narrative는 분석/추천 화면의 책임으로 분리한다. 버튼을 누르기 전, 생성 중, 원격 작업 또는 로컬 적용 실패 상태에는 모두 여권 지갑 전면 이미지 placeholder를 유지한다. 생성 중에는 placeholder 위의 진행률과 최소 상태 문구만 표시한다.
 
 OpenAI 계획이나 source 3D가 비활성·실패해도 target 작업은 계속된다. target 원격 작업이 `FAILED` 또는 `CANCELED`이면 같은 유료 작업을 새로 만들지 못하도록 terminal 상태와 token/key를 보존한다. 폴링 timeout, 파생 자산 저장 또는 로컬 합성 오류는 같은 token과 idempotency key로 재조회할 수 있다. 동일 task의 파생 경로는 결정적 hash를 사용해 이미 저장된 결과를 재사용한다. 목표 atlas 합성뿐 아니라 `model-viewer`의 `baseColorTexture` 적용까지 성공해 `applied` 상태가 된 뒤에만 3D 레이어를 공개한다. 그 뒤에는 원본 canonical GLB와 맞춤 외관을 비교할 수 있다.
 
 ## 7. 인증, 동의, 멱등성과 비용 상한
 
-내부 경로는 인증된 `CUSTOMER`만 사용하며 `getAnalysisById`로 분석 접근권한을 확인한다. 사용자는 분석 접수 화면에서 `MCM_EXTERNAL_AI_ANALYSIS_TEXTURE_2026_08_21_R4` 통합 안내에 한 번 동의한다. 안내는 LIVE 분석을 위한 OpenAI 전송과, 이후 사용자가 목업 화면 버튼을 누를 때 외관 4면을 OpenAI/Meshy로 전송해 비용성 작업을 즉시 시작한다는 사실, source GLB/PBR, 안감 제외, provider 보존과 결과 한계를 포함한다. 동의 시각, 고객, 분석과 안내 버전은 `analysis_external_ai_consents`에 연결해 기록한다.
+내부 경로는 인증된 `CUSTOMER`만 사용하며 분석 접근권한을 확인한다. 사용자는 분석 접수 화면의 `AI 분석을 위한 사진 활용 동의`에서 `MCM_EXTERNAL_AI_ANALYSIS_TEXTURE_2026_08_21_R5` 통합 안내에 한 번 동의한다. 안내는 분석 접수 때 6장이 OpenAI로 전송되어 분석과 네 부위 profile을 함께 만든다는 점, 이후 버튼 클릭 때 저장 profile을 재사용하고 외관 4장이 Meshy로 전송된다는 점, 저장 profile이 없는 non-LIVE 분석에 한해 OpenAI 4면 classifier가 동작할 수 있다는 점, source GLB/PBR, 안감 제외, provider 보존과 결과 한계를 포함한다. 동의 시각, 고객, 분석과 안내 버전은 `analysis_external_ai_consents`에 연결해 기록한다.
 
-분석 완료는 외관 작업 시작 신호가 아니다. 외관 작업은 사용자의 버튼 클릭으로만 시작하며 별도 재동의 체크는 표시하지 않는다. texture service는 provider 설정 확인, signed URL 생성, 멱등 예약과 외부 호출보다 먼저 고객·분석·R4 안내 버전이 일치하는 연결 동의 행을 조회한다. 과거 안내 버전 또는 미동의 분석은 `403 FORBIDDEN`으로 종료한다.
+분석 완료는 외관 작업 시작 신호가 아니다. 외관 작업은 사용자의 버튼 클릭으로만 시작하며 목업 화면에 별도 재동의 체크를 표시하지 않는다. texture service는 signed URL 생성, 멱등 예약과 외부 호출보다 먼저 고객·분석·R5 안내 버전이 일치하는 연결 동의 행을 조회한다. R4를 포함한 과거 안내 버전 또는 미동의 분석은 `403 FORBIDDEN`으로 종료한다.
 
 작업은 서로 다른 `jobKind`를 사용한다.
 
-| `jobKind` | provider | 분석당 생성 | 고객 UTC 일일 | 배포 UTC 일일 |
+| `jobKind` 경로 | 실제 provider 호출 | 분석당 생성 | 고객 UTC 일일 | 배포 UTC 일일 |
 |---|---|---:|---:|---:|
-| `EXTERIOR_PLAN` | OpenAI | 1 | 3 | 5 |
+| 현재 LIVE 저장 profile → `EXTERIOR_PLAN` | 없음(결정론적 변환) | 없음 | 없음 | 없음 |
+| non-LIVE profile 부재 → `EXTERIOR_PLAN` | OpenAI | 1 | 3 | 5 |
 | `SOURCE_MODEL` | Meshy | 1 | 1 | 2 |
 | `TARGET_RETEXTURE` | Meshy | 1 | 3 | 5 |
 
-서버 storage key는 고객, 분석, jobKind와 provider를 기준으로 분석당 유료 작업을 한 번만 허용한다. request hash는 고객, 분석, jobKind, provider, 동의 버전과 네 source asset ID digest로 구성하며 브라우저가 발급한 idempotency key에는 의존하지 않는다. 따라서 같은 완료 요청은 새 탭에서도 plan 또는 signed task token을 재생하고, 진행 중 요청은 두 번째 provider 호출을 차단한다. 브라우저의 분석+jobKind별 key와 Meshy token `sessionStorage`, 동기 ref는 같은 탭에서 중복 클릭과 새로고침 복원을 빠르게 처리한다.
+서버 storage key는 non-LIVE classifier와 Meshy 작업에서 고객, 분석, jobKind와 provider를 기준으로 분석당 유료 작업을 한 번만 허용한다. request hash는 고객, 분석, jobKind, provider, 동의 버전과 네 source asset ID digest로 구성하며 브라우저가 발급한 idempotency key에는 의존하지 않는다. 따라서 같은 완료 요청은 새 탭에서도 plan 또는 signed task token을 재생하고, 진행 중 요청은 두 번째 provider 호출을 차단한다. 현재 LIVE 저장 profile 변환은 provider 예약 자체가 필요 없다. 브라우저의 분석+jobKind별 key와 Meshy token `sessionStorage`, 동기 ref는 같은 탭에서 중복 클릭과 새로고침 복원을 빠르게 처리한다.
 
 Meshy token은 고객, 분석, jobKind, provider task ID와 72시간 만료를 전용 `TEXTURE_TASK_SIGNING_SECRET` HMAC으로 서명한다. token은 암호문이 아니므로 URL query가 아니라 인증된 PUT body에만 보낸다. polling은 진행 중 Promise까지 합치는 짧은 in-process cache를 사용한다. 이는 서버리스 인스턴스 간 분산 rate limit이나 durable queue를 대체하지 않는다.
 
@@ -141,8 +161,10 @@ NEXT_PUBLIC_APP_URL=https://demo.example.com
 
 OPENAI_API_KEY=
 OPENAI_VISION_MODEL=gpt-5.6
-EXTERNAL_AI_PRIVACY_NOTICE_VERSION=MCM_EXTERNAL_AI_ANALYSIS_TEXTURE_2026_08_21_R4
-NEXT_PUBLIC_EXTERNAL_AI_PRIVACY_NOTICE_VERSION=MCM_EXTERNAL_AI_ANALYSIS_TEXTURE_2026_08_21_R4
+AI_MODE=DEMO_FIXTURE
+ENABLE_EXTERNAL_AI=false
+EXTERNAL_AI_PRIVACY_NOTICE_VERSION=MCM_EXTERNAL_AI_ANALYSIS_TEXTURE_2026_08_21_R5
+NEXT_PUBLIC_EXTERNAL_AI_PRIVACY_NOTICE_VERSION=MCM_EXTERNAL_AI_ANALYSIS_TEXTURE_2026_08_21_R5
 
 ENABLE_TEXTURE_AI=false
 MESHY_API_KEY=
@@ -155,8 +177,8 @@ MESHY_SOURCE_MODEL=meshy-7
 ```
 
 - `ENABLE_TEXTURE_AI=true`가 공통 opt-in이다.
-- LIVE 분석의 서버 안내 버전은 통합 R4와 일치해야 한다. 클라이언트는 같은 고정 버전을 분석 동의 영수증에 사용한다.
-- `EXTERIOR_PLAN`은 `OPENAI_API_KEY`가 있어야 한다. 모델은 `OPENAI_VISION_MODEL`을 공유한다.
+- LIVE 분석은 `AI_MODE=LIVE`, `ENABLE_EXTERNAL_AI=true`, OpenAI key/model과 통합 R5 서버 안내 버전이 모두 일치해야 한다. 클라이언트는 같은 고정 버전을 분석 동의 영수증에 사용한다.
+- 현재 capability 계산상 `EXTERIOR_PLAN`에는 `OPENAI_API_KEY`가 필요하고 같은 key/model은 최초 LIVE 분석에도 사용한다. 다만 current LIVE 저장 profile 경로는 이를 다시 호출하거나 quota를 소비하지 않으며, 목업 단계에서 새 OpenAI 요청을 만드는 것은 non-LIVE classifier 호환 폴백뿐이다.
 - `TARGET_RETEXTURE`는 Meshy key, 32자 이상의 고엔트로피 signing secret, Meshy가 접근할 공개 HTTPS GLB URL이 필요하다.
 - `MESHY_MOCKUP_MODEL_URL`이 없으면 HTTPS `NEXT_PUBLIC_APP_URL` 아래의 기본 GLB URL을 조합한다. localhost, 사설 IP, `.glb`가 아닌 URL은 허용하지 않는다.
 - source 3D는 `ENABLE_MESHY_SOURCE_MODEL=true`일 때만 capability에 노출한다.

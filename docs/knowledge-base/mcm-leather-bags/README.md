@@ -34,6 +34,8 @@
 - `RESEARCH_REPORT_KO.md`: 조사 결과, 타임라인, 한계와 AI 적용 규칙
 - `CRAWL_LOG.md`: 수집 범위와 접근 제약
 - 저장소 루트의 `scripts/validate_mcm_leather_knowledge.py`: ID, 날짜, URL, 참조 무결성 검증
+- 저장소 루트의 `scripts/build_mcm_runtime_grounding.py`: 선별 claim을 결정적 런타임 TypeScript로 컴파일하고 stale 여부 검증
+- `mcm-reborn/server/openai/generated/mcmPublicGrounding.ts`: LIVE 분석 prompt에 주입하는 생성물. 직접 수정하지 않음
 
 ## 시간 모델
 
@@ -102,6 +104,29 @@
 - 일반 공정은 가능한 공정 지식일 뿐, 개별 MCM SKU의 확정 라우팅이나 BOM이 아니다.
 
 ## 검증
+
+### LIVE 런타임 provenance
+
+첫 LIVE 분석은 전체 연구 레코드나 외부 URL·이미지를 런타임에 읽지 않는다. build-time compiler가 `claims.jsonl`에서 승인된 16개 claim을 정확한 ID 순서로 선택하고, `ai_use`, `evidence_mode`, `confidence` 제약을 검사한 뒤 claim ID와 한국어 의역문만 TypeScript로 생성한다. 생성물은 전달받은 PDF 정규화 규칙 `MCM_REUSE_GUIDE_2026_08_21_V1`과 함께 6면 OpenAI 분석의 developer prompt에 사용된다.
+
+버전, 정규화된 claim ID/text와 검증 메타데이터의 canonical UTF-8 JSON SHA-256은 다음과 같다.
+
+```text
+knowledge version: MCM_LEATHER_BAGS_PUBLIC_RESEARCH_2026_08_21_V1
+selected claims: 16
+canonical SHA-256: 1027b306a500b3f9b348f5e9db3489d65ba2114b1eb6d7ed4bb6920af07be03f
+```
+
+LIVE 분석은 결합 knowledge version, 공개 KB version, 선별 claim ID 목록과 이 fingerprint를 private `analyses.provider_result`에 남긴다. customer-facing 분석 응답에는 claim 본문이나 외관 소재 profile을 직렬화하지 않는다. claim이나 README 버전이 바뀌면 생성물을 다시 만들고 `--check`를 통과시켜야 한다.
+
+```text
+python -X utf8 scripts/build_mcm_runtime_grounding.py
+python -X utf8 scripts/build_mcm_runtime_grounding.py --check
+```
+
+`--check`는 생성물이 없거나 canonical 입력과 byte-for-byte로 다르면 nonzero로 종료한다.
+
+### 지식 베이스 무결성
 
 저장소 루트에서 표준 라이브러리만 사용하는 검증기를 실행한다.
 

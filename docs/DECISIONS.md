@@ -40,6 +40,7 @@
 | DEC-034 | 2026-08-21 | 승인 | 전달받은 `AI 학습 파일.pdf`의 소재·가방 구성 부위·손상 단계별 재사용 기준을 `MCM_REUSE_GUIDE_2026_08_21_V1`로 정규화해 모든 LIVE 이미지 분석의 developer prompt에 주입한다. | 모델 파인튜닝이 아닌 버전형 prompt grounding으로 즉시 적용한다. 참고 지식은 사진 증거를 대체하지 않으며 제품 계열·진위·숨은 소재를 추정하지 않는다. LIVE 성공 결과와 idempotency hash에 지식 버전을 남겨 결과의 근거 버전을 감사할 수 있게 한다. |
 | DEC-035 | 2026-08-21 | 승인 | 여권 지갑 외관 MVP는 정면·우측면·후면·좌측면 4장을 서버에서 읽어 OpenAI 외관 소재 계획, 선택형 Meshy 원제품 3D/PBR 참고 모델, Meshy 목표 UV 리텍스처를 별도 작업으로 실행한다. 원제품 Meshy UV에 의미 마스크가 있다고 주장하지 않고, 최종 배치는 검토된 여권 지갑 `exterior-mask`로 외피만 교체하며 지퍼·금속·로고·솔기는 원본 atlas를 보존한다. 안감은 제외하고 source 3D 실패가 목표 목업을 막지 않으며 최종 표시는 로컬 GLB와 `@google/model-viewer`를 유지한다. | 사용자가 외관-only MVP 구현을 승인했다. 한 장 중앙 크롭·4×4 미러 타일과 원격 Meshy GLB 전체 교체는 사진 조각이 반복되고 부자재까지 덮는 문제가 있어 폐기한다. 내부 `/api/demo/texture-preview`만 `jobKind`로 확장하고 v2 OpenAPI·DB 스키마는 바꾸지 않는다. source model은 30-credit opt-in flag와 별도 1회 quota, target retexture는 별도 10-credit quota·멱등 예약을 사용한다. 운영 전에는 수동/DCC UV 검수, 소유 Storage와 durable job이 필요하다. |
 | DEC-036 | 2026-08-21 | 승인 | OpenAI 분석과 이후 외관 목업 작업은 분석 접수 화면의 `MCM_EXTERNAL_AI_ANALYSIS_TEXTURE_2026_08_21_R4` 통합 안내 한 번으로 동의받고 분석에 연결해 기록한다. 분석 완료만으로 유료 외관 작업을 자동 시작하지 않으며 목업 화면의 `외관 목업 생성` 버튼 클릭만 시작점으로 삼는다. 목업 화면은 분석 결과·외관 4면·소재 분류·5단계 절차를 표시하지 않고 생성 전·중·실패에는 전면 이미지 placeholder를 유지한다. 목표 atlas를 `exterior-mask * (1 - stitch-preserve-mask)`로 PNG 합성해 원본 스티치 RGB와 기존 PBR을 보존하고 실제 3D material 적용까지 성공한 뒤에만 `model-viewer`를 공개한다. | 분석 단계에서 외부 처리 범위·보존·비용성 호출을 미리 명시하면서도 목업 진입만으로 유료 작업이 시작되는 것을 막고 화면을 결과 중심으로 단순화한다. texture service는 분석에 연결된 고객·R4 동의 행을 provider 호출 전에 확인하며 과거·미동의 분석은 403으로 거부한다. `DEC-035`의 4면/job/target UV 아키텍처는 유지하되 동의 시점, 실행 트리거, 고객 UI, 초기·실패 표시와 솔기 보존 합성 규칙은 이 결정이 구체화·대체한다. |
+| DEC-037 | 2026-08-21 | 승인 | 통합 안내를 `MCM_EXTERNAL_AI_ANALYSIS_TEXTURE_2026_08_21_R5`로 올리고, 최초 LIVE 분석의 명시적 6개 `IMAGE_INDEX`/`VIEW` 라벨 요청에서 사진 분석과 `BODY`·`TRIM`·`STRAP`·`HARDWARE` 외관 profile을 함께 만든다. `BODY=PRESENT`를 LIVE 성공의 필수 조건으로 하고 profile과 PDF V1·공개 KB V1·선별 claim SHA provenance를 private `provider_result`에 저장한다. 목업 버튼의 current LIVE `EXTERIOR_PLAN`은 저장 profile을 결정론적으로 변환해 추가 OpenAI 호출·quota를 쓰지 않는다. current profile이 없는 `modeUsed=LIVE` 기존 분석은 409로 새 분석을 요구하고, 4면 `ExteriorMaterialClassifier`는 profile 없는 non-LIVE 데모·seeded 호환 경로만 사용한다. 이후 Meshy는 외관 4장을 사용한다. | 첫 분석과 목업 분류의 중복 전송·비용을 제거하고 공개 지식의 재현 가능한 근거를 남긴다. PDF grounding은 `MCM_REUSE_GUIDE_2026_08_21_V1`, 공개 KB는 `MCM_LEATHER_BAGS_PUBLIC_RESEARCH_2026_08_21_V1`, 선별 claim canonical SHA-256은 `1027b306a500b3f9b348f5e9db3489d65ba2114b1eb6d7ed4bb6920af07be03f`다. R5는 DEC-036의 R4 고지 범위와 DEC-035의 목업 시 OpenAI 재분류 해석을 대체한다. 분석 narrative와 목업 UI는 분리하고 버튼·진행률·완료 전 placeholder·`applied` 뒤 3D/비교, deterministic target mask, 스티치 PNG와 기존 normal·metallic-roughness 보존 규칙은 유지한다. |
 
 ## 대체 관계
 
@@ -51,13 +52,15 @@
 - `DEC-020`의 4슬롯 촬영 규칙은 **2026-08-18 기준 `DEC-022`의 6면+일련번호 7슬롯 규칙으로 대체**되었다.
 - `DEC-022`의 7장 필수 분석 계약과 `DEC-030`의 시리얼 사진 필수 해석은 **2026-08-21 기준 `DEC-031`의 6면 필수·시리얼 촬영 선택 규칙으로 대체**되었다.
 - `DEC-031`의 시리얼 번호 사진 선택 규칙은 유지하되 `serialNumber` 텍스트 선택 계약은 **2026-08-21 기준 `DEC-032`의 신규 분석 접수 필수·11자리 검증 규칙으로 대체**되었다.
-- `DEC-033`의 분석·추천과 유료 호출 보호 원칙은 유지하되 중앙 크롭·미러 타일·OpenAI 이미지 편집·원격 Meshy GLB 전체 교체 방식은 **2026-08-21 기준 `DEC-035`의 4면 외관 계획·목표 UV atlas·결정론적 외피 마스크 방식으로 대체**되었다. 목업 단계의 별도 동의 해석은 `DEC-036`의 분석 접수 통합 동의로 대체되었다.
-- `DEC-035`의 외관 4면, 세 job, 목표 UV와 canonical GLB 원칙은 유지한다. 동의 시점, 버튼 실행, 간소화 UI, 완료 전 placeholder와 `stitch-preserve-mask` 우선 PNG 합성은 **2026-08-21 기준 `DEC-036`이 구체화·대체**한다.
+- `DEC-033`의 분석·추천과 유료 호출 보호 원칙은 유지하되 중앙 크롭·미러 타일·OpenAI 이미지 편집·원격 Meshy GLB 전체 교체 방식은 **2026-08-21 기준 `DEC-035`의 4면 외관 계획·목표 UV atlas·결정론적 외피 마스크 방식으로 대체**되었다. 목업 단계의 별도 동의 해석은 `DEC-036`의 분석 접수 통합 동의로 대체되었고, 활성 안내 버전과 최초 분석 profile 범위는 `DEC-037`이 다시 대체한다.
+- `DEC-034`의 PDF V1 prompt grounding과 감사 원칙은 유지한다. **2026-08-21 기준 `DEC-037`이 공개 KB V1 선별 claim fingerprint, 명시적 6면 VIEW 라벨과 외관 profile provenance를 추가**한다.
+- `DEC-035`의 외관 4면, 세 job, 목표 UV와 canonical GLB 원칙은 유지한다. 동의 시점, 버튼 실행, 간소화 UI, 완료 전 placeholder와 `stitch-preserve-mask` 우선 PNG 합성은 `DEC-036`이 구체화했다. 다만 목업 버튼에서 OpenAI로 4면을 다시 분류하는 해석은 **2026-08-21 기준 `DEC-037`의 current LIVE 저장 profile 재사용으로 대체**되며 classifier는 non-LIVE 호환 경로에만 남는다.
+- `DEC-036`의 버튼 시작, 분석 narrative와 목업 UI 분리, 진행률·placeholder·`applied` 뒤 3D 공개, 스티치/PBR 보존 원칙은 유지한다. R4 통합 안내와 외관 profile 생성·재사용 범위는 **2026-08-21 기준 `DEC-037`의 R5 계약으로 대체**되었다.
 - `DEC-017`의 Figma 전체 시각 기준은 유지한다. 홈·하단 내비게이션·신청 내역의 구체적인 노드와 탐색 구조는 **2026-08-18 기준 `DEC-019`가 대체·구체화**한다.
 - `DEC-004`의 사용자에게 보이는 분석 모드는 `DEMO_FIXTURE`, `SEEDED_ESTIMATE`, `LIVE`로 유지한다. `hybrid`는 별도 공개 enum이 아니라 `DEC-024`의 `LIVE` 내부 장애 폴백 동작으로 구체화한다.
 - `DEC-018`의 “lifecycle command만 실행 경로”라는 당시 구현 상태는 historical이다. v2 서버 범위와 외부 연결 경계는 `DEC-024`가 대체한다.
 - `DEC-024`의 “고객·운영 UI는 Fixture를 유지하고 후속 연결” 부분은 **2026-08-19 기준 `DEC-025`로 대체**되었다. v1 제거·v2 계약·LIVE 동의 원칙은 유지한다.
-- 기존 행은 결정 당시 기록으로 보존한다. 현재 구현과 체크리스트에는 supersede 관계를 반영한 `DEC-010`~`DEC-036`을 적용한다.
+- 기존 행은 결정 당시 기록으로 보존한다. 현재 구현과 체크리스트에는 supersede 관계를 반영한 `DEC-010`~`DEC-037`을 적용한다.
 
 ## 새 결정 형식
 
