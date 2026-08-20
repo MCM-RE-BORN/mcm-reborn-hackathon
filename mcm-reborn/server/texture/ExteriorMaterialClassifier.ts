@@ -6,7 +6,12 @@ import {
   UpstreamError,
   ValidationError,
 } from "@/contracts/errors";
+import type {
+  ExteriorMaterialProfile,
+  ExteriorMaterialProfilePart,
+} from "@/contracts/exterior-material";
 import type { ExteriorMaterialPlan } from "@/lib/texture-preview";
+import { MCM_PUBLIC_VISUAL_KNOWLEDGE } from "@/server/openai/analysisKnowledge";
 
 const EXTERIOR_MATERIAL_PLAN_VERSION =
   "MCM_EXTERIOR_MATERIAL_PLAN_V1" as const;
@@ -28,7 +33,9 @@ Evidence rules:
 9. BODY transferMode is always GENERATE_SWATCH. TRIM is GENERATE_SWATCH only when clearly observed and reusable as a distinct appearance reference; otherwise use KEEP_TARGET_PBR. STRAP is always OMIT_FROM_PASSPORT_WALLET. HARDWARE is always KEEP_TARGET_PBR.
 10. For every part, semanticMask.status is always UNAVAILABLE and semanticMask.reason is always MESHY_DOES_NOT_RETURN_SEMANTIC_MASK.
 11. Never claim that OpenAI, Meshy, these photographs, or this classification produced a UV semantic mask, UV island assignment, mesh-face label, or pixel-accurate cutout. This output is an appearance plan only; a separately authored target UV mask controls final placement.
-12. warnings may mention only evidence limitations shared by the four exterior photographs. Never include signed URLs or hidden chain-of-thought.`;
+12. warnings may mention only evidence limitations shared by the four exterior photographs. Never include signed URLs or hidden chain-of-thought.
+
+${MCM_PUBLIC_VISUAL_KNOWLEDGE}`;
 
 const ExteriorViewSchema = z.enum(EXPECTED_VIEWS);
 
@@ -262,4 +269,128 @@ export class ExteriorMaterialClassifier {
 
 export function isExteriorMaterialClassifierConfigured() {
   return Boolean(process.env.OPENAI_API_KEY?.trim());
+}
+
+const PROFILE_INDEX_TO_VIEW = {
+  0: "FRONT",
+  1: "REAR",
+  4: "LEFT",
+  5: "RIGHT",
+} as const;
+
+const PROFILE_PART_ORDER = ["BODY", "TRIM", "STRAP", "HARDWARE"] as const;
+
+const MATERIAL_CLASS_LABELS: Record<
+  ExteriorMaterialProfilePart["appearance"]["materialClass"],
+  string
+> = {
+  COATED_CANVAS: "코티드 캔버스",
+  LEATHER: "가죽",
+  METAL: "금속",
+  NYLON: "나일론",
+  OTHER: "기타 외관 소재",
+  TEXTILE: "직물",
+  UNKNOWN: "확인되지 않음",
+};
+
+const PATTERN_CANDIDATE_LABELS: Record<
+  ExteriorMaterialProfilePart["appearance"]["patternCandidate"],
+  string | null
+> = {
+  CUBIC_MONOGRAM: "Cubic Monogram 계열로 보이는 패턴",
+  DIAMOND_JACQUARD: "Diamond Jacquard 계열로 보이는 패턴",
+  LAURETOS: "Lauretos 계열로 보이는 패턴",
+  MAXI_VISETOS: "Maxi Visetos 계열로 보이는 패턴",
+  NO_DISTINCT_PATTERN: "뚜렷한 반복 패턴이 관찰되지 않음",
+  OTHER_MONOGRAM: "기타 모노그램 계열로 보이는 패턴",
+  OTHER_PATTERN: "기타 반복 패턴",
+  UNKNOWN: null,
+  VISETOS: "Visetos 계열로 보이는 패턴",
+};
+
+const SURFACE_TREATMENT_LABELS: Record<
+  ExteriorMaterialProfilePart["appearance"]["surfaceTreatments"][number],
+  string
+> = {
+  CROCO_EMBOSSED: "크로코 엠보싱",
+  CRUSHED_DISTRESSED: "크러시드·디스트레스드",
+  CUT_OUT: "컷아웃",
+  EMBOSSED: "엠보싱",
+  FLOCKED: "플로킹",
+  JACQUARD_WOVEN: "자카드 직조",
+  OTHER: "기타 표면 처리",
+  PATENT_GLOSS: "페이턴트 광택",
+  PERFORATED: "퍼포레이션",
+  PLAIN: "별도 가공이 뚜렷하지 않음",
+  PRINTED: "프린트",
+  QUILTED: "퀼팅",
+  STUDDED: "스터드",
+  SUEDE_LIKE: "스웨이드와 유사한 기모",
+  UNKNOWN: "표면 처리 확인 필요",
+};
+
+/**
+ * Reuses the material profile produced by the six-view analysis. Transfer
+ * modes and semantic-mask limitations remain deterministic application rules,
+ * so the model is not asked to invent UV or mesh semantics a second time.
+ */
+export function exteriorMaterialPlanFromProfile(
+  profile: ExteriorMaterialProfile,
+): ExteriorMaterialPlan {
+  return ExteriorMaterialPlanSchema.parse({
+    parts: PROFILE_PART_ORDER.map((partName) => {
+      const part = profile.parts[partName];
+      const transferMode =
+        partName === "BODY"
+          ? "GENERATE_SWATCH"
+          : partName === "TRIM"
+            ? part.observation === "PRESENT" &&
+              part.confidence >= 0.55 &&
+              part.appearance.materialClass !== "UNKNOWN"
+              ? "GENERATE_SWATCH"
+              : "KEEP_TARGET_PBR"
+            : partName === "STRAP"
+              ? "OMIT_FROM_PASSPORT_WALLET"
+              : "KEEP_TARGET_PBR";
+
+      return {
+        appearance: {
+          colors: part.appearance.colors,
+          finishDescription:
+            part.appearance.finishDescription ??
+            (part.appearance.surfaceTreatments.length > 0
+              ? part.appearance.surfaceTreatments
+                  .map((treatment) => SURFACE_TREATMENT_LABELS[treatment])
+                  .join(", ")
+              : null),
+          materialFamily:
+            part.observation === "NOT_OBSERVED"
+              ? null
+              : (part.appearance.materialDescription ??
+                MATERIAL_CLASS_LABELS[part.appearance.materialClass]),
+          patternDescription:
+            part.appearance.patternDescription ??
+            PATTERN_CANDIDATE_LABELS[part.appearance.patternCandidate],
+        },
+        confidence: part.confidence,
+        evidenceViews: [
+          ...new Set(
+            part.evidenceImageIndexes.map(
+              (index) => PROFILE_INDEX_TO_VIEW[index],
+            ),
+          ),
+        ],
+        observation: part.observation,
+        part: partName,
+        semanticMask: {
+          reason: "MESHY_DOES_NOT_RETURN_SEMANTIC_MASK",
+          status: "UNAVAILABLE",
+        },
+        transferMode,
+      };
+    }),
+    schemaVersion: EXTERIOR_MATERIAL_PLAN_VERSION,
+    sourceEvidence: "PHOTOS",
+    warnings: profile.warnings,
+  });
 }

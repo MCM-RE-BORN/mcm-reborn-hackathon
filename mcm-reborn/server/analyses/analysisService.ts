@@ -11,6 +11,11 @@ import {
   type SourceCategory,
 } from '@/contracts/analysis';
 import {
+  ExteriorMaterialProfileSchema,
+  MCM_PUBLIC_KNOWLEDGE_VERSION,
+  type ExteriorMaterialProfile,
+} from '@/contracts/exterior-material';
+import {
   ConflictError,
   ForbiddenError,
   ImageQualityInsufficientError,
@@ -35,6 +40,11 @@ import {
   assertExternalAiReady,
   createVisionProvider,
 } from '@/server/openai/visionProviderFactory';
+import {
+  MCM_ANALYSIS_KNOWLEDGE_VERSION,
+  MCM_PUBLIC_GROUNDING_CLAIM_IDS,
+  MCM_PUBLIC_KNOWLEDGE_FINGERPRINT,
+} from '@/server/openai/analysisKnowledge';
 import { MCM_MATERIAL_REUSE_KNOWLEDGE_VERSION } from '@/server/openai/materialReuseKnowledge';
 import { VisionImageQualityError } from '@/server/openai/types';
 import { isRecord } from '@/server/http/json';
@@ -135,6 +145,11 @@ export interface Analysis {
   warnings: Array<{ code: string; message: string }>;
   createdAt: string;
   completedAt: string;
+}
+
+export interface AnalysisTextureContext {
+  analysis: Analysis;
+  exteriorMaterialProfile: ExteriorMaterialProfile | null;
 }
 
 export interface AnalysisListItem {
@@ -332,8 +347,19 @@ export async function createAnalysis(input: CreateAnalysisInput): Promise<Analys
       provider_request_id: providerOutput.providerRequestId,
       provider_result: {
         confidence: result.confidence,
+        exteriorMaterialProfile: result.exteriorMaterialProfile,
         imageQuality: { status: 'ACCEPTABLE', issues: [] },
         knowledgeVersion: providerOutput.knowledgeVersion ?? null,
+        knowledgeSources:
+          providerOutput.modeUsed === 'LIVE'
+            ? {
+                combinedVersion: MCM_ANALYSIS_KNOWLEDGE_VERSION,
+                materialReuseVersion: MCM_MATERIAL_REUSE_KNOWLEDGE_VERSION,
+                publicResearchClaimIds: MCM_PUBLIC_GROUNDING_CLAIM_IDS,
+                publicResearchFingerprint: MCM_PUBLIC_KNOWLEDGE_FINGERPRINT,
+                publicResearchVersion: MCM_PUBLIC_KNOWLEDGE_VERSION,
+              }
+            : null,
       },
       damages: result.damages,
       warnings: providerOutput.warnings ?? [],
@@ -699,10 +725,36 @@ export async function getAnalysisById(
   analysisId: string,
   viewer: AnalysisViewer,
 ): Promise<Analysis> {
+  const context = await getAnalysisTextureContext(analysisId, viewer);
+  return context.analysis;
+}
+
+/** Read an authorized analysis plus its private runtime-only material profile. */
+export async function getAnalysisTextureContext(
+  analysisId: string,
+  viewer: AnalysisViewer,
+): Promise<AnalysisTextureContext> {
   const row = await readAuthorizedAnalysisRow(analysisId, viewer);
   const admin = createAdminSupabaseClient();
   const recommendations = await readStoredRecommendations(admin, analysisId);
-  return serializeAnalysis(row, recommendations);
+  const providerResult = isRecord(row.provider_result)
+    ? row.provider_result
+    : {};
+  const profile = ExteriorMaterialProfileSchema.safeParse(
+    providerResult.exteriorMaterialProfile,
+  );
+  const knowledgeSources = isRecord(providerResult.knowledgeSources)
+    ? providerResult.knowledgeSources
+    : {};
+  const profileUsesCurrentKnowledge =
+    providerResult.knowledgeVersion === MCM_ANALYSIS_KNOWLEDGE_VERSION &&
+    knowledgeSources.publicResearchFingerprint ===
+      MCM_PUBLIC_KNOWLEDGE_FINGERPRINT;
+  return {
+    analysis: serializeAnalysis(row, recommendations),
+    exteriorMaterialProfile:
+      profile.success && profileUsesCurrentKnowledge ? profile.data : null,
+  };
 }
 
 async function readOrderedUploadedAssets(
@@ -1173,7 +1225,7 @@ function analysisRequestHash(
           input.externalAiPrivacyNoticeVersion?.trim() ?? null,
         knowledgeVersion:
           (process.env.AI_MODE ?? 'DEMO_FIXTURE').trim().toUpperCase() === 'LIVE'
-            ? MCM_MATERIAL_REUSE_KNOWLEDGE_VERSION
+            ? MCM_ANALYSIS_KNOWLEDGE_VERSION
             : null,
       }),
     )

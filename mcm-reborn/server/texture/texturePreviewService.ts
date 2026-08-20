@@ -25,11 +25,13 @@ import {
 import { createAdminSupabaseClient } from "@/lib/supabase/server";
 import {
   getAnalysisById,
+  getAnalysisTextureContext,
   type AnalysisViewer,
 } from "@/server/analyses/analysisService";
 import {
   ExteriorMaterialClassifier,
   ExteriorMaterialPlanSchema,
+  exteriorMaterialPlanFromProfile,
   isExteriorMaterialClassifierConfigured,
 } from "./ExteriorMaterialClassifier";
 import {
@@ -144,7 +146,10 @@ export async function createTexturePreview(
   input: CreateTexturePreviewInput,
   viewer: AnalysisViewer,
 ): Promise<TexturePreviewCreateResponse> {
-  await getAnalysisById(input.analysisId, viewer);
+  const analysisContext = await getAnalysisTextureContext(
+    input.analysisId,
+    viewer,
+  );
   assertExternalTextureConsent(input);
   const admin = createAdminSupabaseClient();
   await assertLinkedUnifiedExternalAiConsent(
@@ -153,6 +158,33 @@ export async function createTexturePreview(
     viewer.id,
   );
   assertJobEnabled(input.jobKind);
+
+  if (analysisContext.analysis.modeUsed === "LIVE") {
+    if (
+      (input.jobKind === "EXTERIOR_PLAN" ||
+        input.jobKind === "TARGET_RETEXTURE") &&
+      !analysisContext.exteriorMaterialProfile
+    ) {
+      throw new ConflictError(
+        "EXTERIOR_MATERIAL_PROFILE_MISSING",
+        "현재 지식 버전의 외관 소재 분석 정보가 없습니다. 제품 사진을 다시 등록해 새 분석을 진행해 주세요.",
+      );
+    }
+  }
+
+  if (
+    input.jobKind === "EXTERIOR_PLAN" &&
+    analysisContext.exteriorMaterialProfile
+  ) {
+    return {
+      jobKind: "EXTERIOR_PLAN",
+      kind: "plan",
+      plan: exteriorMaterialPlanFromProfile(
+        analysisContext.exteriorMaterialProfile,
+      ),
+      provider: "OPENAI",
+    };
+  }
   const sourceImages = await getAnalysisSourceImageUrls(input.analysisId);
   const provider = providerForJob(input.jobKind);
   const reservation = await reserveTextureOperation(

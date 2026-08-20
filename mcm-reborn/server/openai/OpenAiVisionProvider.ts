@@ -10,9 +10,18 @@ import type {
   VisionProvider,
 } from './types';
 import {
-  MCM_MATERIAL_REUSE_KNOWLEDGE,
-  MCM_MATERIAL_REUSE_KNOWLEDGE_VERSION,
-} from './materialReuseKnowledge';
+  MCM_ANALYSIS_KNOWLEDGE,
+  MCM_ANALYSIS_KNOWLEDGE_VERSION,
+} from './analysisKnowledge';
+
+const ORDERED_IMAGE_VIEWS = [
+  'FRONT',
+  'REAR',
+  'TOP',
+  'BOTTOM',
+  'LEFT',
+  'RIGHT',
+] as const;
 
 const BAG_ANALYSIS_DEVELOPER_PROMPT = `You are the visual inspection component of a service-demo prototype named MCM RE:BORN.
 Analyze exactly six supplied images as ordered views of one customer-owned bag: front, rear, top, bottom, left side, and right side.
@@ -36,10 +45,17 @@ Rules:
 7. longStripAvailable means a visibly long, continuous, low-damage strip suitable for a strap-like component; use false when uncertain.
 8. confidence must reflect image quality and ambiguity. A visible logo alone does not justify high confidence.
 9. summaryKo must be neutral Korean no longer than 300 characters.
-10. Use the appended MCM material and reuse reference when interpreting visually supported materials, components, damage locations, reusable condition, and continuous area. It never overrides the evidence boundary in rule 1.
-11. Do not calculate reusable material rate, reusable area, price, recommendations, or carbon savings. The application rule engine calculates those values.`;
+10. Use the appended versioned MCM references when interpreting visually supported materials, components, patterns, surface treatments, damage locations, reusable condition, and continuous area. They never override the evidence boundary in rule 1.
+11. exteriorMaterialProfile is a reusable photo-grounded classification for the later passport-wallet texture workflow:
+   - For ACCEPTABLE images, return a non-null profile with exactly the BODY, TRIM, STRAP, and HARDWARE object keys. BODY must be PRESENT with direct evidence; otherwise return a null profile instead of inventing a usable body reference.
+   - Use only exterior evidence image indexes 0 (FRONT), 1 (REAR), 4 (LEFT), and 5 (RIGHT). TOP and BOTTOM must not appear in evidenceImageIndexes.
+   - Separate broad materialClass, visually consistent patternCandidate, and visible surfaceTreatments. Do not turn a pattern candidate into a material or authenticity claim.
+   - Use NOT_OBSERVED with empty evidence and unknown/empty appearance fields when a part is not visible. Use UNCERTAIN rather than inventing a boundary or substrate.
+   - This profile is appearance evidence only. It does not create a UV mask, mesh label, cut pattern, or pixel-accurate segmentation.
+   - For RECAPTURE_REQUIRED, exteriorMaterialProfile may be null.
+12. Do not calculate reusable material rate, reusable area, price, recommendations, or carbon savings. The application rule engine calculates those values.`;
 
-const LIVE_ANALYSIS_DEVELOPER_PROMPT = `${BAG_ANALYSIS_DEVELOPER_PROMPT}\n\n${MCM_MATERIAL_REUSE_KNOWLEDGE}`;
+const LIVE_ANALYSIS_DEVELOPER_PROMPT = `${BAG_ANALYSIS_DEVELOPER_PROMPT}\n\n${MCM_ANALYSIS_KNOWLEDGE}`;
 
 /** OpenAI Structured Outputs provider for the LIVE v2 analysis mode. */
 export class OpenAiVisionProvider implements VisionProvider {
@@ -70,18 +86,24 @@ export class OpenAiVisionProvider implements VisionProvider {
           content: [
             {
               type: 'text',
-              text: '여섯 이미지를 지정된 순서의 동일 제품으로 보고 분석하세요.',
+              text: '각 VIEW 라벨 바로 다음 이미지만 해당 시점의 증거로 사용하고, 여섯 장을 동일 제품으로 분석하세요.',
             },
-            ...input.imageUrls.map((url) => ({
-              type: 'image_url' as const,
-              image_url: { url, detail: 'auto' as const },
-            })),
+            ...input.imageUrls.flatMap((url, index) => [
+              {
+                type: 'text' as const,
+                text: `IMAGE_INDEX: ${index}; VIEW: ${ORDERED_IMAGE_VIEWS[index]}`,
+              },
+              {
+                type: 'image_url' as const,
+                image_url: { url, detail: 'auto' as const },
+              },
+            ]),
           ],
         },
       ],
       response_format: zodResponseFormat(
         BagVisionSchema,
-        'mcm_reborn_bag_analysis_v2',
+        'mcm_reborn_bag_analysis_v3',
       ),
     });
 
@@ -91,13 +113,18 @@ export class OpenAiVisionProvider implements VisionProvider {
     }
 
     assertImageQualityContract(parsed, input.imageUrls.length);
-
+    if (
+      parsed.imageQuality.status === 'ACCEPTABLE' &&
+      !parsed.exteriorMaterialProfile
+    ) {
+      throw new Error('OPENAI_EXTERIOR_MATERIAL_PROFILE_EMPTY');
+    }
     return {
       result: parsed,
       model: this.model,
       providerRequestId: completion.id,
       modeUsed: 'LIVE',
-      knowledgeVersion: MCM_MATERIAL_REUSE_KNOWLEDGE_VERSION,
+      knowledgeVersion: MCM_ANALYSIS_KNOWLEDGE_VERSION,
     };
   }
 }

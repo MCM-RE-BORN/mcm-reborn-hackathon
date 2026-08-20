@@ -341,7 +341,12 @@ export function TextureMockupStudio({ analysisId }: TextureMockupStudioProps) {
           }
           setPlanState("ready");
         } catch (error) {
-          if (isConsentGuardError(error)) throw error;
+          if (
+            isConsentGuardError(error) ||
+            isExteriorProfileGuardError(error)
+          ) {
+            throw error;
+          }
           setPlanState("fallback");
         }
       } else {
@@ -652,6 +657,14 @@ function isMeshyTaskTokenError(error: unknown) {
   return message.includes("texture task") || message.includes("texture asset");
 }
 
+function isExteriorProfileGuardError(error: unknown) {
+  return (
+    error instanceof CustomerApiError &&
+    error.status === 409 &&
+    error.message.includes("외관 소재 분석 정보")
+  );
+}
+
 function readExternalError(error: unknown) {
   const message = error instanceof Error ? error.message : "";
   const normalized = message.toLowerCase();
@@ -660,6 +673,9 @@ function readExternalError(error: unknown) {
   }
   if (isMeshyTaskTokenError(error)) {
     return "기존 외관 목업 작업의 복구 시간이 만료되었거나 작업을 인증할 수 없습니다.";
+  }
+  if (isExteriorProfileGuardError(error)) {
+    return "현재 지식 기준의 외관 소재 정보가 없어 새 AI 분석이 필요합니다.";
   }
   if (normalized.includes("credits")) {
     return "Meshy API credits가 부족합니다.";
