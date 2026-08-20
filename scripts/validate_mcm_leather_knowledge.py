@@ -12,6 +12,7 @@ for the schema keywords used by this knowledge base.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 import sys
@@ -30,6 +31,14 @@ PRODUCT_PATH = KB_ROOT / "data" / "products.jsonl"
 PATTERN_IMAGE_PATH = KB_ROOT / "data" / "pattern_image_references.jsonl"
 MATERIAL_IMAGE_PATH = KB_ROOT / "data" / "material_image_references.jsonl"
 SCHEMA_PATH = KB_ROOT / "schema" / "knowledge-record.schema.json"
+README_PATH = KB_ROOT / "README.md"
+RUNTIME_WIKI_PATH = (
+    REPO_ROOT
+    / "mcm-reborn"
+    / "server"
+    / "knowledge"
+    / "mcmLeatherWiki.generated.json"
+)
 
 SOURCE_ID_RE = re.compile(r"^SRC-[0-9]{3}$")
 CLAIM_ID_RE = re.compile(r"^CLM-[0-9]{3}$")
@@ -39,6 +48,7 @@ IMAGE_ID_RE = re.compile(r"^(PIMG|MIMG|CIMG)-[0-9]{3}$")
 ISO_DATE_RE = re.compile(r"^[0-9]{4}-[0-9]{2}-[0-9]{2}$")
 LANGUAGE_RE = re.compile(r"^[a-z]{2}(-[A-Z]{2})?$")
 MARKET_RE = re.compile(r"^[A-Z]{2}$")
+WIKI_VERSION_RE = re.compile(r"^버전:\s*`([^`]+)`\s*$", re.MULTILINE)
 
 SOURCE_REQUIRED = {
     "record_type",
@@ -1336,6 +1346,90 @@ def validate_images(
     check_unique(all_content_hashes, "image content_sha256", errors)
 
 
+def validate_runtime_wiki_snapshot(
+    snapshot: Any,
+    sources: list[dict[str, Any]],
+    claims: list[dict[str, Any]],
+    products: list[dict[str, Any]],
+    errors: list[str],
+) -> None:
+    label = RUNTIME_WIKI_PATH.relative_to(REPO_ROOT)
+    if not isinstance(snapshot, dict):
+        errors.append(f"{label}: expected an object")
+        return
+
+    required = {
+        "record_type",
+        "knowledge_base_version",
+        "retrieval_corpus_sha256",
+        "source_files",
+        "counts",
+        "sources",
+        "claims",
+        "products",
+    }
+    if set(snapshot) != required:
+        errors.append(
+            f"{label}: fields must be exactly {sorted(required)}, got {sorted(snapshot)}"
+        )
+        return
+    if snapshot.get("record_type") != "mcm_leather_wiki_snapshot":
+        errors.append(f"{label}: invalid record_type")
+
+    try:
+        readme = README_PATH.read_text(encoding="utf-8")
+    except OSError as error:
+        errors.append(f"{README_PATH}: {error}")
+        return
+    version_match = WIKI_VERSION_RE.search(readme)
+    if not version_match:
+        errors.append(f"{README_PATH}: knowledge version is missing")
+    elif snapshot.get("knowledge_base_version") != version_match.group(1):
+        errors.append(f"{label}: knowledge_base_version does not match README")
+
+    source_paths = {
+        "sources.json": SOURCE_PATH,
+        "claims.jsonl": CLAIM_PATH,
+        "products.jsonl": PRODUCT_PATH,
+    }
+    expected_hashes: dict[str, str] = {}
+    for name, path in source_paths.items():
+        try:
+            expected_hashes[name] = hashlib.sha256(path.read_bytes()).hexdigest()
+        except OSError as error:
+            errors.append(f"{path}: {error}")
+            return
+    if snapshot.get("source_files") != expected_hashes:
+        errors.append(f"{label}: source file hashes are stale")
+
+    digest_input = "\n".join(
+        f"{name}:{digest}" for name, digest in expected_hashes.items()
+    ).encode("utf-8")
+    expected_digest = hashlib.sha256(digest_input).hexdigest()
+    if snapshot.get("retrieval_corpus_sha256") != expected_digest:
+        errors.append(f"{label}: retrieval_corpus_sha256 is stale")
+
+    expected_counts = {
+        "sources": len(sources),
+        "claims": len(claims),
+        "products": len(products),
+    }
+    if snapshot.get("counts") != expected_counts:
+        errors.append(f"{label}: counts do not match the authored knowledge base")
+    if snapshot.get("sources") != sources:
+        errors.append(f"{label}: source records do not match sources.json")
+    if snapshot.get("claims") != claims:
+        errors.append(f"{label}: claim records do not match claims.jsonl")
+    if snapshot.get("products") != products:
+        errors.append(f"{label}: product records do not match products.jsonl")
+
+    retrievable_claims = [
+        claim for claim in claims if claim.get("ai_use") != "exclude"
+    ]
+    if not retrievable_claims:
+        errors.append(f"{label}: no claims are eligible for wiki retrieval")
+
+
 def main() -> int:
     errors: list[str] = []
     schema = load_json(SCHEMA_PATH, errors)
@@ -1347,6 +1441,7 @@ def main() -> int:
     products = load_jsonl(PRODUCT_PATH, errors)
     pattern_images = load_jsonl(PATTERN_IMAGE_PATH, errors)
     material_images = load_jsonl(MATERIAL_IMAGE_PATH, errors)
+    runtime_wiki = load_json(RUNTIME_WIKI_PATH, errors)
 
     validate_records_against_schema(sources, schema, "source", errors)
     validate_records_against_schema(claims, schema, "claim", errors)
@@ -1372,6 +1467,13 @@ def main() -> int:
         material_images,
         source_urls,
         source_dates,
+        errors,
+    )
+    validate_runtime_wiki_snapshot(
+        runtime_wiki,
+        sources,
+        claims,
+        products,
         errors,
     )
 
