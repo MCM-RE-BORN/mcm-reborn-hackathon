@@ -112,8 +112,13 @@ export function ProductCaptureAction({
   return (
     <StickyActionBar>
       {remainingCount === 0 && hasRequiredDetails ? (
-        <Button fullWidth disabled={isSubmitting} onClick={() => void submitAnalysis()}>
-          {isSubmitting ? "AI 분석 접수 중..." : "AI 분석 접수하기"}
+        <Button
+          fullWidth
+          loading={isSubmitting}
+          loadingLabel="AI 분석 접수 중"
+          onClick={() => void submitAnalysis()}
+        >
+          AI 분석 접수하기
         </Button>
       ) : remainingCount === 0 ? (
         <Button disabled fullWidth>

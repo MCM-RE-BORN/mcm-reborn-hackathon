@@ -12,6 +12,7 @@ import {
 } from "react";
 import { AppShell } from "@/components/layout/AppShell";
 import { Button, ButtonLink } from "@/components/ui/Button";
+import { LoadingIndicator } from "@/components/ui/LoadingIndicator";
 import { StatusPanel } from "@/components/ui/StatusPanel";
 import {
   CAPTURE_SLOTS,
@@ -580,6 +581,7 @@ export function CameraScreen({
             <span>{slotConfig.label}</span>
             <button
               aria-label={`${slotConfig.label} 사진 촬영`}
+              aria-busy={isCapturing || undefined}
               className={styles.cameraShutter}
               disabled={isCapturing}
               onClick={() => void handleCapture()}
@@ -599,6 +601,9 @@ export function CameraScreen({
                 sizes="52px"
                 src="/assets/mvp-beta/camera-shutter-background.svg"
               />
+              {isCapturing ? (
+                <LoadingIndicator className={styles.cameraShutterLoading} />
+              ) : null}
             </button>
             <span>
               {slotIndex + 1} / {CAPTURE_SLOTS.length}

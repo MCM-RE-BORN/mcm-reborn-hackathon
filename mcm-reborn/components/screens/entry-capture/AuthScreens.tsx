@@ -8,6 +8,7 @@ import type { FormEvent, ReactNode } from "react";
 import { AppShell } from "@/components/layout/AppShell";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { ButtonLink } from "@/components/ui/Button";
+import { LoadingIndicator } from "@/components/ui/LoadingIndicator";
 import { StatusPanel } from "@/components/ui/StatusPanel";
 import { TextField } from "@/components/ui/TextField";
 import type { PageState } from "./page-state";
@@ -157,11 +158,19 @@ export function LoginScreen({ state }: AuthScreenProps) {
                 type="password"
               />
               <button
+                aria-busy={isSubmitting || undefined}
                 className={styles.authSubmit}
                 disabled={isSubmitting}
                 type="submit"
               >
-                {isSubmitting ? "로그인 중..." : "로그인"}
+                {isSubmitting ? (
+                  <span className={styles.authSubmitLoading}>
+                    <LoadingIndicator className={styles.authSubmitSpinner} />
+                    <span>로그인 중</span>
+                  </span>
+                ) : (
+                  "로그인"
+                )}
               </button>
             </form>
             <nav aria-label="계정 도움말" className={styles.authLinks}>

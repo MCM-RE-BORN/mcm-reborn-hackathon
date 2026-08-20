@@ -61,7 +61,7 @@ function IntroUnavailable({ state }: { state: PageState }) {
             다시 불러오기
           </ButtonLink>
         }
-        description="잠시 후 다시 시도하거나 홈에서 서비스 내용을 둘러보세요."
+        description="잠시 후 다시 시도하거나 홈에서 서비스 내용을 확인해 주세요."
         title="소개 콘텐츠를 불러오지 못했습니다"
         tone={state === "error" ? "error" : "empty"}
       />
@@ -151,6 +151,9 @@ export function IntroScreen({ state }: IntroScreenProps) {
       <div className={styles.introActions} id="intro-actions">
         <ButtonLink fullWidth href="/login">
           시작하기
+        </ButtonLink>
+        <ButtonLink fullWidth href="/home" variant="outline">
+          먼저 둘러보기
         </ButtonLink>
       </div>
     </AppShell>

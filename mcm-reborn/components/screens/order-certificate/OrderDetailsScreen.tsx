@@ -131,7 +131,9 @@ export function OrderDetailsScreen({
     null,
   );
   const [requestError, setRequestError] = useState(false);
-  const [decisionPending, setDecisionPending] = useState(false);
+  const [decisionPending, setDecisionPending] = useState<
+    "approve" | "reject" | null
+  >(null);
 
   useEffect(() => {
     if (!applicationId) {
@@ -222,7 +224,7 @@ export function OrderDetailsScreen({
     if (!applicationId || decisionPending) {
       return;
     }
-    setDecisionPending(true);
+    setDecisionPending(decision);
     try {
       const response = await customerFetch<{
         applicationId: string;
@@ -283,10 +285,10 @@ export function OrderDetailsScreen({
             }
           : current,
       );
-      setDecisionPending(false);
+      setDecisionPending(null);
     } catch {
       setRequestError(true);
-      setDecisionPending(false);
+      setDecisionPending(null);
     }
   }
 
@@ -510,15 +512,19 @@ export function OrderDetailsScreen({
                     </p>
                     <div className={styles.decisionActions}>
                       <Button
-                        disabled={decisionPending}
+                        disabled={decisionPending !== null}
                         fullWidth
+                        loading={decisionPending === "approve"}
+                        loadingLabel="승인 처리 중"
                         onClick={() => void decideChange("approve")}
                       >
-                        {decisionPending ? "처리 중..." : "변경 조건 승인"}
+                        변경 조건 승인
                       </Button>
                       <Button
-                        disabled={decisionPending}
+                        disabled={decisionPending !== null}
                         fullWidth
+                        loading={decisionPending === "reject"}
+                        loadingLabel="거절 처리 중"
                         onClick={() => void decideChange("reject")}
                         variant="danger"
                       >

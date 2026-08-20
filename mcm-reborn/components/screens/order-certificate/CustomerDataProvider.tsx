@@ -52,35 +52,37 @@ function historyFingerprint(snapshot: Pick<
   ]);
 }
 
-async function loadInitialData() {
-  const [applications, analyses, profile] = await Promise.all([
-    customerFetch<CustomerApplicationPage>("/api/v2/applications?size=50"),
-    customerFetch<CustomerAnalysisPage>("/api/v2/analyses?size=50"),
-    customerFetch<CustomerMe>("/api/v2/me"),
-  ]);
-  const latest = applications.items[0];
-  const latestApplication = latest
-    ? await customerFetch<CustomerApplicationDetail>(
-        `/api/v2/applications/${latest.id}`,
-      )
-    : null;
-
-  return { analyses, applications, latestApplication, profile };
-}
-
-async function loadHistory() {
+async function loadHistory(
+  previousLatestApplication: CustomerApplicationDetail | null = null,
+) {
   const [applications, analyses] = await Promise.all([
     customerFetch<CustomerApplicationPage>("/api/v2/applications?size=50"),
     customerFetch<CustomerAnalysisPage>("/api/v2/analyses?size=50"),
   ]);
   const latest = applications.items[0];
-  const latestApplication = latest
-    ? await customerFetch<CustomerApplicationDetail>(
+  let latestApplication: CustomerApplicationDetail | null = null;
+  if (latest) {
+    try {
+      latestApplication = await customerFetch<CustomerApplicationDetail>(
         `/api/v2/applications/${latest.id}`,
-      )
-    : null;
+      );
+    } catch {
+      latestApplication =
+        previousLatestApplication?.id === latest.id
+          ? previousLatestApplication
+          : null;
+    }
+  }
 
   return { analyses, applications, latestApplication };
+}
+
+async function loadInitialData(fallbackProfile: CustomerMe) {
+  const [history, profile] = await Promise.all([
+    loadHistory(),
+    customerFetch<CustomerMe>("/api/v2/me").catch(() => fallbackProfile),
+  ]);
+  return { ...history, profile };
 }
 
 export function CustomerDataProvider({ children }: { children: ReactNode }) {
@@ -125,7 +127,7 @@ export function CustomerDataProvider({ children }: { children: ReactNode }) {
 
     const generation = generationRef.current;
     setStatus("loading");
-    const request = loadInitialData()
+    const request = loadInitialData(session.user)
       .then((initialData) => {
         const next: CustomerDataSnapshot = {
           ...initialData,
@@ -163,7 +165,7 @@ export function CustomerDataProvider({ children }: { children: ReactNode }) {
       return historyRequestRef.current;
     }
     const generation = generationRef.current;
-    const request = loadHistory()
+    const request = loadHistory(cached.latestApplication)
       .then((history) => {
         if (generation !== generationRef.current) {
           return false;

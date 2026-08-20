@@ -101,6 +101,22 @@
   width: 100%;
 }
 
+.buttonLoadingContent {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-5);
+}
+
+.buttonLoadingIndicator {
+  width: var(--space-7);
+  height: var(--space-7);
+  flex: none;
+  border-width: var(--border-thin);
+  border-color: currentcolor;
+  border-top-color: var(--color-transparent);
+}
+
 .actionButtonLink {
   min-height: var(--control-height-lg);
   justify-content: space-between;

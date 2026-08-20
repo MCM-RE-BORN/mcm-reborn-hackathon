@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { AppShell } from "@/components/layout/AppShell";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Section } from "@/components/layout/Section";
 import { ActionButtonLink } from "@/components/ui/ActionButtonLink";
+import { Button } from "@/components/ui/Button";
 import { KeyValueList } from "@/components/ui/KeyValueList";
 import { SectionBand } from "@/components/ui/SectionBand";
 import { StatusPanel } from "@/components/ui/StatusPanel";
@@ -48,17 +49,21 @@ export function MyPageScreen({ state }: MyPageScreenProps) {
     ) ?? false;
   const requestError = status === "error" && data === null;
 
+  const requestData = useCallback(() => {
+    if (requestedOnEntryRef.current) return;
+    requestedOnEntryRef.current = true;
+    const request = data ? revalidateHistory() : bootstrap().then(() => true);
+    void request.catch(() => {
+      requestedOnEntryRef.current = false;
+    });
+  }, [bootstrap, data, revalidateHistory]);
+
   useEffect(() => {
     if (state !== "normal" || requestedOnEntryRef.current) {
       return;
     }
-    requestedOnEntryRef.current = true;
-    if (data) {
-      void revalidateHistory().catch(() => undefined);
-    } else {
-      void bootstrap().catch(() => undefined);
-    }
-  }, [bootstrap, data, revalidateHistory, state]);
+    requestData();
+  }, [requestData, state]);
 
   const address = latestApplication?.shippingAddress;
   const addressText = [
@@ -88,11 +93,15 @@ export function MyPageScreen({ state }: MyPageScreenProps) {
         </div>
       ) : requestError ? (
         <div className={styles.stateInset}>
-          <DemoStatePanel
-            emptyDescription="프로필 정보를 불러오지 못했습니다."
-            retryHref="/mypage"
-            state="error"
-            subject="프로필 정보"
+          <StatusPanel
+            action={
+              <Button fullWidth onClick={requestData} variant="outline">
+                다시 시도
+              </Button>
+            }
+            description="잠시 후 다시 시도해 주세요."
+            title="프로필 정보를 불러오지 못했습니다"
+            tone="error"
           />
         </div>
       ) : !profile ? (

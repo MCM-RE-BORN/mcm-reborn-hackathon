@@ -2,10 +2,11 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { AppShell } from "@/components/layout/AppShell";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { Button } from "@/components/ui/Button";
 import { StatusPanel } from "@/components/ui/StatusPanel";
 import { formatApiDate, formatKrw } from "@/lib/formatters";
 import type { DemoState } from "./demo-state";
@@ -34,17 +35,21 @@ export function OrdersListScreen({ state, view }: OrdersListScreenProps) {
   const analyses = data?.analyses.items ?? null;
   const requestError = status === "error" && data === null;
 
+  const requestData = useCallback(() => {
+    if (requestedOnEntryRef.current) return;
+    requestedOnEntryRef.current = true;
+    const request = data ? revalidateHistory() : bootstrap().then(() => true);
+    void request.catch(() => {
+      requestedOnEntryRef.current = false;
+    });
+  }, [bootstrap, data, revalidateHistory]);
+
   useEffect(() => {
     if (state !== "normal" || requestedOnEntryRef.current) {
       return;
     }
-    requestedOnEntryRef.current = true;
-    if (data) {
-      void revalidateHistory().catch(() => undefined);
-    } else {
-      void bootstrap().catch(() => undefined);
-    }
-  }, [bootstrap, data, revalidateHistory, state]);
+    requestData();
+  }, [requestData, state]);
 
   return (
     <AppShell
@@ -64,11 +69,15 @@ export function OrdersListScreen({ state, view }: OrdersListScreenProps) {
         </div>
       ) : requestError ? (
         <div className={styles.stateInset}>
-          <DemoStatePanel
-            emptyDescription="신청 내역을 불러오지 못했습니다."
-            retryHref="/orders"
-            state="error"
-            subject="신청 내역"
+          <StatusPanel
+            action={
+              <Button fullWidth onClick={requestData} variant="outline">
+                다시 시도
+              </Button>
+            }
+            description="잠시 후 다시 시도해 주세요."
+            title="진단 및 신청 내역을 불러오지 못했습니다"
+            tone="error"
           />
         </div>
       ) : applications === null || analyses === null ? (

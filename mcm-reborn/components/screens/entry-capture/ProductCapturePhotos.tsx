@@ -145,16 +145,16 @@ export function ProductCapturePhotos({
       <div className={styles.captureSecondaryAction}>
         <Button
           aria-describedby="album-selection-note"
-          disabled={isProcessing || !nextAlbumSlot}
+          disabled={!nextAlbumSlot}
           fullWidth
+          loading={isProcessing}
+          loadingLabel="사진 준비 중"
           onClick={() => albumInputRef.current?.click()}
           variant="outline"
         >
-          {isProcessing
-            ? "사진 준비 중"
-            : nextAlbumSlot
-              ? `앨범에서 ${nextAlbumSlot.label} 선택`
-              : `사진 ${CAPTURE_SLOTS.length}장 등록 완료`}
+          {nextAlbumSlot
+            ? `앨범에서 ${nextAlbumSlot.label} 선택`
+            : `사진 ${CAPTURE_SLOTS.length}장 등록 완료`}
         </Button>
         <input
           accept="image/jpeg,image/png"

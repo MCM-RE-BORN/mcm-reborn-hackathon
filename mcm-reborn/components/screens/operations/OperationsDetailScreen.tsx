@@ -601,14 +601,13 @@ export function OperationsDetailScreen({
                 <Button
                   fullWidth
                   size="large"
-                  disabled={isActionPending}
+                  loading={isActionPending}
+                  loadingLabel="처리 중"
                   onClick={handleAdvance}
                 >
-                  {isActionPending
-                    ? "처리 중..."
-                    : transition.mode === "inspection-api"
-                      ? "실물 검수 저장"
-                      : transition.label}
+                  {transition.mode === "inspection-api"
+                    ? "실물 검수 저장"
+                    : transition.label}
                 </Button>
                 <small>
                   {transition.mode === "inspection-api"

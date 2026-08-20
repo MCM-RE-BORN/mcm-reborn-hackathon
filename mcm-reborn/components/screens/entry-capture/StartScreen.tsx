@@ -13,6 +13,7 @@ type StartScreenProps = {
 };
 
 const MINIMUM_SPLASH_MS = 1_000;
+const IMAGE_WAIT_FALLBACK_MS = 4_000;
 
 export function StartScreen({ bootstrapCustomer = false }: StartScreenProps) {
   const router = useRouter();
@@ -20,6 +21,14 @@ export function StartScreen({ bootstrapCustomer = false }: StartScreenProps) {
   const [imageReady, setImageReady] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
   const [transitionError, setTransitionError] = useState(false);
+
+  useEffect(() => {
+    const fallbackId = window.setTimeout(
+      () => setImageReady(true),
+      IMAGE_WAIT_FALLBACK_MS,
+    );
+    return () => window.clearTimeout(fallbackId);
+  }, []);
 
   useEffect(() => {
     if (!imageReady) return;
