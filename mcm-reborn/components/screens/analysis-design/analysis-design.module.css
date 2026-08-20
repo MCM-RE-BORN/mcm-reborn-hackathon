@@ -126,6 +126,10 @@
   line-height: var(--line-height-tight);
 }
 
+.sourceSummaryCopy h2 + p {
+  margin-top: var(--space-12);
+}
+
 .contractNotice,
 .engravingNotice {
   display: grid;

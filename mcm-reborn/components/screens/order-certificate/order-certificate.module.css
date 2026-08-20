@@ -256,6 +256,10 @@
   line-height: var(--line-height-tight);
 }
 
+.orderProductCopy h2 + p {
+  margin-top: var(--space-12);
+}
+
 .orderProductRow > strong {
   align-self: end;
   white-space: nowrap;

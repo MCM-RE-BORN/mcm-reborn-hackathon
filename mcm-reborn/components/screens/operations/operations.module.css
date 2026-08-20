@@ -457,6 +457,10 @@
   grid-column: 2;
 }
 
+.detailHeading h1 + p {
+  margin-top: var(--space-10);
+}
+
 .ownerBadge {
   display: grid;
   min-width: 8rem;

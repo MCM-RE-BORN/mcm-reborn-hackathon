@@ -39,19 +39,11 @@
   display: grid;
   min-width: var(--space-0);
   flex: 1;
-  gap: var(--space-2);
 }
 
 .captureButtonCopy strong {
   font-size: var(--font-size-control);
   font-weight: var(--font-weight-semibold);
-  line-height: var(--line-height-tight);
-}
-
-.captureButtonCopy span {
-  color: var(--color-muted);
-  font-size: var(--font-size-label);
-  font-weight: var(--font-weight-regular);
   line-height: var(--line-height-tight);
 }
 

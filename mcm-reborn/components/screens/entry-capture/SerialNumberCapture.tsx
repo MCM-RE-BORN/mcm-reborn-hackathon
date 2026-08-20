@@ -71,11 +71,6 @@ export function SerialNumberCapture({
         />
         <span className={styles.captureButtonCopy}>
           <strong>시리얼번호 촬영</strong>
-          <span>
-            {isCaptured
-              ? "촬영 완료 · 다시 촬영할 수 있어요"
-              : "제품 내부 라벨을 선명하게 촬영해주세요"}
-          </span>
         </span>
         <span aria-hidden="true" className={styles.captureButtonChevron} />
       </ButtonLink>
