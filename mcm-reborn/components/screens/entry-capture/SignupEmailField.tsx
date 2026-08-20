@@ -24,6 +24,13 @@ export function SignupEmailField({ hasError = false }: SignupEmailFieldProps) {
         <input
           aria-describedby={hasError ? "signup-email-error" : undefined}
           aria-invalid={hasError ? true : undefined}
+          // The browser only sees two plain text inputs next to an "이메일
+          // 주소" label, so its email-autofill heuristic offers the full
+          // address for either one and — since it can't tell they're two
+          // halves of one field — fills the complete address into both.
+          // autoComplete="off" opts this local-part input out of that
+          // heuristic so autofill no longer overwrites the domain input.
+          autoComplete="off"
           className={`${fieldStyles.input} ${fieldStyles["input-compact"]}`}
           id="signup-email-local"
           name="signup-email-local"
@@ -37,6 +44,7 @@ export function SignupEmailField({ hasError = false }: SignupEmailFieldProps) {
         <input
           aria-describedby={hasError ? "signup-email-error" : undefined}
           aria-invalid={hasError ? true : undefined}
+          autoComplete="off"
           className={`${fieldStyles.input} ${fieldStyles["input-compact"]}`}
           id="signup-email-domain"
           name="signup-email-domain"
