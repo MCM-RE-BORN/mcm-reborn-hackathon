@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { StickyActionBar } from "@/components/layout/StickyActionBar";
 import { Button } from "@/components/ui/Button";
+import { TEXTURE_PRIVACY_NOTICE_VERSION } from "@/lib/texture-preview";
 import {
   GENERAL_CAPTURE_SLOTS,
   MIN_REQUIRED_CAPTURES,
@@ -35,10 +36,7 @@ export function ProductCaptureAction({
     productDetails.useDuration.trim() || USE_DURATION_OPTIONS[0];
   const normalizedDesiredUse =
     productDetails.desiredUse.trim() || DESIRED_USE_OPTIONS[0];
-  const externalAiPrivacyNoticeVersion =
-    process.env.NEXT_PUBLIC_EXTERNAL_AI_PRIVACY_NOTICE_VERSION?.trim();
   const hasRequiredExternalAiConsent =
-    !externalAiPrivacyNoticeVersion ||
     productDetails.externalAiProcessingConsentAccepted;
   const hasSerialNumber = Boolean(productDetails.serialNumber.trim());
   const hasValidSerialNumber = SERIAL_NUMBER_PATTERN.test(
@@ -108,12 +106,8 @@ export function ProductCaptureAction({
           category: productDetails.category,
           conditionNote: productDetails.conditionNote || undefined,
           desiredUse: normalizedDesiredUse,
-          ...(externalAiPrivacyNoticeVersion
-            ? {
-                externalAiPrivacyNoticeVersion,
-                externalAiProcessingConsentAccepted: true,
-              }
-            : {}),
+          externalAiPrivacyNoticeVersion: TEXTURE_PRIVACY_NOTICE_VERSION,
+          externalAiProcessingConsentAccepted: true,
           imageAssetIds: presignedAssets.map((asset) => asset.assetId),
           locale: "ko-KR",
           purchaseYear: Number(productDetails.purchaseYear),

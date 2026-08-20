@@ -146,10 +146,15 @@ export async function createTexturePreview(
 ): Promise<TexturePreviewCreateResponse> {
   await getAnalysisById(input.analysisId, viewer);
   assertExternalTextureConsent(input);
+  const admin = createAdminSupabaseClient();
+  await assertLinkedUnifiedExternalAiConsent(
+    admin,
+    input.analysisId,
+    viewer.id,
+  );
   assertJobEnabled(input.jobKind);
   const sourceImages = await getAnalysisSourceImageUrls(input.analysisId);
   const provider = providerForJob(input.jobKind);
-  const admin = createAdminSupabaseClient();
   const reservation = await reserveTextureOperation(
     admin,
     input,
@@ -291,6 +296,31 @@ function assertExternalTextureConsent(input: CreateTexturePreviewInput) {
   ) {
     throw new ForbiddenError(
       "External AI texture processing consent is required for the active notice",
+    );
+  }
+}
+
+async function assertLinkedUnifiedExternalAiConsent(
+  admin: SupabaseClient,
+  analysisId: string,
+  customerId: string,
+) {
+  const { data: consent, error } = await admin
+    .from("analysis_external_ai_consents")
+    .select("id")
+    .eq("analysis_id", analysisId)
+    .eq("customer_id", customerId)
+    .eq("privacy_notice_version", TEXTURE_PRIVACY_NOTICE_VERSION)
+    .limit(1)
+    .maybeSingle();
+  if (error) {
+    throw new ServiceUnavailableError(
+      "External AI consent verification is unavailable",
+    );
+  }
+  if (!consent) {
+    throw new ForbiddenError(
+      "This analysis is not covered by the active external AI analysis and texture notice",
     );
   }
 }

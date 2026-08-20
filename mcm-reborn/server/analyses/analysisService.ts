@@ -30,6 +30,7 @@ import {
   createAdminSupabaseClient,
   createUserSupabaseClient,
 } from '@/lib/supabase/server';
+import { TEXTURE_PRIVACY_NOTICE_VERSION } from '@/lib/texture-preview';
 import {
   assertExternalAiReady,
   createVisionProvider,
@@ -474,20 +475,32 @@ export async function createAnalysis(input: CreateAnalysisInput): Promise<Analys
 
 function assertExternalAiConsent(input: CreateAnalysisInput): void {
   const mode = (process.env.AI_MODE ?? 'DEMO_FIXTURE').trim().toUpperCase();
-  if (mode !== 'LIVE') {
+  const consentFieldsProvided =
+    input.externalAiProcessingConsentAccepted !== undefined
+    || input.externalAiPrivacyNoticeVersion !== undefined;
+
+  if (mode === 'LIVE') {
+    assertExternalAiReady();
+    const configuredVersion =
+      process.env.EXTERNAL_AI_PRIVACY_NOTICE_VERSION?.trim();
+    if (configuredVersion !== TEXTURE_PRIVACY_NOTICE_VERSION) {
+      throw new ServiceUnavailableError(
+        'External AI privacy notice is not configured for the active unified notice',
+      );
+    }
+  } else if (!consentFieldsProvided) {
+    // Non-LIVE API clients can still create fixture analyses without opting in.
+    // Those analyses cannot pass the texture service's linked-consent guard.
     return;
   }
 
-  assertExternalAiReady();
-  const expectedVersion =
-    process.env.EXTERNAL_AI_PRIVACY_NOTICE_VERSION?.trim();
   if (
     input.externalAiProcessingConsentAccepted !== true ||
-    !expectedVersion ||
-    input.externalAiPrivacyNoticeVersion?.trim() !== expectedVersion
+    input.externalAiPrivacyNoticeVersion?.trim() !==
+      TEXTURE_PRIVACY_NOTICE_VERSION
   ) {
     throw new ForbiddenError(
-      'External AI image processing consent is required for the active privacy notice',
+      'External AI analysis and texture processing consent is required for the active unified notice',
     );
   }
 }
@@ -497,8 +510,7 @@ async function recordExternalAiConsent(
   input: CreateAnalysisInput,
   requestHash: string,
 ): Promise<string | null> {
-  const mode = (process.env.AI_MODE ?? 'DEMO_FIXTURE').trim().toUpperCase();
-  if (mode !== 'LIVE') {
+  if (!hasUnifiedExternalAiConsent(input)) {
     return null;
   }
 
@@ -555,8 +567,7 @@ async function ensureExternalAiConsentLinked(
   analysisId: string,
   knownConsentId?: string | null,
 ): Promise<void> {
-  const mode = (process.env.AI_MODE ?? 'DEMO_FIXTURE').trim().toUpperCase();
-  if (mode !== 'LIVE') {
+  if (!hasUnifiedExternalAiConsent(input)) {
     return;
   }
 
@@ -595,6 +606,14 @@ async function ensureExternalAiConsentLinked(
   if (linkError || linked?.id !== consent.id) {
     throw databaseWriteError('external AI consent link');
   }
+}
+
+function hasUnifiedExternalAiConsent(input: CreateAnalysisInput): boolean {
+  return (
+    input.externalAiProcessingConsentAccepted === true &&
+    input.externalAiPrivacyNoticeVersion?.trim() ===
+      TEXTURE_PRIVACY_NOTICE_VERSION
+  );
 }
 
 function externalAiConsentReceiptHash(

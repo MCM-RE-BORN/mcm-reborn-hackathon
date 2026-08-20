@@ -2,6 +2,10 @@
 
 import { TextField } from "@/components/ui/TextField";
 import {
+  TEXTURE_PRIVACY_NOTICE_KO,
+  TEXTURE_PRIVACY_NOTICE_VERSION,
+} from "@/lib/texture-preview";
+import {
   DESIRED_USE_OPTIONS,
   USE_DURATION_OPTIONS,
   useCaptureSession,
@@ -10,8 +14,6 @@ import styles from "./entry-capture.module.css";
 
 export function ProductCaptureDetails() {
   const { productDetails, updateProductDetails } = useCaptureSession();
-  const externalAiPrivacyNoticeVersion =
-    process.env.NEXT_PUBLIC_EXTERNAL_AI_PRIVACY_NOTICE_VERSION?.trim();
 
   return (
     <section aria-labelledby="product-info-title" className={styles.productInfo}>
@@ -97,32 +99,26 @@ export function ProductCaptureDetails() {
         value={productDetails.conditionNote}
       />
 
-      {externalAiPrivacyNoticeVersion ? (
-        <fieldset className={styles.consentGroup}>
-          <legend>외부 AI 사진 처리</legend>
-          <label>
-            <input
-              checked={productDetails.externalAiProcessingConsentAccepted}
-              onChange={(event) =>
-                updateProductDetails({
-                  externalAiProcessingConsentAccepted:
-                    event.currentTarget.checked,
-                })
-              }
-              required
-              type="checkbox"
-            />
-            <span>
-              [필수 · LIVE 모드] 등록한 사진을 OpenAI로 전송해 사진 품질,
-              소재와 손상 상태를 분석하는 데 동의합니다. 결과는 주문 전
-              예상치이며 공식 정품 판정이 아닙니다.
-            </span>
-          </label>
-          <p className={styles.externalAiNoticeVersion}>
-            개인정보 처리 안내 버전 {externalAiPrivacyNoticeVersion}
-          </p>
-        </fieldset>
-      ) : null}
+      <fieldset className={styles.consentGroup}>
+        <legend>AI 분석·외관 목업 외부 처리</legend>
+        <label>
+          <input
+            checked={productDetails.externalAiProcessingConsentAccepted}
+            onChange={(event) =>
+              updateProductDetails({
+                externalAiProcessingConsentAccepted:
+                  event.currentTarget.checked,
+              })
+            }
+            required
+            type="checkbox"
+          />
+          <span>[필수] {TEXTURE_PRIVACY_NOTICE_KO}</span>
+        </label>
+        <p className={styles.externalAiNoticeVersion}>
+          개인정보 처리 안내 버전 {TEXTURE_PRIVACY_NOTICE_VERSION}
+        </p>
+      </fieldset>
     </section>
   );
 }
