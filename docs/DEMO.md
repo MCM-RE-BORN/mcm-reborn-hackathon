@@ -30,15 +30,15 @@
 
 ## 사전 준비
 
-1. 저장소 루트에서 앱을 실행하고 `/` 또는 `/intro`의 서비스 소개에서 시작한다. 홈의 직접 주소는 `/home`이다.
-2. 현재 로그인·회원가입은 데모 폼이므로 실제 고객·운영자 계정이나 비밀값을 준비하지 않는다.
+1. 저장소 루트에서 앱을 실행하고 `/`의 1초 시작 화면이 `/intro` 서비스 소개로 자동 이동하는지 확인한다. 홈의 직접 주소는 `/home`이다.
+2. 실제 Supabase CUSTOMER·OPERATOR 계정과 역할이 연결된 `profiles` 행, `.env.local`의 공개·서버 환경변수를 준비한다. 회원가입 화면은 저장 동작이 없는 안내 폼이다.
 3. 모바일 또는 모바일 에뮬레이션 환경에서 HTTPS/localhost 카메라 권한과 후면 카메라를 확인한다.
 4. 실제 촬영 실패에 대비해 정면·후면·상단·하단·좌측면·우측면·일련번호 JPG/PNG 예시 사진을 준비한다.
 5. 중앙 시나리오 `DEMO_FIXTURE`가 접수·주문·보증서에서 같은 식별자와 수치를 표시하는지 확인한다.
 6. 홈 hero 영상이 실제 재생되고, 하단 내비게이션이 `신청 내역`·`홈`·`마이페이지` 3개로 표시되는지 확인한다.
 7. 저장소 루트에서 계약·앱 검증 명령을 실행한다.
 
-현재 Fixture 고객 데모 실행에는 Supabase·OpenAI 환경변수가 필요하지 않다. 운영자 lifecycle command Route Handler를 연동 테스트할 때는 `.env.example`을 `mcm-reborn/.env.local`로 복사하고 Supabase URL·publishable key·service role key를 설정한다. 서버 전용인 `SUPABASE_SERVICE_ROLE_KEY`와 `OPENAI_API_KEY`에는 절대 `NEXT_PUBLIC_` 접두사를 붙이지 않는다.
+현재 고객·운영 브라우저 여정에는 Supabase 환경변수와 적용된 schema·migration·Auth 역할 연결이 필요하다. 분석을 `DEMO_FIXTURE`로 실행하면 OpenAI 키는 필요하지 않다. `.env.example`을 `mcm-reborn/.env.local`로 복사하고 Supabase URL·publishable key·service role key를 설정한다. 서버 전용인 `SUPABASE_SERVICE_ROLE_KEY`와 `OPENAI_API_KEY`에는 절대 `NEXT_PUBLIC_` 접두사를 붙이지 않는다.
 
 ```powershell
 Copy-Item .\.env.example .\mcm-reborn\.env.local
