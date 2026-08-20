@@ -104,8 +104,8 @@ export function IntroScreen({ state }: IntroScreenProps) {
           <section className={styles.introHero}>
             <p className={styles.eyebrow}>OFFICIAL UPCYCLING SERVICE</p>
             <h1>
-              당신의 MCM의
-              <br />새로운 여정
+              당신의 MCM에
+              <br />새로운 여정을
             </h1>
             <p>
               사용하지 않는 MCM 제품을 분석하고, 나만의 디자인으로 다시
