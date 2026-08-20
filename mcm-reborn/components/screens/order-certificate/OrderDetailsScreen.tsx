@@ -326,10 +326,6 @@ export function OrderDetailsScreen({
   ]
     .filter(Boolean)
     .join(" ");
-  const certificateHref =
-    effectiveStatus === "COMPLETED"
-      ? `/certificates/demo?applicationId=${applicationId}&state=issued`
-      : "/certificates/demo?state=locked";
   const timelineDescription = useMemo(
     () => timeline?.steps.find((step) => step.status === effectiveStatus)?.description,
     [effectiveStatus, timeline],
@@ -340,7 +336,7 @@ export function OrderDetailsScreen({
       header={
         <PageHeader
           backHref="/orders"
-          title="신청 내역"
+          title="신청 상세"
         />
       }
     >
@@ -419,13 +415,15 @@ export function OrderDetailsScreen({
               </button>
               <a href="#delivery-information">배송현황</a>
             </div>
-            <ActionButtonLink
-              className={styles.orderCertificateAction}
-              fullWidth
-              href={certificateHref}
-            >
-              나의 RE:BORN 인증서 보기
-            </ActionButtonLink>
+            {effectiveStatus === "COMPLETED" ? (
+              <ActionButtonLink
+                className={styles.orderCertificateAction}
+                fullWidth
+                href={`/certificates/demo?applicationId=${applicationId}&state=issued`}
+              >
+                나의 RE:BORN 인증서 보기
+              </ActionButtonLink>
+            ) : null}
           </article>
 
           <SectionBand />
