@@ -290,7 +290,7 @@
   grid-template-columns: minmax(var(--space-0), 1fr) minmax(var(--space-0), 2fr);
   gap: var(--space-9);
   min-height: var(--space-17);
-  align-items: start;
+  align-items: center;
   padding-block: var(--space-4);
   font-size: var(--font-size-body);
   line-height: var(--line-height-tight);
@@ -365,7 +365,7 @@
 
 .statusCopy {
   display: grid;
-  gap: var(--space-5);
+  gap: var(--space-14);
 }
 
 .statusCopy h2 {
@@ -378,7 +378,7 @@
   color: var(--color-muted);
   font-size: var(--font-size-body);
   font-weight: var(--font-weight-light);
-  line-height: var(--line-height-reading);
+  line-height: var(--line-height-tight);
 }
 
 .statusAction {
