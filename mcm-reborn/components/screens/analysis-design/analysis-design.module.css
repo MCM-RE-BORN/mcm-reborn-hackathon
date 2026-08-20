@@ -218,9 +218,39 @@
 }
 
 .analysisDetails {
+  display: grid;
+  min-width: var(--space-0);
+  gap: var(--space-9);
   margin-top: var(--space-22);
   padding-top: var(--space-13);
   border-top: var(--border-thin) solid var(--color-divider);
+}
+
+.analysisSectionTitle {
+  font-size: var(--font-size-control);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
+  letter-spacing: var(--letter-spacing-tight);
+}
+
+.analysisNarrative {
+  display: grid;
+  min-width: var(--space-0);
+  gap: var(--space-7);
+  padding: var(--space-9);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+}
+
+.analysisNarrative p {
+  min-width: var(--space-0);
+  color: var(--color-ink-soft);
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-regular);
+  line-height: var(--line-height-reading);
+  overflow-wrap: anywhere;
+  white-space: pre-line;
+  word-break: keep-all;
 }
 
 .limitedCopy {

@@ -168,6 +168,8 @@ export function AnalysisResultScreen({
     );
   }
 
+  const conditionSummary = analysis.condition.summary.trim();
+
   return (
     <AppShell
       footer={
@@ -186,7 +188,13 @@ export function AnalysisResultScreen({
         />
         <SubmissionProductSummary />
 
-        <div className={styles.analysisDetails}>
+        <section
+          aria-labelledby="analysis-facts-title"
+          className={styles.analysisDetails}
+        >
+          <h2 className={styles.analysisSectionTitle} id="analysis-facts-title">
+            분석 정보
+          </h2>
           <KeyValueList
             items={[
               {
@@ -207,7 +215,6 @@ export function AnalysisResultScreen({
                   MATERIAL_LABELS[analysis.sourceProduct.materialType] ??
                   analysis.sourceProduct.materialType,
               },
-              { label: "AI 예상 상태", value: analysis.condition.summary },
               {
                 label: "재사용 예상 면적",
                 value: `${analysis.estimatedReusableAreaCm2.toLocaleString("ko-KR")}cm²`,
@@ -218,7 +225,22 @@ export function AnalysisResultScreen({
               },
             ]}
           />
-        </div>
+        </section>
+
+        {conditionSummary ? (
+          <section
+            aria-labelledby="analysis-summary-title"
+            className={styles.analysisNarrative}
+          >
+            <h2
+              className={styles.analysisSectionTitle}
+              id="analysis-summary-title"
+            >
+              AI 분석 내용
+            </h2>
+            <p>{conditionSummary}</p>
+          </section>
+        ) : null}
 
         <aside className={styles.contractNotice}>
           <strong>사진 기반 사전 분석</strong>
