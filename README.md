@@ -27,7 +27,8 @@
 | `mock-data.json` | 최종 제품 4종, 대표 주문·분석·실물 검수·변경 승인·보증서 Fixture |
 | `supabase-schema.sql` | 테이블, RLS, Storage 정책, 제품 Seed |
 | `.env.example` | 환경변수 템플릿 |
-| `prompts/bag-analysis.system.txt` | OpenAI 분석 시스템 프롬프트 |
+| `prompts/bag-analysis.system.txt` | OpenAI 분석 developer prompt 참고본 |
+| `docs/AI_ANALYSIS_DOMAIN_KNOWLEDGE.md` | PDF에서 정규화한 소재·구성 부위·재사용 판단 지식과 감사 버전 |
 | `examples/openai-analysis.ts` | Responses API + 이미지 + Zod Structured Output 참고 예시. 실행 Route Handler는 공식 SDK의 Chat Completions Structured Outputs 사용 |
 | `examples/mock-status.ts` | v2 상태 전이와 제작 시작 검수·승인 guard 예시 |
 | `examples/recommendation.ts` | 결정론적 수율·추천·Mock ESG 계산 |

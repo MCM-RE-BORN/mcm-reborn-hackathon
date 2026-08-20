@@ -18,7 +18,7 @@
 
 | 기능 | 시연 MVP 구현 | 운영 서비스에 추가로 필요 |
 |---|---|---|
-| 제품 분석 | 7개 지정 구도 이미지를 OpenAI Structured Outputs로 분석하는 `LIVE`, 재현 가능한 `DEMO_FIXTURE`·`SEEDED_ESTIMATE`, 품질 미달·제공자 실패 처리 | 실제 촬영 품질 평가 데이터셋, 모델 평가·버전 승격, 사람 검수 및 공식 진위 판정 서비스 분리 |
+| 제품 분석 | 6면 지정 구도 이미지를 OpenAI Structured Outputs로 분석하는 `LIVE`, 재현 가능한 `DEMO_FIXTURE`·`SEEDED_ESTIMATE`, 품질 미달·제공자 실패 처리, `MCM_REUSE_GUIDE_2026_08_21_V1` 소재·재사용 지식 grounding | 실제 촬영 품질 평가 데이터셋, 모델 평가·지식 버전 승격, 사람 검수 및 공식 진위 판정 서비스 분리 |
 | 추천 | 재사용 가능 면적을 hard gate로 사용하고 상태, 손상도, 소재, 패턴 노출, 긴 스트립, 잔여 조각 활용, 희망 용도를 점수와 사유 코드에 반영 | 실제 제작 BOM·재단 패턴·재고·공정 능력·원가를 반영한 버전형 최적화와 오프라인 평가 |
 | 텍스처 추출 | 브라우저에서 원본 중앙 소재 영역을 크롭하고 반복 가능한 미러 타일을 생성 | 제품/배경/금속/봉제선 분할, 렌즈·원근·조명·색 보정, 실제 크기 추정, 저작권·상표 검토 |
 | 텍스처 제작 | 로컬 결정론적 텍스처와 선택형 OpenAI `gpt-image-2` 이미지 편집 | 색상 표준, 물리 단위, 패널별 마스크, PBR 채널 품질 평가, 재생성·승인 이력 |
@@ -31,7 +31,9 @@
 
 ### 2.1 제품 분석
 
-`LIVE` 분석은 서버의 공식 OpenAI JavaScript SDK로 7개 이미지 URL을 정면, 후면, 상단, 하단, 좌측면, 우측면, 일련번호 순서로 전달한다. 응답은 Zod 기반 Structured Outputs로 검증한다. 모델은 관찰 가능한 카테고리, 소재, 상태, 손상, 이미지 품질, 긴 스트립 가능성 및 주문 적합 참고 신호만 반환한다. 재사용률, 면적, 가격, 추천, 탄소 수치는 모델이 만들지 않고 애플리케이션 규칙이 계산한다. Structured Outputs의 목적과 스키마 준수 방식은 [OpenAI 공식 문서](https://developers.openai.com/api/docs/guides/structured-outputs)를 기준으로 한다.
+`LIVE` 분석은 서버의 공식 OpenAI JavaScript SDK로 6개 이미지 URL을 정면, 후면, 상단, 하단, 좌측면, 우측면 순서로 전달한다. 응답은 Zod 기반 Structured Outputs로 검증한다. 모델은 관찰 가능한 카테고리, 소재, 상태, 손상, 이미지 품질, 긴 스트립 가능성 및 주문 적합 참고 신호만 반환한다. 재사용률, 면적, 가격, 추천, 탄소 수치는 모델이 만들지 않고 애플리케이션 규칙이 계산한다. Structured Outputs의 목적과 스키마 준수 방식은 [OpenAI 공식 문서](https://developers.openai.com/api/docs/guides/structured-outputs)를 기준으로 한다.
+
+전달받은 `AI 학습 파일.pdf`의 소재·구성 부위·상태별 재사용 기준은 `MCM_REUSE_GUIDE_2026_08_21_V1`로 정규화해 모든 LIVE 요청의 developer prompt에 주입한다. 이는 파인튜닝이 아닌 요청별 grounding이며 사진에 보이는 증거보다 우선하지 않는다. LIVE 성공 결과의 내부 provider JSON과 idempotency request hash에 지식 버전을 기록한다. 정규화된 기준과 원본 해시는 [`AI_ANALYSIS_DOMAIN_KNOWLEDGE.md`](./AI_ANALYSIS_DOMAIN_KNOWLEDGE.md)에 기록한다.
 
 외부 분석은 `AI_MODE=LIVE`, 배포 opt-in, 서버 키, 고정된 개인정보 안내 버전, 요청별 고객 동의가 모두 있어야 실행된다. OpenAI 장애 시에는 검증된 Fixture로 폴백할 수 있지만, 이미지 품질 미달 `422 IMAGE_QUALITY_INSUFFICIENT`를 성공 Fixture로 바꾸지는 않는다. `DEMO_FIXTURE`와 `SEEDED_ESTIMATE`는 실제 업로드 사진을 판독한 결과가 아니므로 화면의 mode/provider 표시를 유지한다.
 

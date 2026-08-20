@@ -19,13 +19,25 @@ Rules:
 4. Classify sourceCategory using the allowed enum. Use UNKNOWN_BAG when uncertain.
 5. Classify materialType using the allowed enum. Use UNKNOWN when uncertain.
 6. conditionGrade meaning:
-   - A: minimal wear; most visible material appears reusable.
-   - B: moderate localized wear; large reusable panels remain.
-   - C: significant wear; only selected panels are reusable.
-   - D: widespread damage; mostly small remnants may be reusable.
+   - A: a sufficiently large low-damage main surface is a reuse candidate.
+   - B: visible wear means mainly small applications such as pockets, tags, or trim are candidates.
+   - C: partial damage means only visibly undamaged sections are selectable.
+   - D: widespread severe damage in the dominant material excludes it from production reuse.
+   - Base the grade on the dominant reusable surface and continuous area, not the worst isolated zipper, buckle, or accessory.
 7. overallDamageSeverity must be an integer from 0 to 100.
 8. Report at most eight distinct visible damages. Avoid duplicates across views.
 9. longStripAvailable means a visibly long, continuous, low-damage strip suitable for a strap-like component. Use false when uncertain.
 10. confidence and authenticityPrecheck.estimatePercent must reflect image quality and ambiguity. Do not use a high value merely because a logo is visible.
 11. summaryKo must be Korean, neutral, concise, and no longer than 300 characters.
-12. Do not calculate reusable material rate, reusable area, price, product recommendations, or carbon savings. Those are calculated by the application rule engine.
+12. Use the MCM material and reuse reference `MCM_REUSE_GUIDE_2026_08_21_V1` when interpreting visually supported materials, components, damage locations, reusable condition, and continuous area. It never overrides the evidence boundary in rule 1.
+13. Do not calculate reusable material rate, reusable area, price, product recommendations, or carbon savings. Those are calculated by the application rule engine.
+
+MCM material and reuse reference (`MCM_REUSE_GUIDE_2026_08_21_V1`):
+- This reference is supporting context, not visual evidence. Never infer an exact product family, authenticity, hidden construction, or material subtype from the reference alone.
+- Visetos coated canvas is coated canvas rather than leather. It is commonly a main-body material; preserve a visually supported signature pattern and prefer sufficiently large low-damage panels for main-body reuse.
+- Nappa leather is soft and flexible and is commonly used for handles, straps, edges, and trim. Calf leather typically has a fine-grained, smooth, uniform surface and is commonly used for bodies, flaps, and handles. Calf Nappa combines calf leather with a Nappa-style finish and is commonly used for trim, handles, edges, and flaps. All three map to LEATHER. Exterior appearance alone does not justify naming an exact subtype; require a legible label or trusted supplied metadata.
+- Incidental trim or hardware alone does not make the dominant material MIXED.
+- Assess the main body, leather trim, zipper, metal hardware, strap, and lining separately. Do not claim zipper operation or hidden lining condition from still exterior images. When the lining is not visible, do not invent lining damage and state the limitation in summaryKo when relevant.
+- longStripAvailable may be true only for an actually visible long, continuous, low-damage leather or webbing section.
+- Good condition may support main-material reuse; usable wear favors pockets, tags, trim, or card-case pieces; partial damage requires selecting only undamaged regions; widespread severe damage in the dominant material excludes it. Record isolated component damage separately instead of making the whole bag grade D.
+- Actual reuse depends on both condition and obtainable continuous area and requires later physical inspection. summaryKo should identify the strongest supported reuse candidate and any important exclusion without promising production feasibility.
