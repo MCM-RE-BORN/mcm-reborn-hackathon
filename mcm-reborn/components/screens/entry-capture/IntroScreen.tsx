@@ -61,7 +61,7 @@ function IntroUnavailable({ state }: { state: PageState }) {
             다시 불러오기
           </ButtonLink>
         }
-        description="잠시 후 다시 시도하거나 홈에서 서비스 내용을 확인해 주세요."
+        description="잠시 후 다시 시도해 주세요."
         title="소개 콘텐츠를 불러오지 못했습니다"
         tone={state === "error" ? "error" : "empty"}
       />
@@ -71,12 +71,7 @@ function IntroUnavailable({ state }: { state: PageState }) {
   if (state === "permission" || state === "limited") {
     return (
       <StatusPanel
-        action={
-          <ButtonLink fullWidth href="/home" variant="outline">
-            홈에서 둘러보기
-          </ButtonLink>
-        }
-        description="이 기기에서는 일부 소개 콘텐츠만 이용할 수 있습니다. 홈에서 서비스 흐름을 계속 확인할 수 있습니다."
+        description="이 기기에서는 소개 콘텐츠 이용이 제한되어 있습니다. 지원되는 환경에서 다시 시도해 주세요."
         title="소개 화면 이용이 제한되어 있습니다"
         tone="permission"
       />
@@ -108,8 +103,8 @@ export function IntroScreen({ state }: IntroScreenProps) {
           <section className={styles.introHero}>
             <p className={styles.eyebrow}>OFFICIAL UPCYCLING SERVICE</p>
             <h1>
-              당신의 MCM에
-              <br />새로운 여정을
+              당신의 MCM의
+              <br />새로운 여정
             </h1>
             <p>
               사용하지 않는 MCM 제품을 분석하고, 나만의 디자인으로 다시
@@ -151,9 +146,6 @@ export function IntroScreen({ state }: IntroScreenProps) {
       <div className={styles.introActions} id="intro-actions">
         <ButtonLink fullWidth href="/login">
           시작하기
-        </ButtonLink>
-        <ButtonLink fullWidth href="/home" variant="outline">
-          먼저 둘러보기
         </ButtonLink>
       </div>
     </AppShell>

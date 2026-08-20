@@ -193,6 +193,8 @@
 }
 
 .introScrollCue {
+  position: relative;
+  z-index: 1;
   display: grid;
   width: fit-content;
   min-height: var(--touch-target-min);
@@ -205,6 +207,24 @@
   font-weight: var(--font-weight-medium);
   line-height: var(--line-height-tight);
   text-decoration: none;
+  isolation: isolate;
+}
+
+.introScrollCue::before {
+  position: absolute;
+  z-index: var(--z-behind);
+  bottom: calc(var(--space-9) * -1);
+  left: 50%;
+  width: min(100vw, var(--layout-shell-max));
+  height: var(--space-29);
+  background: linear-gradient(
+    to top,
+    var(--color-canvas) 35%,
+    var(--color-transparent) 100%
+  );
+  content: "";
+  pointer-events: none;
+  transform: translateX(-50%);
 }
 
 .introScrollCue i {
