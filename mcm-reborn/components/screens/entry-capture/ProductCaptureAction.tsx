@@ -34,11 +34,17 @@ export function ProductCaptureAction({
     productDetails.useDuration.trim() || USE_DURATION_OPTIONS[0];
   const normalizedDesiredUse =
     productDetails.desiredUse.trim() || DESIRED_USE_OPTIONS[0];
+  const externalAiPrivacyNoticeVersion =
+    process.env.NEXT_PUBLIC_EXTERNAL_AI_PRIVACY_NOTICE_VERSION?.trim();
+  const hasRequiredExternalAiConsent =
+    !externalAiPrivacyNoticeVersion ||
+    productDetails.externalAiProcessingConsentAccepted;
   const hasRequiredDetails = Boolean(
     productDetails.category &&
       productDetails.purchaseYear.trim() &&
       normalizedUseDuration &&
-      normalizedDesiredUse,
+      normalizedDesiredUse &&
+      hasRequiredExternalAiConsent,
   );
 
   async function submitAnalysis() {
@@ -92,6 +98,12 @@ export function ProductCaptureAction({
           category: productDetails.category,
           conditionNote: productDetails.conditionNote || undefined,
           desiredUse: normalizedDesiredUse,
+          ...(externalAiPrivacyNoticeVersion
+            ? {
+                externalAiPrivacyNoticeVersion,
+                externalAiProcessingConsentAccepted: true,
+              }
+            : {}),
           imageAssetIds: presignedAssets.map((asset) => asset.assetId),
           locale: "ko-KR",
           purchaseYear: Number(productDetails.purchaseYear),

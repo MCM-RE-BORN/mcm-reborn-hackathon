@@ -829,6 +829,13 @@
   outline-offset: var(--space-1);
 }
 
+.externalAiNoticeVersion {
+  padding-left: calc(var(--space-10) + var(--space-7));
+  color: var(--color-muted);
+  font-size: var(--font-size-caption);
+  line-height: var(--line-height-reading);
+}
+
 .cameraContent {
   position: relative;
   min-height: 100dvh;

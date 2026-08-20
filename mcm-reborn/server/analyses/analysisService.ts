@@ -273,7 +273,7 @@ export async function createAnalysis(input: CreateAnalysisInput): Promise<Analys
     }
 
     const products = await readActiveProductRules(admin);
-    const derived = deriveAnalysis(providerOutput, products);
+    const derived = deriveAnalysis(providerOutput, products, normalizedInput);
     analysisId = randomUUID();
     await attachIdempotencyResource(
       admin,
@@ -813,6 +813,7 @@ async function readActiveProductRules(
 function deriveAnalysis(
   providerOutput: Awaited<ReturnType<ReturnType<typeof createVisionProvider>['analyze']>>,
   products: ProductRuleRow[],
+  input: NormalizedProductInput,
 ) {
   const { result, fixtureEstimate, modeUsed } = providerOutput;
   const calculated = calculateReusableMaterial(
@@ -852,12 +853,16 @@ function deriveAnalysis(
       };
     }
 
-    const recommendation = calculateRecommendationScore(
+    const recommendation = calculateRecommendationScore({
+      conditionGrade: result.conditionGrade,
+      desiredUse: input.desiredUse,
       estimatedReusableAreaCm2,
-      product.required_area_cm2,
-      result.conditionGrade,
-      product.code,
-    );
+      longStripAvailable: result.longStripAvailable,
+      materialType: result.materialType,
+      overallDamageSeverity: result.overallDamageSeverity,
+      productCode: product.code,
+      requiredAreaCm2: product.required_area_cm2,
+    });
     return {
       productId: product.id,
       productCode,

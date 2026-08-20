@@ -30,6 +30,7 @@ export type CustomerProduct = {
   listImage: unknown;
   mockPrice: CustomerMoney;
   name: string;
+  requiredAreaCm2?: number;
   recommendation?: {
     eligible: boolean;
     reasonCodes: string[];
@@ -148,6 +149,12 @@ export type CustomerAnalysis = {
   };
   estimatedReusableAreaCm2: number;
   estimatedReusableMaterialRate: number;
+  damages: Array<{
+    confidence: number;
+    location: string;
+    severity: number;
+    type: string;
+  }>;
   estimateMeta?: {
     confidencePercent: number;
     notice: string;
@@ -157,6 +164,8 @@ export type CustomerAnalysis = {
     methodologyVersion: string;
   };
   id: string;
+  longStripAvailable: boolean;
+  modeUsed: "DEMO_FIXTURE" | "LIVE" | "SEEDED_ESTIMATE";
   authenticityPrecheck?: {
     estimatePercent: number;
     status: string;
@@ -169,8 +178,15 @@ export type CustomerAnalysis = {
   }>;
   sourceProduct: {
     category: string;
+    confidence: number;
     materialType: string;
   };
+  provider: {
+    model: string;
+    name: "DEMO_DATA" | "OPENAI";
+    requestId: string | null;
+  };
+  warnings: Array<{ code: string; message: string }>;
 };
 
 export type CustomerChangeRequest = {
