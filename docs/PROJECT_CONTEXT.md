@@ -43,7 +43,7 @@ MCM RE:BORN은 사용자가 보유한 MCM 가방을 모바일로 촬영하고, �
 - 실행 앱은 `mcm-reborn/`의 Next.js `16.3.0`, React `19.2.8`, TypeScript strict 구성이다. 서버와 브라우저 고객·운영 화면은 Supabase Auth·Postgres·private Storage를 사용하는 v2 경로를 사용하며, 실제 고객 자격증명으로 전체 여정을 검증하는 작업은 남아 있다.
 - 앱은 ESLint `9`, Tailwind CSS `4`를 사용한다. 패키지와 프레임워크 버전은 `mcm-reborn/package.json`과 lockfile을 확인한다.
 - `LIVE` 분석 구현은 서버 전용 키와 공식 OpenAI JavaScript SDK의 Chat Completions Structured Outputs(`chat.completions.parse` + Zod)를 사용한다. 전달받은 소재·구성 부위·재사용 기준은 `MCM_REUSE_GUIDE_2026_08_21_V1` developer prompt grounding으로 적용하고 사진 증거보다 우선하지 않는다. 배포 opt-in, 고정된 privacy notice와 요청별 외부 처리 동의가 모두 있어야 하며, 제공자 장애에는 검증된 Fixture로 폴백한다. 실제 OpenAI 호출은 아직 검증되지 않았다.
-- 입력과 AI 응답은 Zod로 검증한다. 목업 상세는 실제 여권지갑 GLB와 `@google/model-viewer` 런타임을 사용하며, 촬영 원본의 중앙 소재 크롭·미러 타일을 base-color texture에 적용한다. 고객이 별도 동의한 경우에만 OpenAI 이미지 편집 또는 Meshy 2K 리텍스처를 선택적으로 호출하는 내부 데모 경로를 제공한다. 외부 기능은 기본 비활성이고 실제 키를 사용한 staging 호출은 별도 검증 대상이다. DB의 Product3D 계약은 보존하며, 준비되지 않은 제품 자산은 계속 `model_3d_ready=false`로 API 노출을 막는다.
+- 입력과 AI 응답은 Zod로 검증한다. 목업 상세는 실제 여권지갑 GLB와 `@google/model-viewer` 런타임을 사용한다. 고객이 별도 동의한 경우 서버 저장 외관 4면으로 OpenAI BODY/TRIM/STRAP/HARDWARE 소재 계획, 선택형 Meshy source 3D/PBR과 Meshy 7 목표 UV 리텍스처를 별도 job으로 실행한다. 최종 base-color는 검토된 `exterior-mask` 범위에만 합성해 지퍼·금속·로고·솔기를 보존하고 source 3D는 참고용으로만 사용한다. 안감은 MVP에서 제외한다. 외부 기능은 기본 비활성이고 실제 키를 사용한 staging 호출은 별도 검증 대상이다. DB의 Product3D 계약은 보존하며, 준비되지 않은 제품 자산은 계속 `model_3d_ready=false`로 API 노출을 막는다.
 - Spring Boot 구성은 API 가이드의 대안일 뿐이며 같은 MVP에서 두 서버 구조를 혼합하지 않는다.
 - 앱 작업 전 `mcm-reborn/AGENTS.md`의 Next.js 버전별 규칙을 읽고 설치된 `node_modules/next/dist/docs/`에서 해당 API를 확인한다.
 - 승인 없이 프레임워크나 유사 패키지를 새로 선택하지 않는다.
