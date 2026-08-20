@@ -21,3 +21,11 @@ Thumbs.db
 .idea/
 .vscode/
 *.iml
+
+# Temporary and lock files
+_to_delete/
+*.lock
+*.lock.*
+*.bak
+*.bak*
+*.tar.gz
