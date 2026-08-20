@@ -2,29 +2,32 @@
 
 확인일: `2026-08-21` (Asia/Seoul)
 
-이 문서는 MCM 공식 편집·상품 페이지와 공식 CDN에서 확인한 이미지의 탐색용 갤러리다. 이미지 파일은 저장소에 복제하지 않았다. 전체 자산 URL과 출처·시기 메타데이터는 `data/pattern_image_references.jsonl`과 `data/material_image_references.jsonl`에 있다.
+이 문서는 MCM 공식 편집·상품 페이지와 그 페이지가 사용하는 CDN에서 확인한 이미지의 탐색용 갤러리다. 이미지 파일은 저장소에 복제하지 않았다. 전체 자산 URL과 출처·시기 메타데이터는 `data/pattern_image_references.jsonl`과 `data/material_image_references.jsonl`에 있다.
 
 ## 권리·해석 제한
 
-- 모든 사진과 편집 이미지는 MCM의 공식 마케팅 저작물이다. 재사용 허가는 확인되지 않았으며 `unknown_reference_only`로 보존한다.
+- 모든 사진과 편집 이미지는 MCM 공식 채널에 게시된 마케팅 이미지다. 권리자와 재사용 허가는 확인되지 않았으며 내부 상태를 `unknown_reference_only`로 보존한다.
 - 링크·연구 참고는 저작권 허가, 재배포 허가 또는 모델 학습 허가를 뜻하지 않는다.
-- CDN의 자산 공개 시각은 제품 출시일이 아니다. `asset_published_at`과 컬렉션·제품의 유효 시기를 분리한다.
+- 이미지 `published_at`은 반드시 `date_basis`와 함께 읽는다. 편집 페이지 공개월과 CDN `X-Amp-Published` 시각은 서로 다른 근거이며 어느 쪽도 제품 출시일이 아니다.
 - 조명, 렌즈, 보정, 화면 색역과 축척 때문에 사진만으로 동물 종, tannage, 코팅 수지, 색상 규격, 그레인 구조를 확정하지 않는다.
 - 공식 사진도 반복 타일의 실측 치수, 벡터 마스터, 패널 정합 규칙이나 Pantone 값을 공개하지 않는다.
 
 ## 수집 범위
 
-| 구분 | 그룹·SKU | 고유 이미지 |
+| 구분 | 그룹·SKU | 참조 수 |
 | --- | ---: | ---: |
 | 패턴 | Visetos 및 AW19 변형 | 12 |
 | 패턴 | Vintage Monogram Jacquard | 23 |
 | 패턴 | Cubic Monogram | 5 |
 | 패턴 | Lauretos | 14 |
 | 패턴 | Maxi Monogram Leather | 8 |
-| 패턴 | AW26 Disco Visetos | 16 |
+| 패턴 | AW26 Disco Visetos | 12 |
 | 패턴 | AW26 Diamond Jacquard | 18 |
-| 소재 | 12개 공식 SKU 갤러리 | 83 |
-| 합계 | 자산 ID 기준 내부 중복 제거 | **179** |
+| 편집 맥락 | AW26 컬렉션 이미지, 특정 패턴 증거 아님 | 4 |
+| 소재 | 13개 공식 SKU 갤러리 | 89 |
+| 합계 | 이미지 참조 레코드 | **185** |
+
+확인일 기준 185개 모두 공식 CDN에서 `HTTP 200`으로 응답했으며 기본 클라이언트 헤더에서 178개는 JPEG, 7개는 WebP였다. 자산 ID가 달랐지만 응답 바이트가 같았던 1개는 제거했다. 전체 응답 바이트 해시는 저장하지 않았으므로 합계는 법적·시각적으로 서로 다른 저작물의 수가 아니라 레지스트리 레코드 수다. 이 접근성 검사는 향후 링크의 영구 보존을 보장하지 않는다.
 
 ## 패턴 대표 이미지
 
@@ -62,13 +65,13 @@
 
 ### AW26 Disco Visetos
 
-[Stark Backpack 공식 상품 페이지](https://us.mcmworldwide.com/en_US/whats-new/autumn-winter/stark-backpack-in-disco-visetos/MMKGAVE02CO001.html)
+[Stark Backpack 공식 상품 페이지](https://us.mcmworldwide.com/en_US/men/bags/backpacks/stark-backpack-in-disco-visetos/MMKGAVE02CO001.html)
 
 ![Disco Visetos](https://images.mcmworldwide.com/i/mcmworldwide/MMKGAVE02CO001_01/stark-backpack-in-disco-visetos-cognac-medium?$w1000$&fmt=auto&qlt=default)
 
 ### AW26 Diamond Jacquard
 
-[Diamant 3D 공식 상품 페이지](https://us.mcmworldwide.com/en_US/3d-diamond_bag/diamant-3d-shoulder-bag-in-diamond-jacquard/MWSGAAK02MT001.html)
+[Diamant 3D 공식 상품 페이지](https://us.mcmworldwide.com/en_US/women/bags/shoulder-crossbody-bags/diamant-3d-shoulder-bag-in-diamond-jacquard/MWSGAAK02MT001.html)
 
 ![Diamond Jacquard](https://images.mcmworldwide.com/i/mcmworldwide/MWSGAAK02MT001_01/diamant-3d-shoulder-bag-in-diamond-jacquard-multi-medium?$w1000$&fmt=auto&qlt=default)
 
@@ -106,7 +109,7 @@
 
 ### Raffia textile jacquard
 
-[Ella Boston `MWBFSEA04IN001`](https://us.mcmworldwide.com/en_US/whats-new/womens-new-arrivals/ella-boston-bag-in-lauretos-raffia-jacquard/MWBFSEA04IN001.html)
+[Ella Boston `MWBFSEA04IN001`](https://cn.mcmworldwide.com/en_CN/women/bags/top-handle-bags/ella-boston-bag-in-lauretos-raffia-jacquard/MWBFSEA04IN001.html)
 
 ![Lauretos raffia textile jacquard](https://images.mcmworldwide.com/i/mcmworldwide/MWBFSEA04IN001_01?fmt=auto&qlt=default)
 
@@ -115,6 +118,14 @@
 [Himmel Shopper `MWPFSAC01BK001`](https://jp.mcmworldwide.com/en_JP/women/bags/totes-shoppers/himmel-shopper-in-mirum%C2%AE/MWPFSAC01BK001.html)
 
 ![MIRUM alternative material](https://images.mcmworldwide.com/i/mcmworldwide/MWPFSAC01BK001_01?fmt=auto&qlt=default)
+
+### Resetos regenerated leather
+
+[Toni Top-Zip Shopper `MWPFAMT09Q5001`](https://jp.mcmworldwide.com/en_JP/women/bags/totes-shoppers/toni-top-zip-shopper-in-resetos-leather/MWPFAMT09Q5001.html)
+
+![Resetos regenerated leather with Visetos motif](https://images.mcmworldwide.com/i/mcmworldwide/MWPFAMT09Q5001_01?&fmt=auto&qlt=default)
+
+공식 페이지는 `regenerated leather`라고만 표기한다. 정확한 재생 함량·결합재·동물종·무두질·코팅 조성, 비건·생분해성 여부는 확인되지 않았다.
 
 ### Recycled nylon과 nappa trim
 
@@ -136,7 +147,7 @@
 
 ### Croco-embossed leather
 
-[Diamond Bag `MWREAAK01CO001`](https://nz.mcmworldwide.com/en_NZ/women/bags/shoulder-crossbody-bags/diamond-bag-in-visetos-and-croco-embossed-leather/MWREAAK01CO001.html)
+[Diamond Bag `MWREAAK01CO001`](https://au.mcmworldwide.com/en_AU/women/bags/shoulder-crossbody-bags/diamond-bag-in-visetos-and-croco-leather/MWREAAK01CO001.html)
 
 ![Croco-embossed leather handle](https://images.mcmworldwide.com/i/mcmworldwide/MWREAAK01CO001_01?fmt=auto&qlt=default)
 
@@ -150,7 +161,8 @@
 
 ## 전체 레지스트리 사용법
 
-- `subject`, `style_number`, `tags`로 패턴·소재·표면 가공을 검색한다.
-- `asset_id`는 반응형 크기·품질 파생 URL을 하나의 자산으로 중복 제거하는 키다.
-- `source_page_url`과 `observed_at`을 이미지 URL과 함께 인용한다.
+- `subject_type`, `subject`, `style_number`, `tags`로 패턴·편집 맥락·소재·표면 가공을 검색한다.
+- `asset_id`는 반응형 크기·품질 파생 URL을 하나로 접는 키이지 서로 다른 자산 ID의 바이트 동일성이나 권리 독립성을 보장하지 않는다.
+- `source_id`, `market`, `source_page_url`, `observed_at`, `checked_at`을 이미지 URL과 함께 인용한다.
+- `association_confidence`는 이미지와 상품/편집 문맥의 연결 신뢰도이고, `tag_evidence_mode`는 소재 tag가 공식 페이지 메타데이터·DOM 문맥·사진 중 어디에 근거하는지 제한한다. 사진 자체의 소재 판정 확률이 아니다.
 - 제품 판매 종료나 CDN 경로 변경은 이미지가 틀렸다는 뜻이 아니라 링크 수명이 끝났을 수 있음을 뜻한다. 재크롤할 때 기존 레코드를 덮어쓰지 말고 새 스냅샷을 추가한다.

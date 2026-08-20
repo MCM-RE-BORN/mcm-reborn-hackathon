@@ -206,6 +206,7 @@
             "textile",
             "metal",
             "mixed",
+            "regenerated_leather",
             "alternative_material",
             "decoration",
             "unknown"
@@ -245,6 +246,23 @@
         "substrate_fiber": { "enum": ["reported", "unknown", "not_applicable"] },
         "coating_polymer": { "enum": ["reported", "unknown", "not_applicable"] },
         "material_origin_country": { "enum": ["reported", "unknown", "not_applicable"] }
+      }
+    },
+    "measurement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "raw_value", "unit", "values", "value_order", "notes"],
+      "properties": {
+        "kind": { "enum": ["overall_dimensions", "strap_length", "handle_drop"] },
+        "raw_value": { "type": "string", "minLength": 1 },
+        "unit": { "enum": ["cm"] },
+        "values": {
+          "type": "array",
+          "items": { "type": "number" },
+          "minItems": 1
+        },
+        "value_order": { "enum": ["source_order_unlabeled", "min_max", "single"] },
+        "notes": { "type": "string" }
       }
     },
     "product": {
@@ -296,6 +314,11 @@
           "items": { "type": "string", "minLength": 1 },
           "minItems": 1
         },
+        "measurements": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/measurement" },
+          "minItems": 1
+        },
         "product_made_in": { "type": ["string", "null"] },
         "observed_at": { "type": "string", "format": "date" },
         "source_ids": {
@@ -322,28 +345,39 @@
         "subject_type",
         "subject",
         "style_number",
+        "market",
         "tags",
         "asset_id",
         "image_url",
+        "source_id",
         "source_page_url",
+        "source_page_redirected_from",
         "caption",
-        "asset_published_at",
-        "asset_date_precision",
+        "raw_alt_text",
+        "published_at",
+        "date_precision",
+        "date_basis",
         "observed_at",
-        "officiality",
+        "checked_at",
+        "http_status",
+        "content_type",
+        "verification_method",
+        "channel_status",
         "rights_status",
-        "confidence",
+        "association_confidence",
+        "tag_evidence_mode",
         "notes"
       ],
       "properties": {
         "record_type": { "const": "image_reference" },
         "image_id": {
           "type": "string",
-          "pattern": "^[PM]IMG-[0-9]{3}$"
+          "pattern": "^(PIMG|MIMG|CIMG)-[0-9]{3}$"
         },
-        "subject_type": { "enum": ["pattern", "material"] },
+        "subject_type": { "enum": ["pattern", "material", "editorial_context"] },
         "subject": { "type": "string", "minLength": 1 },
         "style_number": { "type": ["string", "null"] },
+        "market": { "type": "string", "pattern": "^[A-Z]{2}$" },
         "tags": {
           "type": "array",
           "items": { "type": "string", "minLength": 1 },
@@ -352,14 +386,30 @@
         },
         "asset_id": { "type": "string", "minLength": 1 },
         "image_url": { "type": "string", "format": "uri", "pattern": "^https://" },
+        "source_id": { "type": "string", "pattern": "^SRC-[0-9]{3}$" },
         "source_page_url": { "type": "string", "format": "uri", "pattern": "^https://" },
+        "source_page_redirected_from": {
+          "oneOf": [
+            { "type": "string", "format": "uri", "pattern": "^https://" },
+            { "type": "null" }
+          ]
+        },
         "caption": { "type": "string", "minLength": 1 },
-        "asset_published_at": { "$ref": "#/$defs/dateOrNull" },
-        "asset_date_precision": { "enum": ["day", "month", "year", "unknown"] },
+        "raw_alt_text": { "type": ["string", "null"] },
+        "published_at": { "$ref": "#/$defs/dateOrNull" },
+        "date_precision": { "enum": ["day", "month", "year", "unknown"] },
+        "date_basis": { "enum": ["source_page_publication", "cdn_asset_header", "unknown"] },
         "observed_at": { "type": "string", "format": "date" },
-        "officiality": { "const": "first_party" },
+        "checked_at": { "type": "string", "format": "date" },
+        "http_status": { "const": 200 },
+        "content_type": { "enum": ["image/jpeg", "image/webp"] },
+        "verification_method": { "type": "string", "minLength": 1 },
+        "channel_status": { "const": "mcm_official_channel" },
         "rights_status": { "const": "unknown_reference_only" },
-        "confidence": { "enum": ["high", "medium", "low"] },
+        "association_confidence": { "enum": ["high", "medium", "low"] },
+        "tag_evidence_mode": { "enum": ["source_metadata", "dom_context", "mixed", "context_only"] },
+        "content_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "response_bytes": { "type": "integer" },
         "notes": { "type": "string" }
       }
     }

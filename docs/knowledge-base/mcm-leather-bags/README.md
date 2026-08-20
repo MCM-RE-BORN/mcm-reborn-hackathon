@@ -24,12 +24,12 @@
 
 ## 파일 구성
 
-- `schema/knowledge-record.schema.json`: 출처·사실·제품 스냅샷의 공통 계약
+- `schema/knowledge-record.schema.json`: 출처·사실·제품·이미지 스냅샷의 공통 계약
 - `data/sources.json`: 출처 레지스트리와 공개·확인 시기
 - `data/claims.jsonl`: 출처에 연결된 원자형 사실 및 명시적 미확인 값
 - `data/products.jsonl`: 대표 공식 SKU의 부품별 소재·구조 스냅샷
-- `data/pattern_image_references.jsonl`: 공식 패턴 편집·상품 이미지 URL과 자산 시기
-- `data/material_image_references.jsonl`: 공식 소재·표면 상품 이미지 URL과 자산 시기
+- `data/pattern_image_references.jsonl`: 공식 패턴 이미지와 패턴으로 오인하지 않도록 분리한 편집 맥락 이미지 URL
+- `data/material_image_references.jsonl`: 공식 소재·표면 상품 이미지 URL과 관찰·검증 메타데이터
 - `IMAGE_INDEX_KO.md`: 패턴·소재별 대표 이미지 갤러리와 전체 레지스트리 안내
 - `RESEARCH_REPORT_KO.md`: 조사 결과, 타임라인, 한계와 AI 적용 규칙
 - `CRAWL_LOG.md`: 수집 범위와 접근 제약
@@ -45,6 +45,8 @@
 - 출처의 `date_precision`: `day`, `month`, `year`, `unknown`
 - claim의 `valid_time.precision`: `day`, `month`, `year`, `season`, `range`, `unknown`
 - claim의 `valid_time.status`: 현재·역사적 스냅샷, 보고기간, 목표, 법적 사건, 표준 버전, 최초 확인일 등을 구분
+- 이미지의 `date_basis`: 편집 페이지 공개일, CDN 헤더 시각, 미확인을 구분
+- 이미지의 `checked_at`: 저장한 URL이 실제 이미지로 응답한 검증일
 
 월·연도까지만 알려진 `published_at`은 각각 그 달 또는 해의 첫날을 정규화 앵커로 저장하고 `date_precision`으로 정확도를 제한한다. 시즌 claim은 시즌명이 속한 달력 연도의 시작·끝을 검색용 외피로 기록하며, 이 범위를 실제 판매기간으로 해석하지 않는다. 제품 페이지처럼 발행일이 없는 살아 있는 문서는 `published_at: null`을 유지하고 `observed_at`만 기록한다. 상표 출원일이나 최초 검색일은 제품 출시일로 승격하지 않는다.
 
@@ -106,10 +108,10 @@
 python -X utf8 scripts/validate_mcm_leather_knowledge.py
 ```
 
-검증기는 JSON/JSONL 파싱, ID·이미지 자산 중복, ISO 날짜, HTTPS 출처, claim·product의 출처 참조, 공식 이미지 CDN·원본 페이지, 권리 상태, 충돌 그룹과 목표·미확인 값의 AI 사용 제약을 확인한다.
+검증기는 저장된 JSON Schema 계약을 모든 레코드에 실제 적용하고, ID·이미지 자산 중복, ISO 날짜, HTTPS 출처, claim·product·image의 출처 참조, 이미지 파일별 유형·공식 채널 URL·원본 페이지, 날짜 근거, 권리 상태, 충돌 그룹과 목표·미확인 값의 AI 사용 제약을 추가로 확인한다.
 
 ## 저작권·재현성
 
-원문 페이지 전체, 제품 이미지, 로고 파일은 저장하지 않는다. 공식 CDN의 링크, 자산 ID, 출처 페이지, 확인 시점만 `unknown_reference_only`로 보존한다. 이는 재사용·재배포·모델 학습 허가가 아니다. 직접 인용 대신 연구자가 작성한 한국어 의역을 사용한다.
+원문 페이지 전체, 제품 이미지, 로고 파일은 저장하지 않는다. MCM 공식 채널에 게시된 링크, 자산 ID, 출처 페이지, 확인 시점만 `unknown_reference_only`로 보존한다. 이 값은 내부 분류이며 권리자 확인이나 재사용·재배포·모델 학습 허가가 아니다. 직접 인용 대신 연구자가 작성한 한국어 의역을 사용한다.
 
 공개 웹의 동적 재고·페이지 변경과 지역별 카탈로그 차이 때문에 이 버전은 절대적 전수조사가 아니라 `2026-08-21`에 재현 가능한 공개 근거의 스냅샷이다.

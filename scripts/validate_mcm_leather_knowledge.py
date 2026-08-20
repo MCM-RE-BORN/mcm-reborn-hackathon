@@ -5,7 +5,9 @@ The validator deliberately uses only the Python standard library so the
 research snapshot can be checked without installing a JSON Schema package.
 It covers the invariants that matter most for retrieval: parseability,
 identity, dates, source links, conflict groups, product component shape,
-and first-party image-reference provenance.
+and official-channel image-reference provenance. Every record is also checked
+against the repository's JSON Schema with a small standard-library validator
+for the schema keywords used by this knowledge base.
 """
 
 from __future__ import annotations
@@ -33,7 +35,7 @@ SOURCE_ID_RE = re.compile(r"^SRC-[0-9]{3}$")
 CLAIM_ID_RE = re.compile(r"^CLM-[0-9]{3}$")
 PRODUCT_ID_RE = re.compile(r"^PRD-[0-9]{3}$")
 CONFLICT_ID_RE = re.compile(r"^CONFLICT-[0-9]{3}$")
-IMAGE_ID_RE = re.compile(r"^[PM]IMG-[0-9]{3}$")
+IMAGE_ID_RE = re.compile(r"^(PIMG|MIMG|CIMG)-[0-9]{3}$")
 ISO_DATE_RE = re.compile(r"^[0-9]{4}-[0-9]{2}-[0-9]{2}$")
 LANGUAGE_RE = re.compile(r"^[a-z]{2}(-[A-Z]{2})?$")
 MARKET_RE = re.compile(r"^[A-Z]{2}$")
@@ -88,6 +90,11 @@ PRODUCT_REQUIRED = {
     "confidence",
     "notes",
 }
+PRODUCT_OPTIONAL = {
+    "construction_features",
+    "composition_claims",
+    "measurements",
+}
 COMPONENT_REQUIRED = {
     "role",
     "material_class",
@@ -114,25 +121,44 @@ ATTRIBUTE_FIELDS = {
 }
 TIME_REQUIRED = {"label", "start", "end", "precision", "status"}
 EVIDENCE_REQUIRED = {"source_id", "locator", "support"}
+MEASUREMENT_REQUIRED = {
+    "kind",
+    "raw_value",
+    "unit",
+    "values",
+    "value_order",
+    "notes",
+}
 IMAGE_REQUIRED = {
     "record_type",
     "image_id",
     "subject_type",
     "subject",
     "style_number",
+    "market",
     "tags",
     "asset_id",
     "image_url",
+    "source_id",
     "source_page_url",
+    "source_page_redirected_from",
     "caption",
-    "asset_published_at",
-    "asset_date_precision",
+    "raw_alt_text",
+    "published_at",
+    "date_precision",
+    "date_basis",
     "observed_at",
-    "officiality",
+    "checked_at",
+    "http_status",
+    "content_type",
+    "verification_method",
+    "channel_status",
     "rights_status",
-    "confidence",
+    "association_confidence",
+    "tag_evidence_mode",
     "notes",
 }
+IMAGE_OPTIONAL = {"content_sha256", "response_bytes"}
 
 FACT_SCOPES = {
     "mcm_brand",
@@ -211,13 +237,25 @@ MATERIAL_CLASSES = {
     "textile",
     "metal",
     "mixed",
+    "regenerated_leather",
     "alternative_material",
     "decoration",
     "unknown",
 }
 ATTRIBUTE_STATES = {"reported", "unknown", "not_applicable"}
 IMAGE_DATE_PRECISIONS = {"day", "month", "year", "unknown"}
-FIRST_PARTY_IMAGE_HOSTS = {
+IMAGE_DATE_BASES = {"source_page_publication", "cdn_asset_header", "unknown"}
+IMAGE_CONTENT_TYPES = {"image/jpeg", "image/webp"}
+IMAGE_ASSOCIATION_CONFIDENCE = {"high", "medium", "low"}
+IMAGE_TAG_EVIDENCE_MODES = {
+    "source_metadata",
+    "dom_context",
+    "mixed",
+    "context_only",
+}
+MEASUREMENT_KINDS = {"overall_dimensions", "strap_length", "handle_drop"}
+MEASUREMENT_VALUE_ORDERS = {"source_order_unlabeled", "min_max", "single"}
+OFFICIAL_PAGE_IMAGE_HOSTS = {
     "images.mcmworldwide.com",
     "cdn.media.amplience.net",
     "i1.adis.ws",
@@ -300,10 +338,244 @@ def check_unique(values: list[Any], label: str, errors: list[str]) -> None:
         errors.append(f"{label}: duplicate values: {', '.join(map(str, duplicates))}")
 
 
-def validate_sources(sources: Any, errors: list[str]) -> set[str]:
+def json_values_equal(left: Any, right: Any) -> bool:
+    """Compare values using JSON Schema equality rather than Python coercion."""
+
+    if isinstance(left, bool) or isinstance(right, bool):
+        return isinstance(left, bool) and isinstance(right, bool) and left == right
+    if (
+        isinstance(left, (int, float))
+        and not isinstance(left, bool)
+        and isinstance(right, (int, float))
+        and not isinstance(right, bool)
+    ):
+        return left == right
+    if type(left) is not type(right):
+        return False
+    if isinstance(left, list):
+        return len(left) == len(right) and all(
+            json_values_equal(a, b) for a, b in zip(left, right)
+        )
+    if isinstance(left, dict):
+        return left.keys() == right.keys() and all(
+            json_values_equal(left[key], right[key]) for key in left
+        )
+    return left == right
+
+
+def json_type_matches(value: Any, expected: str) -> bool:
+    if expected == "null":
+        return value is None
+    if expected == "boolean":
+        return isinstance(value, bool)
+    if expected == "object":
+        return isinstance(value, dict)
+    if expected == "array":
+        return isinstance(value, list)
+    if expected == "string":
+        return isinstance(value, str)
+    if expected == "integer":
+        return isinstance(value, int) and not isinstance(value, bool)
+    if expected == "number":
+        return isinstance(value, (int, float)) and not isinstance(value, bool)
+    return False
+
+
+def resolve_local_ref(ref: Any, root_schema: dict[str, Any]) -> Any:
+    if not isinstance(ref, str) or not ref.startswith("#/"):
+        raise ValueError(f"unsupported reference {ref!r}")
+    value: Any = root_schema
+    for raw_part in ref[2:].split("/"):
+        part = raw_part.replace("~1", "/").replace("~0", "~")
+        if not isinstance(value, dict) or part not in value:
+            raise ValueError(f"unresolved reference {ref!r}")
+        value = value[part]
+    return value
+
+
+def schema_instance_errors(
+    value: Any,
+    schema: Any,
+    root_schema: dict[str, Any],
+    label: str,
+) -> list[str]:
+    """Validate the JSON Schema keyword subset used by this repository."""
+
+    if not isinstance(schema, dict):
+        return [f"{label}: schema node must be an object"]
+
+    errors: list[str] = []
+
+    if "$ref" in schema:
+        try:
+            referenced = resolve_local_ref(schema["$ref"], root_schema)
+        except ValueError as exc:
+            return [f"{label}: {exc}"]
+        errors.extend(schema_instance_errors(value, referenced, root_schema, label))
+        sibling_schema = {key: item for key, item in schema.items() if key != "$ref"}
+        if sibling_schema:
+            errors.extend(
+                schema_instance_errors(value, sibling_schema, root_schema, label)
+            )
+        return errors
+
+    one_of = schema.get("oneOf")
+    if one_of is not None:
+        if not isinstance(one_of, list) or not one_of:
+            errors.append(f"{label}: schema oneOf must be a non-empty array")
+        else:
+            branch_errors = [
+                schema_instance_errors(value, branch, root_schema, label)
+                for branch in one_of
+            ]
+            matches = [index for index, branch in enumerate(branch_errors) if not branch]
+            if len(matches) != 1:
+                errors.append(
+                    f"{label}: expected exactly one oneOf match, got {len(matches)}"
+                )
+                if not matches:
+                    for index, branch in enumerate(branch_errors, start=1):
+                        detail = branch[0] if branch else "matched"
+                        errors.append(f"{label}: oneOf branch {index}: {detail}")
+
+    expected_types = schema.get("type")
+    if expected_types is not None:
+        type_names = (
+            expected_types if isinstance(expected_types, list) else [expected_types]
+        )
+        if not type_names or not all(isinstance(item, str) for item in type_names):
+            errors.append(f"{label}: schema type must be a string or string array")
+            return errors
+        if not any(json_type_matches(value, item) for item in type_names):
+            errors.append(
+                f"{label}: expected JSON type {' or '.join(type_names)}, "
+                f"got {type(value).__name__}"
+            )
+            return errors
+
+    if "const" in schema and not json_values_equal(value, schema["const"]):
+        errors.append(f"{label}: expected constant {schema['const']!r}")
+
+    enum_values = schema.get("enum")
+    if enum_values is not None:
+        if not isinstance(enum_values, list):
+            errors.append(f"{label}: schema enum must be an array")
+        elif not any(json_values_equal(value, item) for item in enum_values):
+            errors.append(f"{label}: value {value!r} is not in enum")
+
+    if isinstance(value, dict):
+        required = schema.get("required", [])
+        if not isinstance(required, list):
+            errors.append(f"{label}: schema required must be an array")
+        else:
+            missing = [key for key in required if key not in value]
+            if missing:
+                errors.append(f"{label}: missing required fields: {', '.join(missing)}")
+
+        properties = schema.get("properties", {})
+        if not isinstance(properties, dict):
+            errors.append(f"{label}: schema properties must be an object")
+            properties = {}
+        for key, item in value.items():
+            child_label = f"{label}.{key}"
+            if key in properties:
+                errors.extend(
+                    schema_instance_errors(item, properties[key], root_schema, child_label)
+                )
+            elif schema.get("additionalProperties") is False:
+                errors.append(f"{child_label}: additional property is not allowed")
+            elif isinstance(schema.get("additionalProperties"), dict):
+                errors.extend(
+                    schema_instance_errors(
+                        item, schema["additionalProperties"], root_schema, child_label
+                    )
+                )
+
+    if isinstance(value, list):
+        min_items = schema.get("minItems")
+        if isinstance(min_items, int) and len(value) < min_items:
+            errors.append(f"{label}: expected at least {min_items} items")
+        items_schema = schema.get("items")
+        if items_schema is not None:
+            for index, item in enumerate(value):
+                errors.extend(
+                    schema_instance_errors(
+                        item, items_schema, root_schema, f"{label}[{index + 1}]"
+                    )
+                )
+        if schema.get("uniqueItems") is True:
+            for left_index, left in enumerate(value):
+                for right_index in range(left_index + 1, len(value)):
+                    if json_values_equal(left, value[right_index]):
+                        errors.append(
+                            f"{label}: items {left_index + 1} and "
+                            f"{right_index + 1} are not unique"
+                        )
+
+    if isinstance(value, str):
+        min_length = schema.get("minLength")
+        if isinstance(min_length, int) and len(value) < min_length:
+            errors.append(f"{label}: expected minimum length {min_length}")
+
+        pattern = schema.get("pattern")
+        if pattern is not None:
+            try:
+                matched = isinstance(pattern, str) and re.search(pattern, value) is not None
+            except re.error as exc:
+                errors.append(f"{label}: invalid schema pattern {pattern!r}: {exc}")
+            else:
+                if not matched:
+                    errors.append(f"{label}: value does not match pattern {pattern!r}")
+
+        value_format = schema.get("format")
+        if value_format == "date":
+            if not ISO_DATE_RE.fullmatch(value):
+                errors.append(f"{label}: expected strict YYYY-MM-DD date")
+            else:
+                try:
+                    date.fromisoformat(value)
+                except ValueError:
+                    errors.append(f"{label}: invalid ISO date {value!r}")
+        elif value_format == "uri":
+            parsed = urlparse(value)
+            if not parsed.scheme or (
+                parsed.scheme in {"http", "https"} and not parsed.netloc
+            ):
+                errors.append(f"{label}: expected an absolute URI")
+        elif value_format is not None:
+            errors.append(f"{label}: unsupported schema format {value_format!r}")
+
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        minimum = schema.get("minimum")
+        if isinstance(minimum, (int, float)) and value < minimum:
+            errors.append(f"{label}: value must be at least {minimum}")
+        maximum = schema.get("maximum")
+        if isinstance(maximum, (int, float)) and value > maximum:
+            errors.append(f"{label}: value must be at most {maximum}")
+
+    return errors
+
+
+def validate_records_against_schema(
+    records: Any,
+    schema: Any,
+    record_label: str,
+    errors: list[str],
+) -> None:
+    if not isinstance(schema, dict):
+        return
+    if not isinstance(records, list):
+        return
+    for index, record in enumerate(records, start=1):
+        errors.extend(
+            schema_instance_errors(record, schema, schema, f"{record_label}[{index}]")
+        )
+
+
+def validate_sources(sources: Any, errors: list[str]) -> dict[str, str]:
     if not isinstance(sources, list):
         errors.append(f"{SOURCE_PATH}: root must be an array")
-        return set()
+        return {}
 
     source_ids: list[str] = []
     for index, source in enumerate(sources, start=1):
@@ -352,7 +624,14 @@ def validate_sources(sources: Any, errors: list[str]) -> set[str]:
             errors.append(f"{label}: notes must be a string")
 
     check_unique(source_ids, "source_id", errors)
-    return set(source_ids)
+    return {
+        source["source_id"]: source["url"]
+        for source in sources
+        if isinstance(source, dict)
+        and isinstance(source.get("source_id"), str)
+        and isinstance(source.get("url"), str)
+        and SOURCE_ID_RE.fullmatch(source["source_id"])
+    }
 
 
 def validate_time(value: Any, label: str, errors: list[str]) -> None:
@@ -407,6 +686,8 @@ def validate_claims(
         if claim.get("ai_use") not in AI_USES:
             errors.append(f"{label}: invalid ai_use {claim.get('ai_use')!r}")
         check_date(claim.get("observed_at"), f"{label}.observed_at", errors)
+        if not isinstance(claim.get("notes"), str):
+            errors.append(f"{label}: notes must be a string")
         validate_time(claim.get("valid_time"), f"{label}.valid_time", errors)
 
         evidence = claim.get("evidence")
@@ -466,7 +747,7 @@ def validate_products(
         check_required(product, PRODUCT_REQUIRED, label, errors)
         check_allowed(
             product,
-            PRODUCT_REQUIRED | {"construction_features", "composition_claims"},
+            PRODUCT_REQUIRED | PRODUCT_OPTIONAL,
             label,
             errors,
         )
@@ -493,9 +774,22 @@ def validate_products(
         check_non_empty_string(
             product.get("silhouette"), f"{label}.silhouette", errors
         )
+        for nullable_string_field in (
+            "family",
+            "collection_or_season",
+            "pattern_family",
+            "product_made_in",
+        ):
+            nullable_value = product.get(nullable_string_field)
+            if nullable_value is not None and not isinstance(nullable_value, str):
+                errors.append(
+                    f"{label}.{nullable_string_field}: expected string or null"
+                )
         if product.get("confidence") not in CONFIDENCE_LEVELS:
             errors.append(f"{label}: invalid confidence {product.get('confidence')!r}")
         check_date(product.get("observed_at"), f"{label}.observed_at", errors)
+        if not isinstance(product.get("notes"), str):
+            errors.append(f"{label}: notes must be a string")
 
         product_sources = product.get("source_ids")
         if not isinstance(product_sources, list) or not product_sources:
@@ -631,23 +925,116 @@ def validate_products(
                         errors,
                     )
 
+        measurements = product.get("measurements")
+        if measurements is not None:
+            if not isinstance(measurements, list) or not measurements:
+                errors.append(f"{label}: measurements must be a non-empty array")
+            else:
+                for measurement_index, measurement in enumerate(
+                    measurements, start=1
+                ):
+                    measurement_label = (
+                        f"{label}.measurements[{measurement_index}]"
+                    )
+                    if not isinstance(measurement, dict):
+                        errors.append(f"{measurement_label}: expected object")
+                        continue
+                    check_required(
+                        measurement,
+                        MEASUREMENT_REQUIRED,
+                        measurement_label,
+                        errors,
+                    )
+                    check_allowed(
+                        measurement,
+                        MEASUREMENT_REQUIRED,
+                        measurement_label,
+                        errors,
+                    )
+                    if measurement.get("kind") not in MEASUREMENT_KINDS:
+                        errors.append(
+                            f"{measurement_label}: invalid kind "
+                            f"{measurement.get('kind')!r}"
+                        )
+                    check_non_empty_string(
+                        measurement.get("raw_value"),
+                        f"{measurement_label}.raw_value",
+                        errors,
+                    )
+                    if measurement.get("unit") != "cm":
+                        errors.append(f"{measurement_label}: unit must be 'cm'")
+                    values = measurement.get("values")
+                    if not isinstance(values, list) or not values:
+                        errors.append(
+                            f"{measurement_label}: values must be a non-empty array"
+                        )
+                        values = []
+                    else:
+                        for value_index, number in enumerate(values, start=1):
+                            if (
+                                not isinstance(number, (int, float))
+                                or isinstance(number, bool)
+                                or number <= 0
+                            ):
+                                errors.append(
+                                    f"{measurement_label}.values[{value_index}]: "
+                                    "expected a positive number"
+                                )
+                    value_order = measurement.get("value_order")
+                    if value_order not in MEASUREMENT_VALUE_ORDERS:
+                        errors.append(
+                            f"{measurement_label}: invalid value_order {value_order!r}"
+                        )
+                    elif value_order == "single" and len(values) != 1:
+                        errors.append(
+                            f"{measurement_label}: single requires exactly one value"
+                        )
+                    elif value_order == "min_max":
+                        if len(values) != 2:
+                            errors.append(
+                                f"{measurement_label}: min_max requires exactly two values"
+                            )
+                        elif values[0] > values[1]:
+                            errors.append(
+                                f"{measurement_label}: min_max values must be ascending"
+                            )
+                    if not isinstance(measurement.get("notes"), str):
+                        errors.append(f"{measurement_label}: notes must be a string")
+
     check_unique(product_ids, "product_id", errors)
     check_unique(snapshot_keys, "(style_number, market, observed_at)", errors)
 
 
-def validate_images(images: list[dict[str, Any]], errors: list[str]) -> None:
+def is_official_mcm_page(value: str) -> bool:
+    parsed = urlparse(value)
+    host = (parsed.hostname or "").lower()
+    return (
+        parsed.scheme == "https"
+        and bool(host)
+        and (host == "mcmworldwide.com" or host.endswith(".mcmworldwide.com"))
+    )
+
+
+def validate_image_registry(
+    images: list[dict[str, Any]],
+    source_urls: dict[str, str],
+    registry_label: str,
+    allowed_subject_types: set[str],
+    errors: list[str],
+) -> tuple[list[str], list[str], list[str], list[str]]:
     image_ids: list[str] = []
     asset_ids: list[str] = []
     image_urls: list[str] = []
+    content_hashes: list[str] = []
 
     if not images:
-        errors.append("image reference registries must contain at least one record")
-        return
+        errors.append(f"{registry_label}: registry must contain at least one record")
+        return image_ids, asset_ids, image_urls, content_hashes
 
     for index, record in enumerate(images, start=1):
-        label = f"image[{index}]"
+        label = f"{registry_label}[{index}]"
         check_required(record, IMAGE_REQUIRED, label, errors)
-        check_allowed(record, IMAGE_REQUIRED, label, errors)
+        check_allowed(record, IMAGE_REQUIRED | IMAGE_OPTIONAL, label, errors)
 
         image_id = record.get("image_id")
         if not isinstance(image_id, str) or not IMAGE_ID_RE.fullmatch(image_id):
@@ -659,19 +1046,31 @@ def validate_images(images: list[dict[str, Any]], errors: list[str]) -> None:
             errors.append(f"{label}: record_type must be 'image_reference'")
 
         subject_type = record.get("subject_type")
-        if subject_type not in {"pattern", "material"}:
+        if subject_type not in {"pattern", "material", "editorial_context"}:
             errors.append(f"{label}: invalid subject_type {subject_type!r}")
         elif isinstance(image_id, str):
-            expected_prefix = "PIMG-" if subject_type == "pattern" else "MIMG-"
+            expected_prefix = {
+                "pattern": "PIMG-",
+                "material": "MIMG-",
+                "editorial_context": "CIMG-",
+            }[subject_type]
             if not image_id.startswith(expected_prefix):
                 errors.append(
                     f"{label}: {subject_type} image_id must start with {expected_prefix}"
                 )
+        if subject_type not in allowed_subject_types:
+            errors.append(
+                f"{label}: subject_type {subject_type!r} is not allowed in "
+                f"{registry_label}"
+            )
 
         check_non_empty_string(record.get("subject"), f"{label}.subject", errors)
         style_number = record.get("style_number")
         if style_number is not None:
             check_non_empty_string(style_number, f"{label}.style_number", errors)
+        market = record.get("market")
+        if not isinstance(market, str) or not MARKET_RE.fullmatch(market):
+            errors.append(f"{label}: invalid market {market!r}")
 
         tags = record.get("tags")
         if not isinstance(tags, list) or not tags:
@@ -694,60 +1093,166 @@ def validate_images(images: list[dict[str, Any]], errors: list[str]) -> None:
             parsed_image = urlparse(image_url)
             if parsed_image.scheme != "https" or not parsed_image.netloc:
                 errors.append(f"{label}: image_url must be an absolute HTTPS URL")
-            elif parsed_image.hostname not in FIRST_PARTY_IMAGE_HOSTS:
+            elif parsed_image.hostname not in OFFICIAL_PAGE_IMAGE_HOSTS:
                 errors.append(
-                    f"{label}: image_url host is not an approved first-party CDN"
+                    f"{label}: image_url host is not an approved official-page image host"
                 )
             image_urls.append(image_url)
 
         source_page_url = record.get("source_page_url")
         if not isinstance(source_page_url, str):
             errors.append(f"{label}: source_page_url must be a string")
-        else:
-            parsed_source = urlparse(source_page_url)
-            source_host = parsed_source.hostname or ""
-            if (
-                parsed_source.scheme != "https"
-                or not source_host
-                or not (
-                    source_host == "mcmworldwide.com"
-                    or source_host.endswith(".mcmworldwide.com")
-                )
+        elif not is_official_mcm_page(source_page_url):
+            errors.append(
+                f"{label}: source_page_url must be an official MCM HTTPS page"
+            )
+
+        source_id = record.get("source_id")
+        if source_id not in source_urls:
+            errors.append(f"{label}: unknown source_id {source_id!r}")
+        elif source_page_url != source_urls[source_id]:
+            errors.append(
+                f"{label}: source_page_url must exactly match {source_id} URL "
+                f"{source_urls[source_id]!r}"
+            )
+
+        redirected_from = record.get("source_page_redirected_from")
+        if redirected_from is not None:
+            if not isinstance(redirected_from, str) or not is_official_mcm_page(
+                redirected_from
             ):
                 errors.append(
-                    f"{label}: source_page_url must be an official MCM HTTPS page"
+                    f"{label}: source_page_redirected_from must be null or an "
+                    "official MCM HTTPS page"
+                )
+            elif redirected_from == source_page_url:
+                errors.append(
+                    f"{label}: redirected URL must differ from canonical source page"
                 )
 
         check_non_empty_string(record.get("caption"), f"{label}.caption", errors)
-        check_date(
-            record.get("asset_published_at"),
-            f"{label}.asset_published_at",
-            errors,
-            True,
-        )
-        precision = record.get("asset_date_precision")
-        if precision not in IMAGE_DATE_PRECISIONS:
-            errors.append(f"{label}: invalid asset_date_precision {precision!r}")
-        elif record.get("asset_published_at") is None and precision != "unknown":
-            errors.append(
-                f"{label}: null asset_published_at requires unknown precision"
-            )
-        check_date(record.get("observed_at"), f"{label}.observed_at", errors)
+        raw_alt_text = record.get("raw_alt_text")
+        if raw_alt_text is not None and (
+            not isinstance(raw_alt_text, str) or not raw_alt_text.strip()
+        ):
+            errors.append(f"{label}: raw_alt_text must be null or non-empty text")
 
-        if record.get("officiality") != "first_party":
-            errors.append(f"{label}: officiality must be 'first_party'")
+        published_at = record.get("published_at")
+        check_date(published_at, f"{label}.published_at", errors, True)
+        precision = record.get("date_precision")
+        if precision not in IMAGE_DATE_PRECISIONS:
+            errors.append(f"{label}: invalid date_precision {precision!r}")
+        elif published_at is None and precision != "unknown":
+            errors.append(f"{label}: null published_at requires unknown precision")
+        elif published_at is not None and precision == "unknown":
+            errors.append(f"{label}: dated record requires known date_precision")
+
+        date_basis = record.get("date_basis")
+        if date_basis not in IMAGE_DATE_BASES:
+            errors.append(f"{label}: invalid date_basis {date_basis!r}")
+        elif published_at is None and date_basis != "unknown":
+            errors.append(f"{label}: null published_at requires unknown date_basis")
+        elif published_at is not None and date_basis == "unknown":
+            errors.append(f"{label}: dated record requires a known date_basis")
+
+        check_date(record.get("observed_at"), f"{label}.observed_at", errors)
+        check_date(record.get("checked_at"), f"{label}.checked_at", errors)
+        observed_at = record.get("observed_at")
+        checked_at = record.get("checked_at")
+        if (
+            isinstance(observed_at, str)
+            and isinstance(checked_at, str)
+            and checked_at < observed_at
+        ):
+            errors.append(f"{label}: checked_at must not precede observed_at")
+
+        if record.get("http_status") != 200:
+            errors.append(f"{label}: http_status must be 200")
+        if record.get("content_type") not in IMAGE_CONTENT_TYPES:
+            errors.append(
+                f"{label}: invalid content_type {record.get('content_type')!r}"
+            )
+        check_non_empty_string(
+            record.get("verification_method"),
+            f"{label}.verification_method",
+            errors,
+        )
+        if record.get("channel_status") != "mcm_official_channel":
+            errors.append(
+                f"{label}: channel_status must be 'mcm_official_channel'"
+            )
         if record.get("rights_status") != "unknown_reference_only":
             errors.append(
                 f"{label}: rights_status must be 'unknown_reference_only'"
             )
-        if record.get("confidence") not in {"high", "medium", "low"}:
-            errors.append(f"{label}: invalid confidence {record.get('confidence')!r}")
+        if record.get("association_confidence") not in IMAGE_ASSOCIATION_CONFIDENCE:
+            errors.append(
+                f"{label}: invalid association_confidence "
+                f"{record.get('association_confidence')!r}"
+            )
+        tag_evidence_mode = record.get("tag_evidence_mode")
+        if tag_evidence_mode not in IMAGE_TAG_EVIDENCE_MODES:
+            errors.append(
+                f"{label}: invalid tag_evidence_mode {tag_evidence_mode!r}"
+            )
+        if subject_type == "editorial_context" and tag_evidence_mode != "context_only":
+            errors.append(
+                f"{label}: editorial context must use context_only tag evidence"
+            )
+        if subject_type != "editorial_context" and tag_evidence_mode == "context_only":
+            errors.append(
+                f"{label}: context_only tag evidence requires editorial_context"
+            )
+
+        content_sha256 = record.get("content_sha256")
+        if content_sha256 is not None:
+            if not isinstance(content_sha256, str) or not re.fullmatch(
+                r"[0-9a-f]{64}", content_sha256
+            ):
+                errors.append(f"{label}: invalid content_sha256")
+            else:
+                content_hashes.append(content_sha256)
+        response_bytes = record.get("response_bytes")
+        if response_bytes is not None and (
+            not isinstance(response_bytes, int)
+            or isinstance(response_bytes, bool)
+            or response_bytes <= 0
+        ):
+            errors.append(f"{label}: response_bytes must be a positive integer")
         if not isinstance(record.get("notes"), str):
             errors.append(f"{label}: notes must be a string")
 
-    check_unique(image_ids, "image_id", errors)
-    check_unique(asset_ids, "image asset_id", errors)
-    check_unique(image_urls, "image_url", errors)
+    return image_ids, asset_ids, image_urls, content_hashes
+
+
+def validate_images(
+    pattern_images: list[dict[str, Any]],
+    material_images: list[dict[str, Any]],
+    source_urls: dict[str, str],
+    errors: list[str],
+) -> None:
+    pattern_result = validate_image_registry(
+        pattern_images,
+        source_urls,
+        "pattern_image",
+        {"pattern", "editorial_context"},
+        errors,
+    )
+    material_result = validate_image_registry(
+        material_images,
+        source_urls,
+        "material_image",
+        {"material"},
+        errors,
+    )
+    all_image_ids = pattern_result[0] + material_result[0]
+    all_asset_ids = pattern_result[1] + material_result[1]
+    all_image_urls = pattern_result[2] + material_result[2]
+    all_content_hashes = pattern_result[3] + material_result[3]
+    check_unique(all_image_ids, "image_id", errors)
+    check_unique(all_asset_ids, "image asset_id", errors)
+    check_unique(all_image_urls, "image_url", errors)
+    check_unique(all_content_hashes, "image content_sha256", errors)
 
 
 def main() -> int:
@@ -762,10 +1267,21 @@ def main() -> int:
     pattern_images = load_jsonl(PATTERN_IMAGE_PATH, errors)
     material_images = load_jsonl(MATERIAL_IMAGE_PATH, errors)
 
-    source_ids = validate_sources(sources, errors)
+    validate_records_against_schema(sources, schema, "source", errors)
+    validate_records_against_schema(claims, schema, "claim", errors)
+    validate_records_against_schema(products, schema, "product", errors)
+    validate_records_against_schema(
+        pattern_images, schema, "pattern_image", errors
+    )
+    validate_records_against_schema(
+        material_images, schema, "material_image", errors
+    )
+
+    source_urls = validate_sources(sources, errors)
+    source_ids = set(source_urls)
     validate_claims(claims, source_ids, errors)
     validate_products(products, source_ids, errors)
-    validate_images(pattern_images + material_images, errors)
+    validate_images(pattern_images, material_images, source_urls, errors)
 
     if errors:
         print("MCM leather knowledge validation failed:")
@@ -780,11 +1296,15 @@ def main() -> int:
             if claim.get("conflict_group_id") is not None
         }
     )
+    image_type_counts = Counter(
+        image.get("subject_type") for image in pattern_images + material_images
+    )
     print(
         "Validated MCM leather knowledge: "
         f"{len(sources)} sources, {len(claims)} claims, "
-        f"{len(products)} products, {len(pattern_images)} pattern images, "
-        f"{len(material_images)} material images, "
+        f"{len(products)} products, {image_type_counts['pattern']} pattern images, "
+        f"{image_type_counts['material']} material images, "
+        f"{image_type_counts['editorial_context']} editorial context images, "
         f"{conflict_count} conflict groups."
     )
     return 0

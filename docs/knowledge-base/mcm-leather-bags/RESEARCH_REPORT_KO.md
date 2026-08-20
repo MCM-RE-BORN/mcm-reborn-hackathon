@@ -18,6 +18,7 @@
 10. MCM 2024 보고서의 2024년 정확 보고값 `100%`와 살아 있는 지속가능성 페이지의 하한 `최소 78%`는 모순이 아니다. 보고기간과 값의 성격을 나눠 저장했다.
 11. LWG는 브랜드나 완제품 자체를 인증하지 않고 공급망 시설을 감사·인증한다. “LWG 인증 가방/브랜드”라는 치환은 부정확하다. [LWG Claims Guidance](https://www.leatherworkinggroup.com/what-we-do/claims-guidance/), `SRC-017`.
 12. 공개 자료에는 개별 SKU의 인쇄 잉크, 코팅 두께, 엠보싱 압력·온도, 실 규격·SPI, 접착제, 엣지코트 배합, 도금 두께, 패널·피할 두께, QC 허용치가 없다. 일반 공정을 MCM 고유 공정처럼 채우지 않았다.
+13. `Resetos regenerated leather`는 공식 제품명·본체 표기지만 정확한 재생 함량, 결합재, 동물종, tannage와 coating 조성은 공개되지 않았다. 일반 `Responsible materials` 배지만으로 비건·베지터블 태닝·생분해성을 확정하지 않는다. [MCM Resetos Toni](https://jp.mcmworldwide.com/en_JP/women/bags/totes-shoppers/toni-top-zip-shopper-in-resetos-leather/MWPFAMT09Q5001.html), `SRC-093`.
 
 ## 2. 조사 범위와 판정법
 
@@ -48,7 +49,7 @@
 
 | 유효 시기 | 패턴·이벤트 | 디자인·소재 구현 | 근거 |
 | --- | --- | --- | --- |
-| 1976–현재 | Visetos 원형 | 손그림 MCM 문자·월계수·리본·다이아몬드의 반복. 대표 Cognac은 검정 모티프를 코팅 캔버스에 구현 | [MCM Heritage](https://us.mcmworldwide.com/en_US/heritage-edit), `SRC-001`; [MCM Visetos](https://au.mcmworldwide.com/en_AU/mcm-edit/mcm-visetos-aw-19), `SRC-002` |
+| 1976 등장 / 2026-08-21 대표형 설명 | Visetos 원형 | 손그림 MCM 문자·월계수·리본·다이아몬드의 반복. 현행 대표 Cognac 설명은 검정 모티프를 코팅 캔버스에 구현 | [MCM Heritage](https://us.mcmworldwide.com/en_US/heritage-edit), `SRC-001`; [MCM Visetos](https://au.mcmworldwide.com/en_AU/mcm-edit/mcm-visetos-aw-19), `SRC-002` |
 | AW19 | Seasonal Visetos | Cognac 원형에 Deep Blue, Winter Moss, Gradation 같은 색상·그라데이션 변형 | `SRC-002` |
 | 2021-06 최초 확인 | Vintage Monogram Jacquard | Visetos를 빈티지하고 직조된 표면으로 재구성 | [WWD/Yahoo](https://www.yahoo.com/lifestyle/mcm-introduces-logo-designs-first-040144766.html), `SRC-030` |
 | 2021 도입 / 2022-02 공식 페이지 | Cubic Monogram | Bavarian diamond를 3D 건축 구조처럼 반복. Italian jacquard, print, Vachetta·Spanish nappa emboss | [MCM Cubic Craft](https://ca.mcmworldwide.com/mcm-edit/mcm-cubic-monogram-craftsmanship), `SRC-006` |
@@ -87,6 +88,7 @@
 | 촉감·유형 | nappa/napa, grained leather | natural leather는 tannage 명칭이 아님 |
 | 표면 가공 | printed, embossed, croco-embossed, quilted, crushed, sequined, studded | croco-embossed는 악어가죽이 아님 |
 | 무두질 | metal-free, chrome-free 목표, 대부분 SKU 미표기 | metal-free와 chrome-free를 자동 동의어 처리하지 않음 |
+| 재생가죽 표현 | Resetos regenerated leather | 정확한 재생 함량·결합재·동물종·무두질·코팅 조성 및 비건 여부 미표기 |
 | 비가죽 본체 | Visetos coated canvas, jacquard, raffia jacquard, recycled nylon, MIRUM | 가죽 trim이 있어도 body 소재와 분리 |
 | 안감 | cotton twill, fabric, microfiber suede finish, lamb nappa | microfiber suede finish는 동물성 suede가 아님 |
 | 하드웨어 | 24K gold plated, cobalt, matte black 등 SKU별 표기 | 도금 두께·방식은 미공개 |
@@ -94,6 +96,8 @@
 LWG의 2024 정의에서 full grain은 교정용 기계 가공으로 원래 grain을 제거하지 않은 가죽이고, Napa는 부드럽고 통염되며 가볍게 마감한 full-grain 계열 용어다. [LWG Definitions v1.1](https://www.leatherworkinggroup.com/fileadmin/uploads/lwg/Knowledge/LWG_List_of_Definitions_v1.1.pdf), `SRC-019`.
 
 ### 대표 SKU 부품 스냅샷
+
+표 안의 `Italian`, `Spanish` 같은 국명은 공식 상품 페이지의 원문 마케팅 소재명을 그대로 보존한 것이다. 원료 원산지, 제혁국, 직물 제조국 중 어느 역할인지 확인되지 않으면 구조화된 `material_origin_country`는 `null/unknown`이다. `Made in` 열만 완제품 생산국이다.
 
 | SKU | 본체 | 트림·안감 | 구조·표면 | Made in | 출처 |
 | --- | --- | --- | --- | --- | --- |
@@ -121,6 +125,7 @@ LWG의 2024 정의에서 full grain은 교정용 기계 가공으로 원래 grai
 | `MWDDSDU02C8001` | natural nappa | microfiber | embossed Visetos drawstring | Italy | `SRC-056` |
 | `MWREAAK01CO001` | Visetos canvas | Italian croco-embossed leather handle | diamond form | South Korea | `SRC-057` |
 | `MMLFSTA02BK001` | Italian recycled nylon | nappa, fabric | sling | South Korea | `SRC-058` |
+| `MWPFAMT09Q5001` | Resetos regenerated leather | leather handles·strap, fabric lining | Visetos motif, top zip, back/slip/card pockets | South Korea | `SRC-093` |
 
 전체 부품 레코드는 `data/products.jsonl`에 있다. `attribute_state`의 `reported`, `unknown`, `not_applicable`을 함께 읽어야 하며, `null`만으로 “없음”을 뜻하지 않는다.
 
@@ -190,6 +195,12 @@ UNIDO의 전통적인 leather-goods 순서는 다음과 같다.
 
 이 순서는 AI가 손상 위치나 재사용 난이도를 설명할 때 일반 배경으로만 쓸 수 있다. MCM 개별 가방의 확정 BOM·공정 라우팅으로 출력하면 안 된다.
 
+### 7.4 공식 관리 지침
+
+MCM의 현행 Care FAQ는 과중 적재·형태 변형을 피하고, 습기·수분·땀·열·직사광선·알코올·유성 물질·마찰·충격을 피하며, 형태를 유지한 채 더스트백에 넣어 서늘하고 건조한 곳에 보관하고 부드러운 마른 천으로 관리하며 드라이클리닝하지 말 것을 안내한다. 엠보싱 가죽은 마찰에 따른 표면 박리와 중량에 따른 로고 변형, 메탈릭 가죽은 접힘부 주름·균열·변색·분말 전이, 스터드·스톤은 압력 손상과 다른 물체 긁힘을 별도로 경고한다. [MCM Care FAQ](https://us.mcmworldwide.com/en_US/care/ca-care-faq.html), `SRC-092`.
+
+이는 현행 일반 지침 스냅샷이며 제품별 care label과 고객서비스 안내가 우선한다. 손상 유형이 모든 제품에 반드시 발생한다는 예측값으로 사용하지 않는다.
+
 ## 8. 조달·LWG·대체 소재 시계열
 
 | 보고·유효 시기 | 값 | 출처·주의 |
@@ -222,6 +233,7 @@ LWG가 실제로 인증하는 주체와 주장 범위는 [LWG FAQ](https://www.l
 - 반복 타일의 실측 치수, 모티프 간격·배율, 패널별 방향·배치, 봉제선 패턴 정합 규칙
 - 정품 제작용 벡터 마스터, Pantone·잉크값
 - 개별 leather SKU의 chrome·vegetable·aldehyde·metal-free tannage
+- Resetos의 정확한 재생 가죽 함량·결합재·동물종·무두질·코팅 조성 및 비건·생분해성 여부
 - 엠보싱 금형 깊이, 온도, 압력, dwell time
 - 실 소재·호수·SPI, 손봉제·기계봉제 여부
 - 접착제 종류
@@ -271,11 +283,11 @@ LWG가 실제로 인증하는 주체와 주장 범위는 [LWG FAQ](https://www.l
 
 ## 13. 패턴·소재 이미지 레지스트리
 
-공식 MCM 편집·상품 페이지에서 패턴 이미지 96개와 12개 소재 SKU의 상품 이미지 83개, 합계 179개 고유 자산을 확인했다. 자산 ID를 기준으로 반응형 리사이즈와 DOM 중복을 제거했으며 이미지 파일은 저장소에 복제하지 않았다.
+공식 MCM 편집·상품 페이지에서 패턴 이미지 92개, 특정 패턴 증거로 사용하지 않는 AW26 편집 맥락 4개, 13개 소재 SKU의 상품 이미지 89개, 합계 185개 참조를 확인했다. 자산 ID를 기준으로 반응형 리사이즈와 DOM 중복을 제거하고, 확인된 동일 응답 바이트 중복 1개도 제거했으며 이미지 파일은 저장소에 복제하지 않았다.
 
 - 패턴: Visetos·AW19 변형, Vintage Monogram Jacquard, Cubic, Lauretos, Maxi Monogram Leather, Disco Visetos, Diamond Jacquard
-- 소재·표면: coated canvas+calf nappa, calf nappa, full-grain leather, goatskin, quilted nappa, raffia jacquard, MIRUM, recycled nylon, lambskin, studded calfskin, croco emboss, sequin lambskin
+- 소재·표면: coated canvas+calf nappa, calf nappa, full-grain leather, goatskin, quilted nappa, raffia jacquard, MIRUM, Resetos regenerated leather, recycled nylon, lambskin, studded calfskin, croco emboss, sequin lambskin
 - 전체 메타데이터: `data/pattern_image_references.jsonl`, `data/material_image_references.jsonl`
 - 탐색용 대표 갤러리: [IMAGE_INDEX_KO.md](IMAGE_INDEX_KO.md)
 
-모든 자산은 MCM 공식 마케팅 저작물이며 권리 상태를 `unknown_reference_only`로 기록했다. 사진의 조명·보정·축척 때문에 소재 판정 ground truth로 단독 사용하지 않고, 반드시 공식 제품 문구와 연결한다. CDN의 `asset_published_at`은 제품 출시일이 아니라 자산 공개·재게시 시각이다.
+모든 참조는 MCM 공식 채널에 게시된 마케팅 이미지지만 권리자와 재사용 허가는 미확인이다. `unknown_reference_only`는 내부 처리 상태이지 저작권·재배포·학습 허가가 아니다. 사진의 조명·보정·축척 때문에 소재 판정 ground truth로 단독 사용하지 않고 반드시 공식 제품 문구와 연결한다. 이미지 `published_at`은 `date_basis`가 편집 페이지 공개일인지 CDN 헤더인지와 함께 읽고, 어느 쪽도 제품 출시일로 승격하지 않는다.
