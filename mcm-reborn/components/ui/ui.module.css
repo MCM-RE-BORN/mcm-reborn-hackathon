@@ -101,6 +101,22 @@
   width: 100%;
 }
 
+.buttonLoadingContent {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-5);
+}
+
+.buttonLoadingIndicator {
+  width: var(--space-7);
+  height: var(--space-7);
+  flex: none;
+  border-width: var(--border-thin);
+  border-color: currentcolor;
+  border-top-color: var(--color-transparent);
+}
+
 .actionButtonLink {
   min-height: var(--control-height-lg);
   justify-content: space-between;
@@ -288,7 +304,7 @@
 .keyValueRow dd {
   color: var(--color-ink);
   font-weight: var(--font-weight-semibold);
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
   text-align: right;
 }
 
@@ -337,7 +353,7 @@
   color: var(--color-danger);
 }
 
-.statusSpinner {
+.loadingIndicator {
   display: inline-block;
   width: var(--control-height-xl);
   height: var(--control-height-xl);
@@ -349,7 +365,7 @@
 
 .statusCopy {
   display: grid;
-  gap: var(--space-5);
+  gap: var(--space-14);
 }
 
 .statusCopy h2 {
@@ -362,7 +378,7 @@
   color: var(--color-muted);
   font-size: var(--font-size-body);
   font-weight: var(--font-weight-light);
-  line-height: var(--line-height-reading);
+  line-height: var(--line-height-tight);
 }
 
 .statusAction {

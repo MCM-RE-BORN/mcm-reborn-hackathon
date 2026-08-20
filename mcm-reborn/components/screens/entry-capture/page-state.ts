@@ -15,6 +15,7 @@ export type PageState =
   | "limited";
 
 export type EntrySearchParams = Promise<{
+  bootstrap?: string | string[];
   captured?: string | string[];
   completed?: string | string[];
   slot?: string | string[];
@@ -63,6 +64,7 @@ export async function readEntrySearchParams(searchParams: EntrySearchParams) {
   }
 
   return {
+    bootstrapCustomer: firstValue(values.bootstrap) === "customer",
     captured: capturedSlots.length > 0,
     capturedSlots,
     slot,

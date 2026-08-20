@@ -124,12 +124,13 @@ export function CheckoutScreen({ analysisId, productId, state }: CheckoutScreenP
           <StickyActionBar>
             <Button
               aria-describedby="payment-environment-notice"
-              disabled={isSubmitting}
               form="checkout-form"
               fullWidth
+              loading={isSubmitting}
+              loadingLabel="신청 처리 중"
               type="submit"
             >
-              {isSubmitting ? "신청 처리 중..." : `${formatKrw(product.mockPrice.amount)} 결제하기`}
+              {formatKrw(product.mockPrice.amount)} 결제하기
             </Button>
           </StickyActionBar>
         ) : undefined

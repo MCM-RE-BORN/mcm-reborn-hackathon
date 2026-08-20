@@ -52,7 +52,6 @@ ANALYSIS_CAPTURE_SLOTS = [
     'BOTTOM',
     'LEFT_SIDE',
     'RIGHT_SIDE',
-    'SERIAL_NUMBER',
 ]
 PRIMARY_SCENARIO_KEY = 'MCM_BACKPACK_CHANGE_APPROVED_20260817'
 INSPECTION_OUTCOMES = {'NO_CHANGE', 'CHANGE_REQUIRED', 'PRODUCTION_UNAVAILABLE'}
@@ -374,13 +373,25 @@ def validate_openapi(openapi: dict[str, Any]) -> tuple[int, int]:
 
     create_analysis = schemas['CreateAnalysisRequest']
     image_ids = create_analysis['properties']['imageAssetIds']
-    if (image_ids.get('minItems'), image_ids.get('maxItems')) != (7, 7):
-        fail('CreateAnalysisRequest must require exactly seven source photos')
+    if (image_ids.get('minItems'), image_ids.get('maxItems')) != (6, 6):
+        fail('CreateAnalysisRequest must require exactly six source photos')
+    if image_ids.get('uniqueItems') is not True:
+        fail('CreateAnalysisRequest imageAssetIds must be unique')
     if image_ids.get('description') != (
-        '정면, 후면, 상단, 하단, 좌측면, 우측면, 일련번호 촬영 자산 ID를 이 순서로 전달합니다. '
-        '일곱 슬롯은 모두 필수입니다.'
+        '정면, 후면, 상단, 하단, 좌측면, 우측면 촬영 자산 ID만 이 순서로 전달합니다. '
+        '여섯 슬롯은 모두 필수이며 배열 0~1은 SOURCE_FRONT, 2~5는 SOURCE_SIDE purpose여야 합니다. '
+        'INTERIOR·ENGRAVING 자산과 일련번호 사진은 포함하지 않습니다.'
     ):
-        fail('CreateAnalysisRequest must define the seven required capture slots in order')
+        fail('CreateAnalysisRequest must define the six ordered capture slots and their purposes')
+    analysis_description = openapi['paths']['/analyses']['post'].get('description', '')
+    for fragment in (
+        '배열 0~1의 purpose는 SOURCE_FRONT, 2~5는 SOURCE_SIDE여야 합니다.',
+        'INTERIOR 또는 ENGRAVING 자산과 일련번호 사진은 imageAssetIds에 포함하지 않습니다.',
+        'serialNumber는 신규 분석 접수에 필수이며',
+        'ASCII 영문·숫자 11자리여야 합니다.',
+    ):
+        if fragment not in analysis_description:
+            fail('POST /analyses must enforce directional purposes and exclude the serial photo')
     required_input = {
         'imageAssetIds',
         'locale',
@@ -388,11 +399,17 @@ def validate_openapi(openapi: dict[str, Any]) -> tuple[int, int]:
         'purchaseYear',
         'useDuration',
         'desiredUse',
+        'serialNumber',
     }
     if set(create_analysis['required']) != required_input:
         fail(f'CreateAnalysisRequest required fields must be {sorted(required_input)}')
-    if {'serialNumber', 'conditionNote'} & set(create_analysis['required']):
-        fail('serialNumber and conditionNote must remain optional')
+    if 'conditionNote' in set(create_analysis['required']):
+        fail('conditionNote must remain optional')
+    serial_number = create_analysis['properties']['serialNumber']
+    if (serial_number.get('minLength'), serial_number.get('maxLength')) != (11, 11):
+        fail('CreateAnalysisRequest serialNumber must be exactly 11 characters')
+    if serial_number.get('pattern') != r'^(?=.*[A-Za-z])(?=.*[0-9])[A-Za-z0-9]{11}$':
+        fail('CreateAnalysisRequest serialNumber must require ASCII letters and digits')
     scenario_enum = create_analysis['properties']['demoScenarioKey']['enum']
     if PRIMARY_SCENARIO_KEY not in scenario_enum or 'PRIMARY_REBORN_BACKPACK' in scenario_enum:
         fail('CreateAnalysisRequest must expose only the canonical v2 primary scenario key')
@@ -741,8 +758,8 @@ def validate_mock(mock: dict[str, Any], version: str) -> tuple[int, int, int]:
         fail('Mock upload purposes differ from OpenAPI')
     if upload.get('presignFileCount') != {'min': 1, 'max': 4}:
         fail('Mock presign count must be 1..4')
-    if upload.get('analysisFileCount') != {'min': 7, 'max': 7}:
-        fail('Mock analysis count must be exactly seven')
+    if upload.get('analysisFileCount') != {'min': 6, 'max': 6}:
+        fail('Mock analysis count must be exactly six')
     if upload.get('analysisSlots') != ANALYSIS_CAPTURE_SLOTS:
         fail('Mock analysis slots must preserve the required capture order')
 
@@ -907,11 +924,10 @@ def validate_mock(mock: dict[str, Any], version: str) -> tuple[int, int, int]:
         'images': [
             {'slot': 'FRONT', 'purpose': 'SOURCE_FRONT', 'url': '/assets/mvp-beta/source-backpack-front.webp'},
             {'slot': 'REAR', 'purpose': 'SOURCE_FRONT', 'url': '/assets/mvp-beta/source-backpack-front.webp'},
-            {'slot': 'TOP', 'purpose': 'SOURCE_FRONT', 'url': '/assets/mvp-beta/source-backpack-front.webp'},
-            {'slot': 'BOTTOM', 'purpose': 'SOURCE_FRONT', 'url': '/assets/mvp-beta/source-backpack-front.webp'},
+            {'slot': 'TOP', 'purpose': 'SOURCE_SIDE', 'url': '/assets/mvp-beta/source-backpack-front.webp'},
+            {'slot': 'BOTTOM', 'purpose': 'SOURCE_SIDE', 'url': '/assets/mvp-beta/source-backpack-front.webp'},
             {'slot': 'LEFT_SIDE', 'purpose': 'SOURCE_SIDE', 'url': '/assets/mvp-beta/source-backpack-side.webp'},
             {'slot': 'RIGHT_SIDE', 'purpose': 'SOURCE_SIDE', 'url': '/assets/mvp-beta/source-backpack-side.webp'},
-            {'slot': 'SERIAL_NUMBER', 'purpose': 'ENGRAVING', 'url': '/assets/mvp-beta/source-backpack-engraving.webp'},
         ],
     }:
         fail('Primary source must be the canonical MCM monogram backpack')
@@ -1054,8 +1070,10 @@ def validate_sql(sql: str) -> None:
             '10 MiB source limit': 'size_bytes <= 10485760',
             'JPG/PNG source MIME': "mime_type in ('image/jpeg', 'image/png')",
             'product input purchase year': 'purchase_year integer not null',
-            'seven-position display order': 'analysis_images_display_order_check check (display_order between 0 and 6)',
-            'exactly-seven photo DB guard': 'analysis requires exactly 7 uploaded owner photos',
+            'six-position display order': 'analysis_images_display_order_check check (display_order between 0 and 5)',
+            'exactly-six photo DB guard': 'analysis requires exactly 6 uploaded owner photos',
+            'front and rear purpose guard': "ai.display_order between 0 and 1 and ma.purpose = 'SOURCE_FRONT'",
+            'remaining directional purpose guard': "ai.display_order between 2 and 5 and ma.purpose = 'SOURCE_SIDE'",
             'estimate confidence': 'estimate_confidence_percent integer check',
             'estimated reusable rate': 'estimated_reusable_material_rate integer check',
             'recommendation reusable rate': 'estimated_reusable_material_rate integer not null',
@@ -1145,10 +1163,19 @@ def validate_sql(sql: str) -> None:
         'analysis requires exactly 4 uploaded owner photos',
         'uploaded_photo_count <> 4',
         'display_order between 0 and 3',
+        'analysis requires exactly 7 uploaded owner photos',
+        'uploaded_photo_count <> 7',
+        'display_order between 0 and 6',
     ]
     present = [fragment for fragment in forbidden if fragment in sql]
     if present:
         fail(f'SQL still contains removed v1 contract fragments: {present}')
+    if re.search(
+        r"and ma\.upload_status = 'UPLOADED';\s*if uploaded_photo_count <> 6",
+        sql,
+        flags=re.IGNORECASE,
+    ):
+        fail('SQL analysis trigger still accepts six uploaded assets without purpose mapping')
 
     validate_runtime_trigger_contract(sql, 'supabase-schema.sql')
     validate_analytics_rpc_contract(sql, 'supabase-schema.sql')
@@ -1414,6 +1441,64 @@ def validate_capture_seven_view_migrations(up_migration: str, rollback: str) -> 
         fail('Capture seven-view rollback must not use broad CASCADE drops')
 
 
+def validate_capture_six_view_migrations(up_migration: str, rollback: str) -> None:
+    require_fragments(
+        up_migration,
+        '202608210008 capture six-view up migration',
+        {
+            'transaction start': 'begin;',
+            'transaction commit': 'commit;',
+            'private serial-link backup': 'private.mcm_capture_six_view_backup_20260821',
+            'private serial-link backup rls': (
+                'alter table private.mcm_capture_six_view_backup_20260821\n'
+                '  enable row level security;'
+            ),
+            'serial-link selection': 'where ai.display_order = 6',
+            'serial-link removal': 'delete from public.analysis_images\nwhere display_order = 6',
+            'media preservation': 'media_assets row and private Storage object are retained',
+            'six-position display order': 'display_order between 0 and 5',
+            'analysis photo trigger function': 'create or replace function public.enforce_analysis_photo_contract()',
+            'exactly-six guard': 'uploaded_photo_count <> 6',
+            'exactly-six error': 'analysis requires exactly 6 uploaded owner photos',
+            'front and rear purpose guard': "ai.display_order between 0 and 1 and ma.purpose = 'SOURCE_FRONT'",
+            'remaining directional purpose guard': "ai.display_order between 2 and 5 and ma.purpose = 'SOURCE_SIDE'",
+        },
+    )
+    require_fragments(
+        rollback,
+        '202608210008 capture six-view rollback',
+        {
+            'transaction start': 'begin;',
+            'transaction commit': 'commit;',
+            'required private backup': 'capture six-view rollback requires the private serial-photo backup',
+            'deleted-reference safety stop': 'rollback requires manual handling of deleted analyses or serial-photo assets',
+            'link-conflict safety stop': 'rollback requires manual handling of conflicting serial-photo links',
+            'restore seven-position order': 'display_order between 0 and 6',
+            'restore serial links': 'insert into public.analysis_images',
+            'restore exact-seven guard': 'uploaded_photo_count <> 7',
+            'restore exact-seven error': 'analysis requires exactly 7 uploaded owner photos',
+            'restore front and rear purposes': "ai.display_order between 0 and 1 and ma.purpose = 'SOURCE_FRONT'",
+            'restore remaining directional purposes': "ai.display_order between 2 and 5 and ma.purpose = 'SOURCE_SIDE'",
+            'restore serial purpose': "ai.display_order = 6 and ma.purpose = 'ENGRAVING'",
+            'remove private backup': 'drop table private.mcm_capture_six_view_backup_20260821',
+        },
+    )
+    if re.search(r'\bcascade\b', up_migration + rollback, flags=re.IGNORECASE):
+        fail('Capture six-view migration must not use CASCADE')
+    if re.search(
+        r"and ma\.upload_status = 'UPLOADED';\s*if uploaded_photo_count <> 6",
+        up_migration,
+        flags=re.IGNORECASE,
+    ):
+        fail('Capture six-view migration still accepts assets without directional purposes')
+    if re.search(
+        r"and ma\.upload_status = 'UPLOADED';\s*if uploaded_photo_count <> 7",
+        rollback,
+        flags=re.IGNORECASE,
+    ):
+        fail('Capture six-view rollback still accepts seven assets without legacy purpose mapping')
+
+
 def validate_lifecycle_migrations(up_migration: str, rollback: str) -> None:
     require_fragments(
         up_migration,
@@ -1531,6 +1616,7 @@ def validate_capture_ui(
     capture_config: str,
     capture_photos: str,
     capture_screen: str,
+    serial_capture: str,
     camera_screen: str,
     capture_session: str,
     page_state: str,
@@ -1547,38 +1633,56 @@ def validate_capture_ui(
         'rightSide',
         'serialNumber',
     ]
-    expected_labels = ['정면', '후면', '상단', '하단', '좌측면', '우측면', '일련번호']
+    expected_labels = ['정면', '후면', '상단', '하단', '좌측면', '우측면', '시리얼 번호']
     if re.findall(r'\bid: "([^"]+)"', capture_config) != expected_ids:
-        fail('Capture UI slot IDs must preserve the seven-view order')
+        fail('Capture UI slot IDs must preserve the six required views and optional serial slot')
     if re.findall(r'\blabel: "([^"]+)"', capture_config) != expected_labels:
-        fail('Capture UI labels must preserve the seven-view order')
+        fail('Capture UI labels must preserve the six required views and optional serial slot')
     require_fragments(
         capture_config,
         'capture-config.ts',
         {
             'front default': 'DEFAULT_CAPTURE_SLOT: CaptureSlotId = "front"',
-            'all slots required': 'MIN_REQUIRED_CAPTURES = CAPTURE_SLOTS.length',
+            'general capture slots': 'GENERAL_CAPTURE_SLOTS = CAPTURE_SLOTS.filter',
+            'six directional slots required': 'MIN_REQUIRED_CAPTURES = GENERAL_CAPTURE_SLOTS.length',
             'serial full-width slot': 'className: "captureSlotSerial"',
+            'shared serial format': (
+                'SERIAL_NUMBER_PATTERN = '
+                '/^(?=.*[A-Za-z])(?=.*\\d)[A-Za-z0-9]{11}$/'
+            ),
         },
     )
     require_fragments(
         capture_photos,
         'ProductCapturePhotos.tsx',
         {
-            'seven-photo guidance': '일곱 사진이 모두 필요합니다.',
-            'serial placeholder': 'slot.id === "serialNumber"',
-            'dynamic completion count': '사진 ${CAPTURE_SLOTS.length}장 등록 완료',
-            'seven-photo rule': '7장 · 파일당 최대 10MB',
+            'six-photo guidance': '여섯 사진이 필요하며 시리얼 번호 사진은 선택 사항입니다.',
+            'required slot grid': 'GENERAL_CAPTURE_SLOTS.map',
+            'album slot label': '`앨범에서 ${nextAlbumSlot.label} 사진 선택`',
+            'dynamic completion count': '`사진 ${GENERAL_CAPTURE_SLOTS.length}장 등록 완료`',
+            'six-photo rule': 'JPG, PNG 6장 · 파일당 최대 10MB',
         },
     )
     require_fragments(
         capture_screen,
         'ProductCaptureScreen.tsx',
         {
-            'seven required labels': '정면, 후면, 상단, 하단, 좌측면, 우측면, 일련번호',
-            'all photos required': '사진이 모두 필요해요.',
+            'six required labels': '정면, 후면, 상단, 하단, 좌측면, 우측면',
+            'photos and serial required': '사진과 시리얼 번호 입력이 필요해요.',
+            'optional serial photo': '시리얼 번호 사진 촬영은 선택 사항이에요.',
         },
     )
+    require_fragments(
+        serial_capture,
+        'SerialNumberCapture.tsx',
+        {
+            'serial capture label': '시리얼 번호 촬영하여 입력',
+            'required serial marker': '<b aria-hidden="true">*</b>',
+            'required serial input': 'required',
+        },
+    )
+    if '시리얼 번호 (선택)' in serial_capture:
+        fail('SerialNumberCapture.tsx must not label required serial text as optional')
     require_fragments(
         camera_screen,
         'CameraScreen.tsx',
@@ -1587,7 +1691,8 @@ def validate_capture_ui(
             'completed slot query': 'completedSlots.join(",")',
             'ordered completion round trip': 'const nextCompletedSlots = CAPTURE_SLOTS.filter(',
             'ordered completion IDs': '.map((captureSlot) => captureSlot.id)',
-            'dynamic camera total': '{CAPTURE_SLOTS.length}',
+            'six-view camera total': '{GENERAL_CAPTURE_SLOTS.length}',
+            'optional serial counter': 'slot === "serialNumber"',
         },
     )
     require_fragments(
@@ -1612,7 +1717,7 @@ def validate_capture_ui(
         capture_progress,
         'capture-progress.ts',
         {
-            'canonical slot counting': 'return CAPTURE_SLOTS.filter(',
+            'required slot counting': 'return GENERAL_CAPTURE_SLOTS.filter(',
             'session-or-query completion': 'captures[slot.id] || capturedSlotSet.has(slot.id)',
         },
     )
@@ -1622,6 +1727,10 @@ def validate_capture_ui(
         {
             'canonical minimum gate': 'MIN_REQUIRED_CAPTURES - completedCount',
             'zero remaining submit gate': 'remainingCount === 0 && hasRequiredDetails',
+            'required serial gate': 'hasValidSerialNumber',
+            'required serial copy': '시리얼 번호를 입력해 주세요',
+            'six-view upload order': 'const orderedCaptures = GENERAL_CAPTURE_SLOTS.map',
+            'six required upload guard': '필수 사진 6장을 모두 등록해 주세요.',
             'analysis submission CTA': 'AI 분석 접수하기',
         },
     )
@@ -1654,8 +1763,8 @@ def validate_prompt_and_examples(
             'eligible status': 'ORDER_ELIGIBLE',
             'ineligible status': 'INELIGIBLE',
             'official-decision disclaimer': 'not an official authenticity determination or guarantee',
-            'seven-image rule': 'seven supplied images',
-            'seven-view order': 'front, rear, top, bottom, left side, right side, and serial-number detail views',
+            'six-image rule': 'six supplied images',
+            'six-view order': 'front, rear, top, bottom, left side, and right side views',
         },
     )
     require_fragments(
@@ -1666,9 +1775,9 @@ def validate_prompt_and_examples(
             'canonical scenario key': PRIMARY_SCENARIO_KEY,
             'v2 modes': "mode: 'LIVE'",
             'estimate confidence': 'confidencePercent:',
-            'seven-image requirement': 'imageUrls.length !== 7',
-            'seven-image index range': 'imageIndex: z.number().int().min(0).max(6)',
-            'ordered seven-view request': '정면, 후면, 상단, 하단, 좌측면, 우측면, 일련번호 순서',
+            'six-image requirement': 'imageUrls.length !== 6',
+            'six-image index range': 'imageIndex: z.number().int().min(0).max(5)',
+            'ordered six-view request': '정면, 후면, 상단, 하단, 좌측면, 우측면 순서',
             'recapture error': 'ImageQualityInsufficientError',
         },
     )
@@ -1712,6 +1821,100 @@ def validate_prompt_and_examples(
         ]
         if present:
             fail(f'{label} still contains removed v1 authenticity terms: {present}')
+
+
+def validate_runtime_analysis_contract(
+    route: str,
+    service: str,
+    analysis_contract: str,
+    provider: str,
+) -> None:
+    require_fragments(
+        route,
+        'POST /api/v2/analyses Route Handler',
+        {
+            'exactly-six request schema': 'z.array(z.string().uuid()).length(6)',
+            'unique image IDs': 'new Set(ids).size === ids.length',
+            'required serial regex': '/^(?=.*[A-Za-z])(?=.*[0-9])[A-Za-z0-9]{11}$/',
+            'serial validation message': (
+                'serialNumber must be exactly 11 ASCII alphanumeric characters '
+                'and include at least one letter and one digit'
+            ),
+        },
+    )
+    require_fragments(
+        service,
+        'analysisService.ts',
+        {
+            'exactly-six service guard': 'input.imageAssetIds.length !== 6',
+            'six unique image IDs': 'new Set(input.imageAssetIds).size !== 6',
+            'six-image upload guard': 'All six image assets must be uploaded before analysis',
+            'purpose metadata read': ".select('id,owner_id,bucket,path,upload_status,purpose')",
+            'ordered purpose check': 'asset.purpose !== expectedPurpose',
+            'purpose mismatch rejection': 'Image asset purpose does not match required capture slot',
+            'ordered display persistence': 'display_order: displayOrder',
+            'required serial input type': 'serialNumber: string;',
+            'serial normalization': 'const serialNumber = input.serialNumber?.trim();',
+            'serial service validation': '/^(?=.*[A-Za-z])(?=.*[0-9])[A-Za-z0-9]{11}$/.test(serialNumber)',
+            'normalized serial persistence': 'serialNumber,',
+        },
+    )
+    purpose_mapping = re.search(
+        r'const ANALYSIS_IMAGE_PURPOSES = \[(.*?)\] as const;',
+        service,
+        flags=re.DOTALL,
+    )
+    expected_purposes = [
+        'SOURCE_FRONT',
+        'SOURCE_FRONT',
+        'SOURCE_SIDE',
+        'SOURCE_SIDE',
+        'SOURCE_SIDE',
+        'SOURCE_SIDE',
+    ]
+    if not purpose_mapping or re.findall(r"'([^']+)'", purpose_mapping.group(1)) != expected_purposes:
+        fail('analysisService.ts must map positions 0~1 to SOURCE_FRONT and 2~5 to SOURCE_SIDE')
+    require_fragments(
+        analysis_contract,
+        'contracts/analysis.ts',
+        {
+            'six-image index range': 'imageIndex: z.number().int().min(0).max(5)',
+            'runtime image-count bound check': 'imageIndex >= imageCount',
+        },
+    )
+    require_fragments(
+        provider,
+        'OpenAiVisionProvider.ts',
+        {
+            'six-image prompt': 'Analyze exactly six supplied images',
+            'six-view order': 'front, rear, top, bottom, left side, and right side',
+            'six-image requirement': 'input.imageUrls.length !== 6',
+            'six-image index range': 'imageIndex from 0 through 5',
+            'six-image user message': '여섯 이미지를 지정된 순서의 동일 제품으로 보고 분석하세요.',
+        },
+    )
+    for label, text in {
+        'analysis Route Handler': route,
+        'analysis service': service,
+        'analysis contract': analysis_contract,
+        'runtime vision provider': provider,
+    }.items():
+        stale = [
+            fragment
+            for fragment in (
+                'length(7)',
+                'length !== 7',
+                'size !== 7',
+                'exactly seven',
+                'All seven image assets',
+                'max(6)',
+                '0 through 6',
+                'serial-number detail',
+            )
+            if fragment in text
+        ]
+        if stale:
+            fail(f'{label} still contains exact-seven analysis fragments: {stale}')
 
 
 def validate_guide(guide: str) -> None:
@@ -1761,7 +1964,14 @@ def validate_guide(guide: str) -> None:
         'supabase/rollbacks/202608190005_shipment_conflict_hotfix.sql',
         'supabase/migrations/202608190006_customer_decision_gate.sql',
         'supabase/rollbacks/202608190006_customer_decision_gate.sql',
-        '정면·후면·상단·하단·좌측면·우측면·일련번호 7개',
+        'supabase/migrations/202608210008_capture_six_views.sql',
+        'supabase/rollbacks/202608210008_capture_six_views.sql',
+        '정면·후면·상단·하단·좌측면·우측면 6개',
+        '배열 0~1의 정면·후면은 `SOURCE_FRONT`',
+        '배열 2~5의 상단·하단·좌측면·우측면은 `SOURCE_SIDE`',
+        '일련번호 사진은 `imageAssetIds`에 포함하지 않습니다.',
+        '신규 분석 요청의 일련번호 문자열은 필수 `serialNumber`로 전달하며',
+        'DB 컬럼을 `NOT NULL`로 바꾸지 않고',
     ):
         if fragment not in current_guidance:
             fail(f'API guide is missing canonical v2 value: {fragment}')
@@ -1776,6 +1986,7 @@ def validate_runtime_migration_docs(
     migration_name = '202608180004_backend_v2_runtime.sql'
     hotfix_name = '202608190005_shipment_conflict_hotfix.sql'
     decision_gate_name = '202608190006_customer_decision_gate.sql'
+    six_view_name = '202608210008_capture_six_views.sql'
     require_fragments(
         supabase_readme,
         'supabase/README.md',
@@ -1807,8 +2018,9 @@ def validate_runtime_migration_docs(
         'SETUP_GUIDE.md',
         {
             'forward runtime migration': f'supabase/migrations/{migration_name}',
-            'forward order': '001→002→003→004→005→006',
-            'reverse order': '006 → 005 → 004 → 003 → 002 → 001',
+            'forward six-view migration': f'supabase/migrations/{six_view_name}',
+            'forward order': '001→002→003→004→005→006→007→008',
+            'reverse order': '008 → 007 → 006 → 005 → 004 → 003 → 002 → 001',
             'runtime rollback behavior': '004 rollback',
             'shipment hotfix': f'supabase/migrations/{hotfix_name}',
             'customer decision gate': f'supabase/migrations/{decision_gate_name}',
@@ -1818,21 +2030,22 @@ def validate_runtime_migration_docs(
         api_contract,
         'docs/API_CONTRACT.md',
         {
-            'forward runtime migration': f'supabase/migrations/{migration_name}',
-            'runtime rollback': f'supabase/rollbacks/{migration_name}',
-            'shipment hotfix': f'supabase/migrations/{hotfix_name}',
-            'shipment hotfix rollback': f'supabase/rollbacks/{hotfix_name}',
-            'customer decision gate': f'supabase/migrations/{decision_gate_name}',
-            'customer decision gate rollback': f'supabase/rollbacks/{decision_gate_name}',
+            'six required captures': '정면·후면·상단·하단·좌측면·우측면 총 6슬롯',
+            'serial photo excluded': '시리얼 번호 사진은 브라우저 자동 입력용 선택 기능',
+            'required serial text': '신규 분석 요청의 `serialNumber` 텍스트는 필수',
+            'legacy nullable compatibility': 'DB nullable 컬럼은 유지',
+            'forward six-view migration': six_view_name,
+            'exact-six database guard': '정확히 6장 조건',
+            'reverse migration order': '롤백은 008부터 역순',
         },
     )
     require_fragments(
         repository_structure,
         'docs/REPOSITORY_STRUCTURE.md',
         {
-            'runtime migration ownership': migration_name,
-            'shipment hotfix ownership': hotfix_name,
-            'customer decision gate ownership': decision_gate_name,
+            'runtime migration ownership': 'v2 런타임은 004',
+            'shipment/customer/copy ownership': '배송·고객 승인·카피 보정은 005→007',
+            'six-view migration ownership': six_view_name,
         },
     )
 
@@ -1899,6 +2112,12 @@ def main() -> None:
     decision_gate_rollback = (
         ROOT / 'supabase' / 'rollbacks' / '202608190006_customer_decision_gate.sql'
     ).read_text(encoding='utf-8')
+    six_view_migration = (
+        ROOT / 'supabase' / 'migrations' / '202608210008_capture_six_views.sql'
+    ).read_text(encoding='utf-8')
+    six_view_rollback = (
+        ROOT / 'supabase' / 'rollbacks' / '202608210008_capture_six_views.sql'
+    ).read_text(encoding='utf-8')
     guide = (ROOT / 'MCM_REBORN_API_GUIDE.md').read_text(encoding='utf-8')
     supabase_readme = (ROOT / 'supabase' / 'README.md').read_text(encoding='utf-8')
     setup_guide = (ROOT / 'SETUP_GUIDE.md').read_text(encoding='utf-8')
@@ -1908,6 +2127,18 @@ def main() -> None:
     ).read_text(encoding='utf-8')
     prompt = (ROOT / 'prompts' / 'bag-analysis.system.txt').read_text(encoding='utf-8')
     provider = (ROOT / 'examples' / 'openai-analysis.ts').read_text(encoding='utf-8')
+    runtime_analysis_route = (
+        ROOT / 'mcm-reborn' / 'app' / 'api' / 'v2' / 'analyses' / 'route.ts'
+    ).read_text(encoding='utf-8')
+    runtime_analysis_service = (
+        ROOT / 'mcm-reborn' / 'server' / 'analyses' / 'analysisService.ts'
+    ).read_text(encoding='utf-8')
+    runtime_analysis_contract = (
+        ROOT / 'mcm-reborn' / 'contracts' / 'analysis.ts'
+    ).read_text(encoding='utf-8')
+    runtime_vision_provider = (
+        ROOT / 'mcm-reborn' / 'server' / 'openai' / 'OpenAiVisionProvider.ts'
+    ).read_text(encoding='utf-8')
     recommendation = (ROOT / 'examples' / 'recommendation.ts').read_text(encoding='utf-8')
     mock_status = (ROOT / 'examples' / 'mock-status.ts').read_text(encoding='utf-8')
     readme = (ROOT / 'README.md').read_text(encoding='utf-8')
@@ -1923,6 +2154,10 @@ def main() -> None:
     capture_screen = (
         ROOT / 'mcm-reborn' / 'components' / 'screens' / 'entry-capture'
         / 'ProductCaptureScreen.tsx'
+    ).read_text(encoding='utf-8')
+    serial_capture = (
+        ROOT / 'mcm-reborn' / 'components' / 'screens' / 'entry-capture'
+        / 'SerialNumberCapture.tsx'
     ).read_text(encoding='utf-8')
     camera_screen = (
         ROOT / 'mcm-reborn' / 'components' / 'screens' / 'entry-capture'
@@ -1960,6 +2195,10 @@ def main() -> None:
         seven_view_migration,
         seven_view_rollback,
     )
+    validate_capture_six_view_migrations(
+        six_view_migration,
+        six_view_rollback,
+    )
     validate_backend_v2_runtime_migration(
         runtime_migration,
         runtime_rollback,
@@ -1976,6 +2215,7 @@ def main() -> None:
         capture_config,
         capture_photos,
         capture_screen,
+        serial_capture,
         camera_screen,
         capture_session,
         page_state,
@@ -1984,6 +2224,12 @@ def main() -> None:
         demo_scenario,
     )
     validate_prompt_and_examples(prompt, provider, recommendation, mock_status)
+    validate_runtime_analysis_contract(
+        runtime_analysis_route,
+        runtime_analysis_service,
+        runtime_analysis_contract,
+        runtime_vision_provider,
+    )
     validate_guide(guide)
     validate_runtime_migration_docs(
         supabase_readme,

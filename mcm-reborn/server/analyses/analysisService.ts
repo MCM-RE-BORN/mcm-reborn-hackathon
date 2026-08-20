@@ -67,7 +67,7 @@ export interface CreateAnalysisInput {
   purchaseYear?: number;
   useDuration?: string;
   desiredUse?: string;
-  serialNumber?: string | null;
+  serialNumber: string;
   conditionNote?: string | null;
   locale: string;
   demoScenarioKey?: string | null;
@@ -158,8 +158,18 @@ type MediaAssetRow = {
   owner_id: string;
   bucket: string;
   path: string;
+  purpose: 'SOURCE_FRONT' | 'SOURCE_SIDE' | 'INTERIOR' | 'ENGRAVING';
   upload_status: string;
 };
+
+const ANALYSIS_IMAGE_PURPOSES = [
+  'SOURCE_FRONT',
+  'SOURCE_FRONT',
+  'SOURCE_SIDE',
+  'SOURCE_SIDE',
+  'SOURCE_SIDE',
+  'SOURCE_SIDE',
+] as const;
 
 type ProductRuleRow = {
   id: string;
@@ -221,7 +231,7 @@ type NormalizedProductInput = {
   purchaseYear: number;
   useDuration: string;
   desiredUse: string;
-  serialNumber: string | null;
+  serialNumber: string;
   conditionNote: string | null;
 };
 
@@ -678,8 +688,8 @@ async function readOrderedUploadedAssets(
   input: CreateAnalysisInput,
   admin: SupabaseClient,
 ): Promise<MediaAssetRow[]> {
-  if (input.imageAssetIds.length !== 7 || new Set(input.imageAssetIds).size !== 7) {
-    throw new ValidationError('Exactly seven unique imageAssetIds are required');
+  if (input.imageAssetIds.length !== 6 || new Set(input.imageAssetIds).size !== 6) {
+    throw new ValidationError('Exactly six unique imageAssetIds are required');
   }
   if (!input.accessToken) {
     throw new ForbiddenError('A customer access token is required');
@@ -688,7 +698,7 @@ async function readOrderedUploadedAssets(
   const userClient = createUserSupabaseClient(input.accessToken);
   const { data, error } = await userClient
     .from('media_assets')
-    .select('id,owner_id,bucket,path,upload_status')
+    .select('id,owner_id,bucket,path,upload_status,purpose')
     .in('id', input.imageAssetIds);
   if (error) {
     throw new ServiceUnavailableError('Upload metadata is unavailable');
@@ -701,19 +711,28 @@ async function readOrderedUploadedAssets(
     throw new ForbiddenError('One or more image assets are not owned by this customer');
   }
 
-  const ownedAssets = ordered.map((asset) => {
+  const ownedAssets = ordered.map((asset, displayOrder) => {
     if (!asset || asset.owner_id !== input.customerId) {
       throw new ForbiddenError('One or more image assets are not owned by this customer');
     }
     if (asset.bucket !== 'source-products') {
       throw new ValidationError('Image asset is stored in an unsupported bucket');
     }
+    const expectedPurpose = ANALYSIS_IMAGE_PURPOSES[displayOrder];
+    if (asset.purpose !== expectedPurpose) {
+      throw new ValidationError('Image asset purpose does not match required capture slot', {
+        actualPurpose: asset.purpose,
+        assetId: asset.id,
+        displayOrder,
+        expectedPurpose,
+      });
+    }
     return asset;
   });
 
   // Signed uploads do not have a completion callback in the current contract.
   // Reconcile PENDING metadata against private Storage before the DB trigger
-  // evaluates the exact-seven UPLOADED invariant.
+  // evaluates the exact-six UPLOADED invariant.
   await Promise.all(
     ownedAssets.map(async (asset) => {
       const { data: exists, error: storageError } = await admin.storage
@@ -723,7 +742,7 @@ async function readOrderedUploadedAssets(
         throw new ServiceUnavailableError('Uploaded image could not be verified');
       }
       if (!exists) {
-        throw new ValidationError('All seven image assets must be uploaded before analysis', {
+        throw new ValidationError('All six image assets must be uploaded before analysis', {
           assetId: asset.id,
           uploadStatus: asset.upload_status,
         });
@@ -1091,12 +1110,22 @@ function normalizeProductInput(input: CreateAnalysisInput): NormalizedProductInp
   if (!useDuration || !desiredUse) {
     throw new ValidationError('useDuration and desiredUse are required');
   }
+  const serialNumber = input.serialNumber?.trim();
+  if (
+    !serialNumber
+    || !/^(?=.*[A-Za-z])(?=.*[0-9])[A-Za-z0-9]{11}$/.test(serialNumber)
+  ) {
+    throw new ValidationError(
+      'serialNumber must be exactly 11 ASCII alphanumeric characters and include at least one letter and one digit',
+      { field: 'serialNumber' },
+    );
+  }
   return {
     category,
     purchaseYear: input.purchaseYear!,
     useDuration,
     desiredUse,
-    serialNumber: input.serialNumber?.trim() || null,
+    serialNumber,
     conditionNote: input.conditionNote?.trim() || null,
   };
 }

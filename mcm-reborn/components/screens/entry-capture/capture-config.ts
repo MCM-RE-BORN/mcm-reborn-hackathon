@@ -37,16 +37,23 @@ export const CAPTURE_SLOTS = [
   },
   {
     id: "serialNumber",
-    label: "일련번호",
+    label: "시리얼 번호",
     className: "captureSlotSerial",
-    guide: "제품의 일련번호가 선명하게 보이도록 맞춰주세요",
+    guide: "제품의 시리얼 번호가 선명하게 보이도록 맞춰주세요",
   },
 ] as const;
+
+export const GENERAL_CAPTURE_SLOTS = CAPTURE_SLOTS.filter(
+  (slot) => slot.id !== "serialNumber",
+);
+
+export const DEMO_SERIAL_NUMBER = "MK123456789";
+export const SERIAL_NUMBER_PATTERN = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z0-9]{11}$/;
 
 export type CaptureSlotId = (typeof CAPTURE_SLOTS)[number]["id"];
 
 export const DEFAULT_CAPTURE_SLOT: CaptureSlotId = "front";
-export const MIN_REQUIRED_CAPTURES = CAPTURE_SLOTS.length;
+export const MIN_REQUIRED_CAPTURES = GENERAL_CAPTURE_SLOTS.length;
 
 const CAPTURE_SLOT_IDS = new Set<CaptureSlotId>(
   CAPTURE_SLOTS.map((slot) => slot.id),

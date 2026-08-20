@@ -82,9 +82,9 @@ export function CertificateScreen({
       ) : !certificate ? (
         <div className={styles.stateInset}>
           <StatusPanel
-            description="완료된 신청과 보증서 기록을 Supabase에서 조회하고 있습니다."
+            description="완료된 신청과 보증서 기록을 확인하고 있습니다."
             title="ESG Passport를 확인하고 있어요"
-            tone="permission"
+            tone="loading"
           />
         </div>
       ) : (
@@ -137,10 +137,12 @@ export function CertificateScreen({
             description="원본 제품의 AI 분석부터 전문가 실물 검수, 장인 제작과 품질 확인까지의 기록입니다."
             title="업사이클링 여정"
           >
-            <ProgressStepper
-              currentIndex={5}
-              items={["AI 분석", "수거", "실물 검수", "장인 제작", "품질 확인", "Passport"]}
-            />
+            <div className={styles.deliveryStepper}>
+              <ProgressStepper
+                currentIndex={5}
+                items={["AI 분석", "수거", "실물 검수", "장인 제작", "품질 확인", "Passport"]}
+              />
+            </div>
           </Section>
 
           <div className={styles.certificateActions}>

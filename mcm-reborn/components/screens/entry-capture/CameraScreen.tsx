@@ -12,9 +12,12 @@ import {
 } from "react";
 import { AppShell } from "@/components/layout/AppShell";
 import { Button, ButtonLink } from "@/components/ui/Button";
+import { LoadingIndicator } from "@/components/ui/LoadingIndicator";
 import { StatusPanel } from "@/components/ui/StatusPanel";
+import { selectOneXCameraDevice } from "./camera-device-selection";
 import {
   CAPTURE_SLOTS,
+  GENERAL_CAPTURE_SLOTS,
   getCaptureSlot,
   type CaptureSlotId,
 } from "./capture-config";
@@ -47,6 +50,20 @@ type CaptureDraft = {
   previewUrl: string;
 };
 
+type CameraTrackCapabilities = MediaTrackCapabilities & {
+  zoom?: MediaSettingsRange;
+};
+
+type CameraTrackConstraints = MediaTrackConstraints & {
+  zoom?: ConstrainDouble;
+};
+
+const CAMERA_RESOLUTION_CONSTRAINTS: MediaTrackConstraints = {
+  height: { ideal: 1080 },
+  width: { ideal: 1920 },
+};
+const ONE_X_ZOOM = 1;
+
 function stopStream(stream: MediaStream | null) {
   stream?.getTracks().forEach((track) => track.stop());
 }
@@ -55,32 +72,125 @@ function errorName(error: unknown) {
   return error instanceof DOMException ? error.name : "";
 }
 
-async function requestCameraStream() {
-  // Ask for a resolution that most camera sensors natively support in
-  // landscape (1920x1080) instead of a forced portrait size like
-  // 1080x1920. A non-native portrait target makes many webcams/drivers
-  // digitally crop and upscale their feed to approximate it, which shows
-  // up as an unwanted zoomed-in, lower-quality preview. Cropping to fit the
-  // on-screen portrait frame is left to CSS `object-fit: cover`, which
-  // doesn't discard resolution or magnify the image.
-  const preferredConstraints: MediaStreamConstraints = {
-    audio: false,
-    video: {
-      facingMode: { ideal: "environment" },
-      height: { ideal: 1080 },
-      width: { ideal: 1920 },
-    },
-  };
+async function requestRearCameraStream() {
+  let stream: MediaStream;
 
   try {
-    return await navigator.mediaDevices.getUserMedia(preferredConstraints);
+    // Select a rear camera before asking for a resolution. Including the
+    // resolution in this request lets some multi-lens devices satisfy the
+    // request with a telephoto source instead of the default 1x source.
+    stream = await navigator.mediaDevices.getUserMedia({
+      audio: false,
+      video: { facingMode: { exact: "environment" } },
+    });
   } catch (error) {
     if (errorName(error) !== "OverconstrainedError") {
       throw error;
     }
 
-    return navigator.mediaDevices.getUserMedia({ audio: false, video: true });
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({
+        audio: false,
+        video: { facingMode: { ideal: "environment" } },
+      });
+    } catch (fallbackError) {
+      if (errorName(fallbackError) !== "OverconstrainedError") {
+        throw fallbackError;
+      }
+
+      stream = await navigator.mediaDevices.getUserMedia({
+        audio: false,
+        video: true,
+      });
+    }
   }
+
+  return stream;
+}
+
+async function configureCameraStream(stream: MediaStream) {
+  const track = stream.getVideoTracks()[0];
+  if (!track) {
+    return;
+  }
+
+  // Resolution is applied after the physical source has been selected so it
+  // cannot influence which rear lens is opened.
+  try {
+    await track.applyConstraints(CAMERA_RESOLUTION_CONSTRAINTS);
+  } catch {
+    // Keep the usable native-resolution stream when a driver rejects hints.
+  }
+
+  let capabilities: CameraTrackCapabilities;
+  try {
+    capabilities = track.getCapabilities() as CameraTrackCapabilities;
+  } catch {
+    return;
+  }
+
+  const zoom = capabilities.zoom;
+  if (
+    typeof zoom?.min !== "number" ||
+    typeof zoom.max !== "number" ||
+    zoom.min > ONE_X_ZOOM ||
+    zoom.max < ONE_X_ZOOM
+  ) {
+    return;
+  }
+
+  try {
+    await track.applyConstraints({
+      ...CAMERA_RESOLUTION_CONSTRAINTS,
+      zoom: { exact: ONE_X_ZOOM },
+    } as CameraTrackConstraints);
+  } catch {
+    // Zoom is optional in browsers without Image Capture/PTZ permission.
+  }
+}
+
+async function preferOneXCameraStream(stream: MediaStream) {
+  if (typeof navigator.mediaDevices.enumerateDevices !== "function") {
+    return stream;
+  }
+
+  let devices: MediaDeviceInfo[];
+  try {
+    devices = await navigator.mediaDevices.enumerateDevices();
+  } catch {
+    return stream;
+  }
+
+  const currentTrack = stream.getVideoTracks()[0];
+  const currentDeviceId =
+    currentTrack?.getSettings().deviceId ??
+    devices.find(
+      (device) =>
+        device.kind === "videoinput" && device.label === currentTrack?.label,
+    )?.deviceId;
+  const oneXDevice = selectOneXCameraDevice(devices, currentDeviceId);
+
+  if (!oneXDevice || oneXDevice.deviceId === currentDeviceId) {
+    return stream;
+  }
+
+  stopStream(stream);
+  try {
+    return await navigator.mediaDevices.getUserMedia({
+      audio: false,
+      video: { deviceId: { exact: oneXDevice.deviceId } },
+    });
+  } catch {
+    // A stale or browser-private device ID must not break camera access.
+    return requestRearCameraStream();
+  }
+}
+
+async function requestCameraStream() {
+  const initialStream = await requestRearCameraStream();
+  const stream = await preferOneXCameraStream(initialStream);
+  await configureCameraStream(stream);
+  return stream;
 }
 
 function captureFileName(slot: CaptureSlotId) {
@@ -292,7 +402,9 @@ export function CameraScreen({
   const [retryKey, setRetryKey] = useState(0);
   const [isCapturing, setIsCapturing] = useState(false);
   const slotConfig = getCaptureSlot(slot);
-  const slotIndex = CAPTURE_SLOTS.findIndex((item) => item.id === slot);
+  const slotIndex = GENERAL_CAPTURE_SLOTS.findIndex(
+    (item) => item.id === slot,
+  );
 
   const stopCurrentStream = useCallback(() => {
     stopStream(streamRef.current);
@@ -475,6 +587,7 @@ export function CameraScreen({
       return;
     }
 
+    setIsCapturing(true);
     setRuntimeDescription(undefined);
 
     try {
@@ -497,6 +610,10 @@ export function CameraScreen({
           : "사진을 읽지 못했습니다. 다른 사진을 선택해주세요.",
       );
       setRuntimeState("error");
+    } finally {
+      if (mountedRef.current) {
+        setIsCapturing(false);
+      }
     }
   };
 
@@ -611,6 +728,7 @@ export function CameraScreen({
             <span>{slotConfig.label}</span>
             <button
               aria-label={`${slotConfig.label} 사진 촬영`}
+              aria-busy={isCapturing || undefined}
               className={styles.cameraShutter}
               disabled={isCapturing}
               onClick={() => void handleCapture()}
@@ -630,9 +748,14 @@ export function CameraScreen({
                 sizes="52px"
                 src="/assets/mvp-beta/camera-shutter-background.svg"
               />
+              {isCapturing ? (
+                <LoadingIndicator className={styles.cameraShutterLoading} />
+              ) : null}
             </button>
             <span>
-              {slotIndex + 1} / {CAPTURE_SLOTS.length}
+              {slot === "serialNumber"
+                ? "선택"
+                : `${slotIndex + 1} / ${GENERAL_CAPTURE_SLOTS.length}`}
             </span>
           </div>
         </>

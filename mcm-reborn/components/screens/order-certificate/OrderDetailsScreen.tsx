@@ -115,6 +115,12 @@ const STATUS_ORDER = [
   "CANCELED",
 ] as const;
 
+const SHIPMENT_AVAILABLE_STATUSES = new Set([
+  "SHIPPED",
+  "DELIVERED",
+  "COMPLETED",
+]);
+
 export function OrderDetailsScreen({
   applicationId,
   state,
@@ -131,7 +137,9 @@ export function OrderDetailsScreen({
     null,
   );
   const [requestError, setRequestError] = useState(false);
-  const [decisionPending, setDecisionPending] = useState(false);
+  const [decisionPending, setDecisionPending] = useState<
+    "approve" | "reject" | null
+  >(null);
 
   useEffect(() => {
     if (!applicationId) {
@@ -161,20 +169,38 @@ export function OrderDetailsScreen({
         const detail = await customerFetch<CustomerApplicationDetail>(
           `/api/v2/applications/${applicationId}`,
         );
+        const timelineRequest = customerFetch<CustomerTimeline>(
+          `/api/v2/applications/${applicationId}/timeline`,
+        );
+        const shipmentAvailable = SHIPMENT_AVAILABLE_STATUSES.has(
+          detail.effectiveStatus,
+        );
+        const changeRequestRequest =
+          detail.effectiveStatus === "CHANGE_APPROVAL_REQUIRED"
+            ? customerFetch<CustomerChangeRequest>(
+                `/api/v2/applications/${applicationId}/change-request`,
+              )
+            : timelineRequest.then((timeline) =>
+                timeline.steps.some(
+                  (step) => step.status === "CHANGE_APPROVAL_REQUIRED",
+                )
+                  ? customerFetch<CustomerChangeRequest>(
+                      `/api/v2/applications/${applicationId}/change-request`,
+                    )
+                  : null,
+              );
         const [timelineResult, analysisResult, shipmentResult, changeResult] =
           await Promise.allSettled([
-            customerFetch<CustomerTimeline>(
-              `/api/v2/applications/${applicationId}/timeline`,
-            ),
+            timelineRequest,
             customerFetch<CustomerAnalysis>(
               `/api/v2/analyses/${detail.analysisId}`,
             ),
-            customerFetch<CustomerShipment>(
-              `/api/v2/applications/${applicationId}/shipment`,
-            ),
-            customerFetch<CustomerChangeRequest>(
-              `/api/v2/applications/${applicationId}/change-request`,
-            ),
+            shipmentAvailable
+              ? customerFetch<CustomerShipment>(
+                  `/api/v2/applications/${applicationId}/shipment`,
+                )
+              : Promise.resolve(null),
+            changeRequestRequest,
           ]);
         if (cancelled) {
           return;
@@ -195,7 +221,10 @@ export function OrderDetailsScreen({
           setShipment(shipmentResult.value);
         }
         if (changeResult.status === "fulfilled") {
-          setChangeRequest(changeResult.value);
+          setChangeRequest((current) =>
+            changeResult.value ??
+            (current?.status === "PENDING" ? null : current),
+          );
         } else if (initialLoad) {
           setChangeRequest(null);
         }
@@ -222,7 +251,7 @@ export function OrderDetailsScreen({
     if (!applicationId || decisionPending) {
       return;
     }
-    setDecisionPending(true);
+    setDecisionPending(decision);
     try {
       const response = await customerFetch<{
         applicationId: string;
@@ -283,10 +312,10 @@ export function OrderDetailsScreen({
             }
           : current,
       );
-      setDecisionPending(false);
+      setDecisionPending(null);
     } catch {
       setRequestError(true);
-      setDecisionPending(false);
+      setDecisionPending(null);
     }
   }
 
@@ -324,10 +353,6 @@ export function OrderDetailsScreen({
   ]
     .filter(Boolean)
     .join(" ");
-  const certificateHref =
-    effectiveStatus === "COMPLETED"
-      ? `/certificates/demo?applicationId=${applicationId}&state=issued`
-      : "/certificates/demo?state=locked";
   const timelineDescription = useMemo(
     () => timeline?.steps.find((step) => step.status === effectiveStatus)?.description,
     [effectiveStatus, timeline],
@@ -338,7 +363,7 @@ export function OrderDetailsScreen({
       header={
         <PageHeader
           backHref="/orders"
-          title="신청 내역"
+          title="신청 상세"
         />
       }
     >
@@ -365,7 +390,7 @@ export function OrderDetailsScreen({
           <StatusPanel
             description="정보를 불러오고 있습니다."
             title="신청 상세를 확인하고 있어요"
-            tone="permission"
+            tone="loading"
           />
         </div>
       ) : (
@@ -417,13 +442,15 @@ export function OrderDetailsScreen({
               </button>
               <a href="#delivery-information">배송현황</a>
             </div>
-            <ActionButtonLink
-              className={styles.orderCertificateAction}
-              fullWidth
-              href={certificateHref}
-            >
-              나의 RE:BORN 인증서 보기
-            </ActionButtonLink>
+            {effectiveStatus === "COMPLETED" ? (
+              <ActionButtonLink
+                className={styles.orderCertificateAction}
+                fullWidth
+                href={`/certificates/demo?applicationId=${applicationId}&state=issued`}
+              >
+                나의 RE:BORN 인증서 보기
+              </ActionButtonLink>
+            ) : null}
           </article>
 
           <SectionBand />
@@ -510,15 +537,19 @@ export function OrderDetailsScreen({
                     </p>
                     <div className={styles.decisionActions}>
                       <Button
-                        disabled={decisionPending}
+                        disabled={decisionPending !== null}
                         fullWidth
+                        loading={decisionPending === "approve"}
+                        loadingLabel="승인 처리 중"
                         onClick={() => void decideChange("approve")}
                       >
-                        {decisionPending ? "처리 중..." : "변경 조건 승인"}
+                        변경 조건 승인
                       </Button>
                       <Button
-                        disabled={decisionPending}
+                        disabled={decisionPending !== null}
                         fullWidth
+                        loading={decisionPending === "reject"}
+                        loadingLabel="거절 처리 중"
                         onClick={() => void decideChange("reject")}
                         variant="danger"
                       >

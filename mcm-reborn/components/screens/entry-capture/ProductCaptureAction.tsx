@@ -5,8 +5,9 @@ import { useState } from "react";
 import { StickyActionBar } from "@/components/layout/StickyActionBar";
 import { Button } from "@/components/ui/Button";
 import {
-  CAPTURE_SLOTS,
+  GENERAL_CAPTURE_SLOTS,
   MIN_REQUIRED_CAPTURES,
+  SERIAL_NUMBER_PATTERN,
   type CaptureSlotId,
 } from "./capture-config";
 import { captureCount } from "./capture-progress";
@@ -34,11 +35,16 @@ export function ProductCaptureAction({
     productDetails.useDuration.trim() || USE_DURATION_OPTIONS[0];
   const normalizedDesiredUse =
     productDetails.desiredUse.trim() || DESIRED_USE_OPTIONS[0];
+  const hasSerialNumber = Boolean(productDetails.serialNumber.trim());
+  const hasValidSerialNumber = SERIAL_NUMBER_PATTERN.test(
+    productDetails.serialNumber.trim(),
+  );
   const hasRequiredDetails = Boolean(
     productDetails.category &&
       productDetails.purchaseYear.trim() &&
       normalizedUseDuration &&
-      normalizedDesiredUse,
+      normalizedDesiredUse &&
+      hasValidSerialNumber,
   );
 
   async function submitAnalysis() {
@@ -49,9 +55,11 @@ export function ProductCaptureAction({
     setIsSubmitting(true);
     setSubmitError(null);
     try {
-      const orderedCaptures = CAPTURE_SLOTS.map((slot) => captures[slot.id]);
+      const orderedCaptures = GENERAL_CAPTURE_SLOTS.map(
+        (slot) => captures[slot.id],
+      );
       if (orderedCaptures.some((capture) => !capture)) {
-        throw new Error("필수 사진 7장을 모두 등록해 주세요.");
+        throw new Error("필수 사진 6장을 모두 등록해 주세요.");
       }
 
       const presignedAssets: Array<{ assetId: string; headers: Record<string, string>; uploadUrl: string }> = [];
@@ -64,7 +72,9 @@ export function ProductCaptureAction({
             files: chunk.map((capture, chunkIndex) => ({
               contentType: capture!.blob.type === "image/png" ? "image/png" : "image/jpeg",
               fileName: capture!.fileName,
-              purpose: purposeForSlot(CAPTURE_SLOTS[index + chunkIndex].id),
+              purpose: purposeForSlot(
+                GENERAL_CAPTURE_SLOTS[index + chunkIndex].id,
+              ),
               sizeBytes: capture!.blob.size,
             })),
           }),
@@ -95,7 +105,7 @@ export function ProductCaptureAction({
           imageAssetIds: presignedAssets.map((asset) => asset.assetId),
           locale: "ko-KR",
           purchaseYear: Number(productDetails.purchaseYear),
-          serialNumber: productDetails.serialNumber || undefined,
+          serialNumber: productDetails.serialNumber.trim(),
           useDuration: normalizedUseDuration,
         }),
         method: "POST",
@@ -112,8 +122,19 @@ export function ProductCaptureAction({
   return (
     <StickyActionBar>
       {remainingCount === 0 && hasRequiredDetails ? (
-        <Button fullWidth disabled={isSubmitting} onClick={() => void submitAnalysis()}>
-          {isSubmitting ? "AI 분석 접수 중..." : "AI 분석 접수하기"}
+        <Button
+          fullWidth
+          loading={isSubmitting}
+          loadingLabel="AI 분석 접수 중"
+          onClick={() => void submitAnalysis()}
+        >
+          AI 분석 접수하기
+        </Button>
+      ) : remainingCount === 0 && !hasValidSerialNumber ? (
+        <Button disabled fullWidth>
+          {hasSerialNumber
+            ? "시리얼 번호 형식을 확인해 주세요"
+            : "시리얼 번호를 입력해 주세요"}
         </Button>
       ) : remainingCount === 0 ? (
         <Button disabled fullWidth>
