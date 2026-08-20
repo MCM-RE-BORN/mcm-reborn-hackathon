@@ -74,10 +74,14 @@ begin
     join public.media_assets ma on ma.id = ai.media_asset_id
     where ai.analysis_id = new.id
       and ma.owner_id = new.customer_id
-      and ma.upload_status = 'UPLOADED';
+      and ma.upload_status = 'UPLOADED'
+      and (
+        (ai.display_order between 0 and 1 and ma.purpose = 'SOURCE_FRONT')
+        or (ai.display_order between 2 and 5 and ma.purpose = 'SOURCE_SIDE')
+      );
 
     if uploaded_photo_count <> 6 then
-      raise exception 'analysis requires exactly 6 uploaded owner photos';
+      raise exception 'analysis requires exactly 6 uploaded owner photos with directional purposes';
     end if;
   end if;
   return new;

@@ -42,7 +42,7 @@
 | Presign 1회 요청 | 1~4개 |
 | 분석 생성에 연결할 사진 | 정면·후면·상단·하단·좌측면·우측면 6개 |
 
-`POST /uploads/presign`은 점진 업로드를 위해 한 번에 1~4개 사진을 요청할 수 있습니다. 최종 `POST /analyses`에서는 업로드가 완료된 서로 다른 자산 6개를 정면·후면·상단·하단·좌측면·우측면 순서로 전달해야 합니다. 선택 촬영한 일련번호 사진은 `imageAssetIds`에 포함하지 않으며, 일련번호 문자열은 선택 필드인 `serialNumber`로만 전달합니다. 촬영 방향은 프런트 세션과 배열 순서로 관리하며 기존 Storage `purpose` enum을 방향별로 확장하지 않습니다. Route Handler를 구현할 때는 자산 소유자, 업로드 완료 여부, MIME, 크기, 목적을 다시 검증해야 합니다.
+`POST /uploads/presign`은 점진 업로드를 위해 한 번에 1~4개 사진을 요청할 수 있습니다. 최종 `POST /analyses`에서는 업로드가 완료된 서로 다른 자산 6개를 정면·후면·상단·하단·좌측면·우측면 순서로 전달해야 합니다. 배열 0~1의 정면·후면은 `SOURCE_FRONT`, 배열 2~5의 상단·하단·좌측면·우측면은 `SOURCE_SIDE` purpose여야 하며, `INTERIOR`·`ENGRAVING` 자산은 분석 입력으로 거부합니다. 선택 촬영한 일련번호 사진은 `imageAssetIds`에 포함하지 않으며, 일련번호 문자열은 선택 필드인 `serialNumber`로만 전달합니다. 촬영 방향은 프런트 세션과 배열 순서로 관리하며 기존 Storage `purpose` enum을 방향별로 확장하지 않습니다. Route Handler는 자산 소유자, 업로드 완료 여부와 배열 위치별 purpose를 다시 검증합니다.
 
 `mock-data.json.primaryScenario.source.images`의 WebP 경로는 앱에 번들된 표시용 Fixture입니다. 고객이 Presign으로 올리는 소스 파일의 허용 MIME에는 WebP가 포함되지 않습니다.
 

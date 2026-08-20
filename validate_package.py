@@ -379,12 +379,17 @@ def validate_openapi(openapi: dict[str, Any]) -> tuple[int, int]:
         fail('CreateAnalysisRequest imageAssetIds must be unique')
     if image_ids.get('description') != (
         '정면, 후면, 상단, 하단, 좌측면, 우측면 촬영 자산 ID만 이 순서로 전달합니다. '
-        '일련번호 사진은 포함하지 않으며 여섯 슬롯은 모두 필수입니다.'
+        '여섯 슬롯은 모두 필수이며 배열 0~1은 SOURCE_FRONT, 2~5는 SOURCE_SIDE purpose여야 합니다. '
+        'INTERIOR·ENGRAVING 자산과 일련번호 사진은 포함하지 않습니다.'
     ):
-        fail('CreateAnalysisRequest must define only the six required capture slots in order')
+        fail('CreateAnalysisRequest must define the six ordered capture slots and their purposes')
     analysis_description = openapi['paths']['/analyses']['post'].get('description', '')
-    if '일련번호 사진은 imageAssetIds에 포함하지 않습니다.' not in analysis_description:
-        fail('POST /analyses must exclude the optional serial-number photo')
+    for fragment in (
+        '배열 0~1의 purpose는 SOURCE_FRONT, 2~5는 SOURCE_SIDE여야 합니다.',
+        'INTERIOR 또는 ENGRAVING 자산과 일련번호 사진은 imageAssetIds에 포함하지 않습니다.',
+    ):
+        if fragment not in analysis_description:
+            fail('POST /analyses must enforce directional purposes and exclude the serial photo')
     required_input = {
         'imageAssetIds',
         'locale',
@@ -911,8 +916,8 @@ def validate_mock(mock: dict[str, Any], version: str) -> tuple[int, int, int]:
         'images': [
             {'slot': 'FRONT', 'purpose': 'SOURCE_FRONT', 'url': '/assets/mvp-beta/source-backpack-front.webp'},
             {'slot': 'REAR', 'purpose': 'SOURCE_FRONT', 'url': '/assets/mvp-beta/source-backpack-front.webp'},
-            {'slot': 'TOP', 'purpose': 'SOURCE_FRONT', 'url': '/assets/mvp-beta/source-backpack-front.webp'},
-            {'slot': 'BOTTOM', 'purpose': 'SOURCE_FRONT', 'url': '/assets/mvp-beta/source-backpack-front.webp'},
+            {'slot': 'TOP', 'purpose': 'SOURCE_SIDE', 'url': '/assets/mvp-beta/source-backpack-front.webp'},
+            {'slot': 'BOTTOM', 'purpose': 'SOURCE_SIDE', 'url': '/assets/mvp-beta/source-backpack-front.webp'},
             {'slot': 'LEFT_SIDE', 'purpose': 'SOURCE_SIDE', 'url': '/assets/mvp-beta/source-backpack-side.webp'},
             {'slot': 'RIGHT_SIDE', 'purpose': 'SOURCE_SIDE', 'url': '/assets/mvp-beta/source-backpack-side.webp'},
         ],
@@ -1059,6 +1064,8 @@ def validate_sql(sql: str) -> None:
             'product input purchase year': 'purchase_year integer not null',
             'six-position display order': 'analysis_images_display_order_check check (display_order between 0 and 5)',
             'exactly-six photo DB guard': 'analysis requires exactly 6 uploaded owner photos',
+            'front and rear purpose guard': "ai.display_order between 0 and 1 and ma.purpose = 'SOURCE_FRONT'",
+            'remaining directional purpose guard': "ai.display_order between 2 and 5 and ma.purpose = 'SOURCE_SIDE'",
             'estimate confidence': 'estimate_confidence_percent integer check',
             'estimated reusable rate': 'estimated_reusable_material_rate integer check',
             'recommendation reusable rate': 'estimated_reusable_material_rate integer not null',
@@ -1155,6 +1162,12 @@ def validate_sql(sql: str) -> None:
     present = [fragment for fragment in forbidden if fragment in sql]
     if present:
         fail(f'SQL still contains removed v1 contract fragments: {present}')
+    if re.search(
+        r"and ma\.upload_status = 'UPLOADED';\s*if uploaded_photo_count <> 6",
+        sql,
+        flags=re.IGNORECASE,
+    ):
+        fail('SQL analysis trigger still accepts six uploaded assets without purpose mapping')
 
     validate_runtime_trigger_contract(sql, 'supabase-schema.sql')
     validate_analytics_rpc_contract(sql, 'supabase-schema.sql')
@@ -1435,6 +1448,8 @@ def validate_capture_six_view_migrations(up_migration: str, rollback: str) -> No
             'analysis photo trigger function': 'create or replace function public.enforce_analysis_photo_contract()',
             'exactly-six guard': 'uploaded_photo_count <> 6',
             'exactly-six error': 'analysis requires exactly 6 uploaded owner photos',
+            'front and rear purpose guard': "ai.display_order between 0 and 1 and ma.purpose = 'SOURCE_FRONT'",
+            'remaining directional purpose guard': "ai.display_order between 2 and 5 and ma.purpose = 'SOURCE_SIDE'",
         },
     )
     require_fragments(
@@ -1450,11 +1465,26 @@ def validate_capture_six_view_migrations(up_migration: str, rollback: str) -> No
             'restore serial links': 'insert into public.analysis_images',
             'restore exact-seven guard': 'uploaded_photo_count <> 7',
             'restore exact-seven error': 'analysis requires exactly 7 uploaded owner photos',
+            'restore front and rear purposes': "ai.display_order between 0 and 1 and ma.purpose = 'SOURCE_FRONT'",
+            'restore remaining directional purposes': "ai.display_order between 2 and 5 and ma.purpose = 'SOURCE_SIDE'",
+            'restore serial purpose': "ai.display_order = 6 and ma.purpose = 'ENGRAVING'",
             'remove private backup': 'drop table private.mcm_capture_six_view_backup_20260821',
         },
     )
     if re.search(r'\bcascade\b', up_migration + rollback, flags=re.IGNORECASE):
         fail('Capture six-view migration must not use CASCADE')
+    if re.search(
+        r"and ma\.upload_status = 'UPLOADED';\s*if uploaded_photo_count <> 6",
+        up_migration,
+        flags=re.IGNORECASE,
+    ):
+        fail('Capture six-view migration still accepts assets without directional purposes')
+    if re.search(
+        r"and ma\.upload_status = 'UPLOADED';\s*if uploaded_photo_count <> 7",
+        rollback,
+        flags=re.IGNORECASE,
+    ):
+        fail('Capture six-view rollback still accepts seven assets without legacy purpose mapping')
 
 
 def validate_lifecycle_migrations(up_migration: str, rollback: str) -> None:
@@ -1795,10 +1825,28 @@ def validate_runtime_analysis_contract(
             'exactly-six service guard': 'input.imageAssetIds.length !== 6',
             'six unique image IDs': 'new Set(input.imageAssetIds).size !== 6',
             'six-image upload guard': 'All six image assets must be uploaded before analysis',
+            'purpose metadata read': ".select('id,owner_id,bucket,path,upload_status,purpose')",
+            'ordered purpose check': 'asset.purpose !== expectedPurpose',
+            'purpose mismatch rejection': 'Image asset purpose does not match required capture slot',
             'ordered display persistence': 'display_order: displayOrder',
             'optional serial normalization': 'serialNumber: input.serialNumber?.trim() || null',
         },
     )
+    purpose_mapping = re.search(
+        r'const ANALYSIS_IMAGE_PURPOSES = \[(.*?)\] as const;',
+        service,
+        flags=re.DOTALL,
+    )
+    expected_purposes = [
+        'SOURCE_FRONT',
+        'SOURCE_FRONT',
+        'SOURCE_SIDE',
+        'SOURCE_SIDE',
+        'SOURCE_SIDE',
+        'SOURCE_SIDE',
+    ]
+    if not purpose_mapping or re.findall(r"'([^']+)'", purpose_mapping.group(1)) != expected_purposes:
+        fail('analysisService.ts must map positions 0~1 to SOURCE_FRONT and 2~5 to SOURCE_SIDE')
     require_fragments(
         analysis_contract,
         'contracts/analysis.ts',
@@ -1892,6 +1940,8 @@ def validate_guide(guide: str) -> None:
         'supabase/migrations/202608210008_capture_six_views.sql',
         'supabase/rollbacks/202608210008_capture_six_views.sql',
         '정면·후면·상단·하단·좌측면·우측면 6개',
+        '배열 0~1의 정면·후면은 `SOURCE_FRONT`',
+        '배열 2~5의 상단·하단·좌측면·우측면은 `SOURCE_SIDE`',
         '일련번호 사진은 `imageAssetIds`에 포함하지 않으며',
     ):
         if fragment not in current_guidance:

@@ -158,8 +158,18 @@ type MediaAssetRow = {
   owner_id: string;
   bucket: string;
   path: string;
+  purpose: 'SOURCE_FRONT' | 'SOURCE_SIDE' | 'INTERIOR' | 'ENGRAVING';
   upload_status: string;
 };
+
+const ANALYSIS_IMAGE_PURPOSES = [
+  'SOURCE_FRONT',
+  'SOURCE_FRONT',
+  'SOURCE_SIDE',
+  'SOURCE_SIDE',
+  'SOURCE_SIDE',
+  'SOURCE_SIDE',
+] as const;
 
 type ProductRuleRow = {
   id: string;
@@ -688,7 +698,7 @@ async function readOrderedUploadedAssets(
   const userClient = createUserSupabaseClient(input.accessToken);
   const { data, error } = await userClient
     .from('media_assets')
-    .select('id,owner_id,bucket,path,upload_status')
+    .select('id,owner_id,bucket,path,upload_status,purpose')
     .in('id', input.imageAssetIds);
   if (error) {
     throw new ServiceUnavailableError('Upload metadata is unavailable');
@@ -701,12 +711,21 @@ async function readOrderedUploadedAssets(
     throw new ForbiddenError('One or more image assets are not owned by this customer');
   }
 
-  const ownedAssets = ordered.map((asset) => {
+  const ownedAssets = ordered.map((asset, displayOrder) => {
     if (!asset || asset.owner_id !== input.customerId) {
       throw new ForbiddenError('One or more image assets are not owned by this customer');
     }
     if (asset.bucket !== 'source-products') {
       throw new ValidationError('Image asset is stored in an unsupported bucket');
+    }
+    const expectedPurpose = ANALYSIS_IMAGE_PURPOSES[displayOrder];
+    if (asset.purpose !== expectedPurpose) {
+      throw new ValidationError('Image asset purpose does not match required capture slot', {
+        actualPurpose: asset.purpose,
+        assetId: asset.id,
+        displayOrder,
+        expectedPurpose,
+      });
     }
     return asset;
   });

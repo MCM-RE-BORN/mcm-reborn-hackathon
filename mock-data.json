@@ -28,8 +28,8 @@
       "images": [
         { "slot": "FRONT", "purpose": "SOURCE_FRONT", "url": "/assets/mvp-beta/source-backpack-front.webp" },
         { "slot": "REAR", "purpose": "SOURCE_FRONT", "url": "/assets/mvp-beta/source-backpack-front.webp" },
-        { "slot": "TOP", "purpose": "SOURCE_FRONT", "url": "/assets/mvp-beta/source-backpack-front.webp" },
-        { "slot": "BOTTOM", "purpose": "SOURCE_FRONT", "url": "/assets/mvp-beta/source-backpack-front.webp" },
+        { "slot": "TOP", "purpose": "SOURCE_SIDE", "url": "/assets/mvp-beta/source-backpack-front.webp" },
+        { "slot": "BOTTOM", "purpose": "SOURCE_SIDE", "url": "/assets/mvp-beta/source-backpack-front.webp" },
         { "slot": "LEFT_SIDE", "purpose": "SOURCE_SIDE", "url": "/assets/mvp-beta/source-backpack-side.webp" },
         { "slot": "RIGHT_SIDE", "purpose": "SOURCE_SIDE", "url": "/assets/mvp-beta/source-backpack-side.webp" }
       ]
