@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import json
 import re
+import subprocess
 import sys
 from collections import Counter
 from datetime import date
@@ -30,6 +31,7 @@ PRODUCT_PATH = KB_ROOT / "data" / "products.jsonl"
 PATTERN_IMAGE_PATH = KB_ROOT / "data" / "pattern_image_references.jsonl"
 MATERIAL_IMAGE_PATH = KB_ROOT / "data" / "material_image_references.jsonl"
 SCHEMA_PATH = KB_ROOT / "schema" / "knowledge-record.schema.json"
+RUNTIME_GROUNDING_BUILDER = REPO_ROOT / "scripts" / "build_mcm_runtime_grounding.py"
 
 SOURCE_ID_RE = re.compile(r"^SRC-[0-9]{3}$")
 CLAIM_ID_RE = re.compile(r"^CLM-[0-9]{3}$")
@@ -1375,6 +1377,30 @@ def main() -> int:
         errors,
     )
 
+    runtime_grounding_message = ""
+    if not errors:
+        grounding_check = subprocess.run(
+            [
+                sys.executable,
+                "-X",
+                "utf8",
+                str(RUNTIME_GROUNDING_BUILDER),
+                "--check",
+            ],
+            capture_output=True,
+            cwd=REPO_ROOT,
+            encoding="utf-8",
+            errors="replace",
+            check=False,
+        )
+        runtime_grounding_message = grounding_check.stdout.strip()
+        if grounding_check.returncode != 0:
+            details = grounding_check.stderr.strip() or runtime_grounding_message
+            errors.append(
+                "runtime grounding is missing or stale"
+                + (f": {details}" if details else "")
+            )
+
     if errors:
         print("MCM leather knowledge validation failed:")
         for error in errors:
@@ -1399,6 +1425,8 @@ def main() -> int:
         f"{image_type_counts['editorial_context']} editorial context images, "
         f"{conflict_count} conflict groups."
     )
+    if runtime_grounding_message:
+        print(runtime_grounding_message)
     return 0
 
 
