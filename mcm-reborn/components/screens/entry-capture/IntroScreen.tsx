@@ -147,9 +147,6 @@ export function IntroScreen({ state }: IntroScreenProps) {
         <ButtonLink fullWidth href="/login">
           시작하기
         </ButtonLink>
-        <ButtonLink fullWidth href="/home" variant="ghost">
-          먼저 둘러보기
-        </ButtonLink>
       </div>
     </AppShell>
   );
