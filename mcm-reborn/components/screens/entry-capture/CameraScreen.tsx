@@ -55,12 +55,19 @@ function errorName(error: unknown) {
 }
 
 async function requestCameraStream() {
+  // Ask for a resolution that most camera sensors natively support in
+  // landscape (1920x1080) instead of a forced portrait size like
+  // 1080x1920. A non-native portrait target makes many webcams/drivers
+  // digitally crop and upscale their feed to approximate it, which shows
+  // up as an unwanted zoomed-in, lower-quality preview. Cropping to fit the
+  // on-screen portrait frame is left to CSS `object-fit: cover`, which
+  // doesn't discard resolution or magnify the image.
   const preferredConstraints: MediaStreamConstraints = {
     audio: false,
     video: {
       facingMode: { ideal: "environment" },
-      height: { ideal: 1920 },
-      width: { ideal: 1080 },
+      height: { ideal: 1080 },
+      width: { ideal: 1920 },
     },
   };
 

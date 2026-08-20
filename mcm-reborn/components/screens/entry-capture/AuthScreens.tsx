@@ -175,9 +175,6 @@ export function LoginScreen({ state }: AuthScreenProps) {
         ) : (
           <AuthState kind="login" state={state} />
         )}
-        <p className={styles.betaCaption}>
-          입력한 인증 정보는 Supabase Auth로 안전하게 확인합니다.
-        </p>
       </div>
     </AppShell>
   );

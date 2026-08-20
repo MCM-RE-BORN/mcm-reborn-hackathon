@@ -106,7 +106,7 @@ export function OrdersListScreen({ state, view }: OrdersListScreenProps) {
       ) : applications === null || analyses === null ? (
         <div className={styles.stateInset}>
           <StatusPanel
-            description="Supabase에서 고객님의 AI 분석 결과와 신청 내역을 불러오고 있습니다."
+            description="정보를 불러오고 있습니다."
             title="진단 및 신청 내역을 확인하고 있어요"
             tone="permission"
           />
