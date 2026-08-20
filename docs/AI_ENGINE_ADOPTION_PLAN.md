@@ -26,7 +26,7 @@
 
 전문가 점검은 반드시 `ORDER_PLACED → PRODUCT_RECEIVED` 뒤에 수행한다. 주문 전 고객 사진 분석에는 장인 승인 상태를 만들지 않는다.
 
-현재 앱은 Lane A의 완성형 제조 AI 엔진이 아니다. 브라우저 화면은 실제 촬영을 v2 분석·제품·신청 API에 연결하고, 서버 `DEMO_FIXTURE` 모드에서는 재현 가능한 예상치를 표시한다. 서버에는 7장 분석 Route Handler, 품질 오류, 세 분석 모드와 주문·실물 검수 영속 모델이 구현됐지만, 실제 CUSTOMER/OPERATOR 전체 여정과 OpenAI LIVE 품질 모델 실행은 staging 검증 대상이다. provenance hash·`ABSTAIN`·geometry revision·Lane B 재단 데이터는 아직 구현하지 않았다.
+현재 앱은 Lane A의 완성형 제조 AI 엔진이 아니다. 브라우저 화면은 실제 촬영을 v2 분석·제품·신청 API에 연결하고, 서버 `DEMO_FIXTURE` 모드에서는 재현 가능한 예상치를 표시한다. 서버에는 6장 분석 Route Handler, 품질 오류, 세 분석 모드와 주문·실물 검수 영속 모델이 구현됐지만, 실제 CUSTOMER/OPERATOR 전체 여정과 OpenAI LIVE 품질 모델 실행은 staging 검증 대상이다. provenance hash·`ABSTAIN`·geometry revision·Lane B 재단 데이터는 아직 구현하지 않았다.
 
 ## 2. 현재 구현 / 설계 채택 / 보류
 
@@ -69,7 +69,7 @@
 
 ### Lane A — 고객 스마트폰 사전 예상 목표
 
-입력은 Canonical의 정면·후면·상단·하단·좌측면·우측면 6면과 일련번호 JPG/PNG, 총 7장이다.
+입력은 Canonical의 정면·후면·상단·하단·좌측면·우측면 JPG/PNG, 총 6장이다. 선택적인 시리얼 번호 촬영본은 텍스트 자동 입력에만 사용한다.
 
 현행 v2의 `LIVE`는 공식 OpenAI JavaScript SDK의 Chat Completions Structured Outputs를 사용하고 제공자 장애 시 중앙 Fixture로 폴백한다. private 이미지를 외부로 전송하려면 배포 opt-in, 고정 privacy notice, 요청별 명시 동의와 DB 증적이 모두 필요하다. 이미지 품질 실패는 폴백 성공으로 바꾸지 않으며, 실제 OpenAI 호출과 동의 증적의 원격 동작은 아직 검증되지 않았다.
 
@@ -78,7 +78,7 @@ CaptureAsset → QualityGate → deterministic EstimateRun
 → conservative recommendation / ABSTAIN → Mock order
 ```
 
-브라우저는 실제 촬영 뒤 중앙 Fixture 화면으로 이동하므로 이 파이프라인을 호출하지 않는다. v2 분석 서비스는 정확히 7개 업로드 자산, 품질 결과와 결정론적 Fixture/규칙 기반 예상치를 처리하지만 독립 `EstimateRun` revision과 `ABSTAIN` 판정기는 없다.
+브라우저는 실제 촬영 뒤 중앙 Fixture 화면으로 이동하므로 이 파이프라인을 호출하지 않는다. v2 분석 서비스는 정확히 6개 업로드 자산, 품질 결과와 결정론적 Fixture/규칙 기반 예상치를 처리하지만 독립 `EstimateRun` revision과 `ABSTAIN` 판정기는 없다.
 
 허용 출력:
 
@@ -192,7 +192,7 @@ Order → PhysicalInspection → SourcePanelRevision[]
 
 현재 API 계약 v2.0.0에는 독립된 `ABSTAIN` 결과가 없다. 향후 additive 상태·사유·다음 행동 계약을 승인한 뒤, Lane A는 다음 중 하나면 단일 제작 가능 수치를 내지 않도록 한다.
 
-- 필수 7슬롯 중 하나라도 누락, 초점·노출·반사·잘림 실패
+- 필수 6슬롯 중 하나라도 누락, 초점·노출·반사·잘림 실패
 - 동일 패널 식별·coverage 부족, SKU·소재·크기 불명확
 - 광택·검은 소재·변형 때문에 결함이 관찰되지 않음
 - 추천 근거가 보이지 않는 영역이나 합성 영역에 의존
@@ -204,7 +204,7 @@ Order → PhysicalInspection → SourcePanelRevision[]
 
 ### Stage D — 현재 Demo / Lane A
 
-- 구현됨: 실제 모바일 촬영, 기본 파일 검증, 중앙 Fixture 예상, 정적 추천·목업, Mock 주문·결제 화면, 별도 v2 7장 분석·주문·검수·변경 승인·lifecycle·보증서 Route Handler와 DB 계약.
+- 구현됨: 실제 모바일 촬영, 기본 파일 검증, 중앙 Fixture 예상, 정적 추천·목업, Mock 주문·결제 화면, 별도 v2 6장 분석·주문·검수·변경 승인·lifecycle·보증서 Route Handler와 DB 계약.
 - 미구현 또는 미연결: 실제 Supabase 전체 여정/OpenAI LIVE 검증, 영속 content hash, 독립 EstimateRun, `ABSTAIN`, 제조 geometry revision/audit 저장.
 - 시나리오: 72%·91% 예상 → 주문 후 `CHANGE_REQUIRED` → 승인 → 68% 보증서 trace.
 - 제외: 실제 polygon/nesting/UV 생성과 제조 가능 확정.

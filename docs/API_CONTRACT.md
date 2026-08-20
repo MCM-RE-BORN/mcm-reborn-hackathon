@@ -27,7 +27,7 @@
 
 ## 현재 MVP 불변조건
 
-- 분석 업로드는 정면·후면·상단·하단·좌측면·우측면 6면과 일련번호 사진, 총 7슬롯이 모두 필수다. 허용 형식은 JPG/JPEG·PNG, 파일당 최대 10MB다. Presign은 점진 업로드를 위해 한 번에 1~4개를 허용하므로 7장은 여러 요청으로 올릴 수 있고, 최종 `POST /analyses`는 일곱 자산 ID를 이 슬롯 순서대로 받는다.
+- 분석 업로드는 정면·후면·상단·하단·좌측면·우측면 총 6슬롯이 모두 필수다. 허용 형식은 JPG/JPEG·PNG, 파일당 최대 10MB다. Presign은 점진 업로드를 위해 한 번에 1~4개를 허용하므로 6장은 여러 요청으로 올릴 수 있고, 최종 `POST /analyses`는 여섯 자산 ID를 이 슬롯 순서대로 받는다. 시리얼 번호 사진은 브라우저 자동 입력용 선택 기능이며 분석 자산에는 포함하지 않는다.
 - private Storage INSERT는 같은 사용자·경로의 `PENDING` `media_assets` metadata가 먼저 존재해야 한다. 고객 삭제는 소유 `PENDING` 자산이면서 분석에 연결되지 않은 경우만 허용한다.
 - `POST /analyses`의 사진 품질 미달은 `422 IMAGE_QUALITY_INSUFFICIENT`다. `details.imageQuality.status`는 `RECAPTURE_REQUIRED`이며 각 문제에는 `assetId`, 문제 코드와 `guidanceKo`가 있다.
 - 사진 품질 미달은 AI 제공자 장애가 아니므로 hybrid 폴백으로 성공 처리하지 않고 성공 분석도 생성하지 않는다.
@@ -70,7 +70,7 @@ REVIEW_REQUIRED → AWAIT_MANUAL_REVIEW → application creation blocked
 
 계약 버전은 `2.0.0`을 유지한다. 이 변경은 외부에 배포된 v2 서버가 없던 상태에서 승인된 breaking v2 계약의 누락을 완성했으며, lifecycle endpoint와 배송 Fixture는 추가 계약이다. 이후 lifecycle Route Handler가 이 계약의 첫 실행 경로로 추가되었다. `CHANGE_REQUIRED`에서 `proposedTerms`를 필수로 하는 조건은 이미 문서화된 변경안 생성 불변조건을 JSON Schema로 강제하는 보완이다. v2가 외부 소비자에게 배포된 뒤 동일한 필수 조건을 추가한다면 같은 버전을 덮어쓰지 않고 별도 계약 버전으로 올려야 한다.
 
-호환되는 기존 v2 데모 DB에는 fresh bootstrap 파일을 재적용하지 않는다. `202608180001_lifecycle_integrity.sql`, `202608180002_capture_four_views.sql` 적용 뒤 `supabase/migrations/202608180003_capture_seven_views.sql`로 분석 전이의 정확히 7장 조건을 활성화하고, `supabase/migrations/202608180004_backend_v2_runtime.sql`로 Product3D readiness·Mock 결제 상태 guard·고객 변경안 결정·이벤트·Storage metadata binding·외부 AI 동의 증적·신청/옵션 제약을 맞춘다. 이어 `supabase/migrations/202608190005_shipment_conflict_hotfix.sql`로 배송 upsert의 모호한 `application_id` 참조를 명명된 제약조건으로 교체하고, `supabase/migrations/202608190006_customer_decision_gate.sql`로 고객 승인 전 `PRODUCTION_READY` 우회를 차단한다. 사진을 합성하는 backfill은 하지 않으므로 진행 중인 4장 분석은 나머지 구도와 일련번호 사진을 보완한 뒤에만 계속할 수 있다. 롤백은 `supabase/rollbacks/202608190006_customer_decision_gate.sql`부터 `supabase/rollbacks/202608190005_shipment_conflict_hotfix.sql`, `supabase/rollbacks/202608180004_backend_v2_runtime.sql`과 역순의 대응 파일을 사용하며 OpenAPI·DB 중 한쪽만 되돌리지 않는다. `origin/feature-backend` v1 DB는 이 migration 체인의 입력으로 지원하지 않는다.
+호환되는 기존 v2 데모 DB에는 fresh bootstrap 파일을 재적용하지 않는다. 기존 migration 001→007을 순서대로 적용한 뒤 `202608210008_capture_six_views.sql`로 분석 전이의 정확히 6장 조건을 활성화한다. 008은 원본 `media_assets`와 private Storage 객체를 삭제하거나 새 사진을 합성하지 않고, 기존 `display_order=6` 시리얼 사진 연결만 private backup에 보존한 뒤 분석에서 해제한다. 이미 완료된 분석은 이력으로 보존하고, 진행 중인 이전 개수의 분석은 새 6면 입력으로 다시 제출한다. 롤백은 008부터 역순의 대응 파일을 사용하며 OpenAPI·DB 중 한쪽만 되돌리지 않는다. `origin/feature-backend` v1 DB는 이 migration 체인의 입력으로 지원하지 않는다.
 
 관리자·장인 콘솔은 `OPERATOR` 권한으로 실제 신청 목록·상세를 조회하고 현행 v2 lifecycle command와 inspection API를 호출한다. 별도 장인 역할 enum은 추가하지 않는다. `feature-backend`의 `/api/v1` 목록·상세·`PENDING_APPROVAL → APPROVED` 계약은 이 문서의 상태 모델과 호환되지 않으므로 직접 소비하지 않는다.
 

@@ -14,7 +14,7 @@
 |---|---|
 | v2 코드·계약 | 23개 Route Handler 파일·25개 API operation, 인증·검증·서비스, bootstrap과 migration/rollback 구현 |
 | 고객·운영 콘솔 UI | 고객·운영 API를 호출해 Supabase 결과를 렌더링하며, 인증 실패·빈 결과는 상태 화면으로 표시 |
-| 외부 런타임 | 로컬 Supabase health 연결은 확인했으며, 실제 고객 계정의 전체 7장→주문→배송 여정은 staging 검증 필요 |
+| 외부 런타임 | 로컬 Supabase health 연결은 확인했으며, 실제 고객 계정의 전체 6장→주문→배송 여정은 staging 검증 필요 |
 
 따라서 이 브랜치는 **v2 API와 브라우저 고객·운영 화면이 연결된 코드 기준**이지, 운영 준비 완료를 뜻하지 않는다. Supabase 설정이 없거나 고객 인증이 실패하면 화면은 임의 Fixture로 대체하지 않고 로그인·오류·빈 상태를 표시한다.
 
@@ -55,16 +55,16 @@ flowchart LR
 - 이벤트 이름과 metadata key/value를 allowlist로 제한하고, 연결된 분석·제품·신청을 요청 사용자가 볼 수 있는지 확인한다. 직접 `anon`/`authenticated` DB INSERT는 회수하고 서버에서만 기록하며 사용자당 분당 제한을 적용한다.
 - 응답과 로그에는 키·토큰·비밀번호·개인정보·원본 이미지 signed URL을 넣지 않는다.
 
-## 4. 7장 업로드와 분석
+## 4. 6장 업로드와 분석
 
-분석 입력은 아래 순서의 서로 다른 자산 7개가 모두 필요하다.
+분석 입력은 아래 순서의 서로 다른 자산 6개가 모두 필요하다.
 
 ```text
-정면 → 후면 → 상단 → 하단 → 좌측면 → 우측면 → 일련번호
+정면 → 후면 → 상단 → 하단 → 좌측면 → 우측면
 ```
 
 - 파일 형식은 JPG/JPEG·PNG, 파일당 최대 10 MiB다.
-- Presign 요청은 점진 업로드를 위해 한 번에 1~4개를 받지만, 분석 생성은 정확히 7개를 요구한다.
+- Presign 요청은 점진 업로드를 위해 한 번에 1~4개를 받지만, 분석 생성은 정확히 6개를 요구한다. 선택적인 시리얼 번호 사진은 분석 자산에 포함하지 않는다.
 - 원본은 private `source-products` bucket의 `<사용자 UUID>/<asset UUID>.<확장자>` 경로에 둔다.
 - 서버가 먼저 소유 고객의 `PENDING` `media_assets` metadata를 예약하고, 고객 JWT로 matching object의 signed upload URL을 발급한다.
 - Storage INSERT는 같은 경로의 소유자 `PENDING` metadata가 있어야 허용한다. 삭제는 소유자의 `PENDING` 자산이면서 `analysis_images`에 연결되지 않은 경우만 허용한다.
@@ -186,6 +186,7 @@ PRODUCTION_READY → IN_PRODUCTION → QUALITY_CHECK
 → 202608180002_capture_four_views.sql
 → 202608180003_capture_seven_views.sql
 → 202608180004_backend_v2_runtime.sql
+→ 202608210008_capture_six_views.sql
 → 202608190005_shipment_conflict_hotfix.sql
 → 202608190006_customer_decision_gate.sql
 → 202608200007_generic_source_pattern_copy.sql
@@ -205,8 +206,8 @@ PRODUCTION_READY → IN_PRODUCTION → QUALITY_CHECK
 - bootstrap 또는 호환 v2 migration 001→007 실제 적용·롤백 기록
 - `health.status=ok`
 - Customer 간 격리, Operator 권한, private Storage와 signed upload 검증
-- 7장 분석→신청→Mock 결제→수거→검수→변경 승인→제작→배송→완료→보증서 전체 호출
+- 6장 분석→신청→Mock 결제→수거→검수→변경 승인→제작→배송→완료→보증서 전체 호출
 - 동일·충돌 멱등 요청과 RPC 원자성 검증
 - `LIVE` opt-in·notice·요청 동의·증적 저장과 OpenAI 성공/장애 폴백 검증
 
-현재 작업 환경에는 유효한 `.env.local`과 Supabase health 연결이 있으나, 저장소에 비밀값·CLI 링크·migration 적용 로그를 남기지 않는다. 실제 CUSTOMER/OPERATOR 자격증명으로 7장 분석→신청→결제→운영 전이→보증서까지 호출하는 통합 검증과 OpenAI LIVE 호출 증거는 아직 없다. lint·typecheck·build·정적 계약 검증 성공은 이 원격 통합 검증을 대신하지 않는다.
+현재 작업 환경에는 유효한 `.env.local`과 Supabase health 연결이 있으나, 저장소에 비밀값·CLI 링크·migration 적용 로그를 남기지 않는다. 실제 CUSTOMER/OPERATOR 자격증명으로 6장 분석→신청→결제→운영 전이→보증서까지 호출하는 통합 검증과 OpenAI LIVE 호출 증거는 아직 없다. lint·typecheck·build·정적 계약 검증 성공은 이 원격 통합 검증을 대신하지 않는다.
