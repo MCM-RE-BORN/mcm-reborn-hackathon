@@ -197,7 +197,7 @@
       ],
       "properties": {
         "role": {
-          "enum": ["body", "trim", "lining", "handle", "strap", "reinforcement", "hardware", "decoration", "pouch"]
+          "enum": ["body", "flap", "side_panel", "trim", "lining", "handle", "strap", "reinforcement", "hardware", "decoration", "pouch"]
         },
         "material_class": {
           "enum": [
@@ -219,7 +219,10 @@
         "surface_finish": { "type": ["string", "null"] },
         "tannage": { "type": ["string", "null"] },
         "substrate_fiber": { "type": ["string", "null"] },
-        "coating_polymer": { "type": ["string", "null"] },
+        "coating_polymer": {
+          "type": ["string", "null"],
+          "description": "Polymer coating or finish on any component. Leather does not make this axis not_applicable; use unknown when the public source is silent."
+        },
         "material_origin_country": { "type": ["string", "null"] },
         "attribute_state": { "$ref": "#/$defs/attributeState" }
       }

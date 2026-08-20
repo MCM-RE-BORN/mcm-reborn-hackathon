@@ -222,6 +222,8 @@ ACCESS_STATUSES = {
 }
 COMPONENT_ROLES = {
     "body",
+    "flap",
+    "side_panel",
     "trim",
     "lining",
     "handle",
@@ -336,6 +338,14 @@ def check_unique(values: list[Any], label: str, errors: list[str]) -> None:
     )
     if duplicates:
         errors.append(f"{label}: duplicate values: {', '.join(map(str, duplicates))}")
+
+
+def check_contiguous_ids(
+    values: list[str], prefix: str, label: str, errors: list[str]
+) -> None:
+    expected = [f"{prefix}{index:03d}" for index in range(1, len(values) + 1)]
+    if values != expected:
+        errors.append(f"{label}: IDs must be ordered and contiguous from {prefix}001")
 
 
 def json_values_equal(left: Any, right: Any) -> bool:
@@ -578,6 +588,7 @@ def validate_sources(sources: Any, errors: list[str]) -> dict[str, str]:
         return {}
 
     source_ids: list[str] = []
+    source_urls: list[str] = []
     for index, source in enumerate(sources, start=1):
         label = f"source[{index}]"
         if not isinstance(source, dict):
@@ -601,6 +612,8 @@ def validate_sources(sources: Any, errors: list[str]) -> dict[str, str]:
             parsed = urlparse(url)
             if parsed.scheme != "https" or not parsed.netloc:
                 errors.append(f"{label}: url must be an absolute HTTPS URL")
+            else:
+                source_urls.append(url)
         check_date(source.get("published_at"), f"{label}.published_at", errors, True)
         check_date(source.get("observed_at"), f"{label}.observed_at", errors)
         if source.get("source_class") not in SOURCE_CLASSES:
@@ -613,6 +626,10 @@ def validate_sources(sources: Any, errors: list[str]) -> dict[str, str]:
             errors.append(
                 f"{label}: invalid date_precision {source.get('date_precision')!r}"
             )
+        elif source.get("published_at") is None and source.get("date_precision") != "unknown":
+            errors.append(f"{label}: null published_at requires unknown date_precision")
+        elif source.get("published_at") is not None and source.get("date_precision") == "unknown":
+            errors.append(f"{label}: dated source requires known date_precision")
         if source.get("access_status") not in ACCESS_STATUSES:
             errors.append(
                 f"{label}: invalid access_status {source.get('access_status')!r}"
@@ -624,6 +641,8 @@ def validate_sources(sources: Any, errors: list[str]) -> dict[str, str]:
             errors.append(f"{label}: notes must be a string")
 
     check_unique(source_ids, "source_id", errors)
+    check_contiguous_ids(source_ids, "SRC-", "source_id", errors)
+    check_unique(source_urls, "source URL", errors)
     return {
         source["source_id"]: source["url"]
         for source in sources
@@ -649,6 +668,10 @@ def validate_time(value: Any, label: str, errors: list[str]) -> None:
         errors.append(f"{label}: start must not be after end")
     if value.get("precision") not in TIME_PRECISIONS:
         errors.append(f"{label}: invalid precision {value.get('precision')!r}")
+    elif start is None and end is None and value.get("precision") != "unknown":
+        errors.append(f"{label}: undated time context requires unknown precision")
+    elif (start is not None or end is not None) and value.get("precision") == "unknown":
+        errors.append(f"{label}: dated time context requires known precision")
     if value.get("status") not in TIME_STATUSES:
         errors.append(f"{label}: invalid status {value.get('status')!r}")
 
@@ -731,6 +754,7 @@ def validate_claims(
             errors.append(f"{label}: target value cannot be grounding")
 
     check_unique(claim_ids, "claim_id", errors)
+    check_contiguous_ids(claim_ids, "CLM-", "claim_id", errors)
     for conflict_id, count in Counter(conflict_ids).items():
         if count < 2:
             errors.append(f"{conflict_id}: conflict group must contain at least two claims")
@@ -834,6 +858,7 @@ def validate_products(
         if not isinstance(components, list) or not components:
             errors.append(f"{label}: components must be a non-empty array")
         else:
+            component_roles: list[str] = []
             for component_index, component in enumerate(components, start=1):
                 component_label = f"{label}.components[{component_index}]"
                 if not isinstance(component, dict):
@@ -845,6 +870,8 @@ def validate_products(
                     errors.append(
                         f"{component_label}: invalid role {component.get('role')!r}"
                     )
+                else:
+                    component_roles.append(component["role"])
                 material_class = component.get("material_class")
                 if material_class not in MATERIAL_CLASSES:
                     errors.append(
@@ -891,11 +918,21 @@ def validate_products(
                             errors.append(
                                 f"{component_label}.{field}: non-null value must be reported"
                             )
+                    if (
+                        material_class in {"leather", "regenerated_leather"}
+                        and attribute_state.get("coating_polymer") == "not_applicable"
+                    ):
+                        errors.append(
+                            f"{component_label}: leather coating_polymer must be "
+                            "reported or unknown, not not_applicable"
+                        )
                 grain = component.get("grain_structure")
                 if isinstance(grain, str) and "nappa" in grain.lower():
                     errors.append(
                         f"{component_label}: nappa belongs in leather_type, not grain_structure"
                     )
+            if component_roles.count("body") != 1:
+                errors.append(f"{label}: exactly one body component is required")
 
         construction_features = product.get("construction_features")
         if construction_features is not None:
@@ -1002,6 +1039,7 @@ def validate_products(
                         errors.append(f"{measurement_label}: notes must be a string")
 
     check_unique(product_ids, "product_id", errors)
+    check_contiguous_ids(product_ids, "PRD-", "product_id", errors)
     check_unique(snapshot_keys, "(style_number, market, observed_at)", errors)
 
 
@@ -1018,6 +1056,7 @@ def is_official_mcm_page(value: str) -> bool:
 def validate_image_registry(
     images: list[dict[str, Any]],
     source_urls: dict[str, str],
+    source_dates: dict[str, tuple[Any, Any]],
     registry_label: str,
     allowed_subject_types: set[str],
     errors: list[str],
@@ -1154,6 +1193,13 @@ def validate_image_registry(
             errors.append(f"{label}: null published_at requires unknown date_basis")
         elif published_at is not None and date_basis == "unknown":
             errors.append(f"{label}: dated record requires a known date_basis")
+        if date_basis == "source_page_publication" and source_id in source_dates:
+            source_published_at, source_precision = source_dates[source_id]
+            if published_at != source_published_at or precision != source_precision:
+                errors.append(
+                    f"{label}: source_page_publication date must exactly match "
+                    f"{source_id} published_at/date_precision"
+                )
 
         check_date(record.get("observed_at"), f"{label}.observed_at", errors)
         check_date(record.get("checked_at"), f"{label}.checked_at", errors)
@@ -1229,11 +1275,13 @@ def validate_images(
     pattern_images: list[dict[str, Any]],
     material_images: list[dict[str, Any]],
     source_urls: dict[str, str],
+    source_dates: dict[str, tuple[Any, Any]],
     errors: list[str],
 ) -> None:
     pattern_result = validate_image_registry(
         pattern_images,
         source_urls,
+        source_dates,
         "pattern_image",
         {"pattern", "editorial_context"},
         errors,
@@ -1241,6 +1289,7 @@ def validate_images(
     material_result = validate_image_registry(
         material_images,
         source_urls,
+        source_dates,
         "material_image",
         {"material"},
         errors,
@@ -1250,6 +1299,24 @@ def validate_images(
     all_image_urls = pattern_result[2] + material_result[2]
     all_content_hashes = pattern_result[3] + material_result[3]
     check_unique(all_image_ids, "image_id", errors)
+    check_contiguous_ids(
+        [image_id for image_id in all_image_ids if image_id.startswith("PIMG-")],
+        "PIMG-",
+        "pattern image_id",
+        errors,
+    )
+    check_contiguous_ids(
+        [image_id for image_id in all_image_ids if image_id.startswith("CIMG-")],
+        "CIMG-",
+        "editorial context image_id",
+        errors,
+    )
+    check_contiguous_ids(
+        [image_id for image_id in all_image_ids if image_id.startswith("MIMG-")],
+        "MIMG-",
+        "material image_id",
+        errors,
+    )
     check_unique(all_asset_ids, "image asset_id", errors)
     check_unique(all_image_urls, "image_url", errors)
     check_unique(all_content_hashes, "image content_sha256", errors)
@@ -1279,9 +1346,20 @@ def main() -> int:
 
     source_urls = validate_sources(sources, errors)
     source_ids = set(source_urls)
+    source_dates = {
+        source["source_id"]: (source.get("published_at"), source.get("date_precision"))
+        for source in sources
+        if isinstance(source, dict) and source.get("source_id") in source_ids
+    }
     validate_claims(claims, source_ids, errors)
     validate_products(products, source_ids, errors)
-    validate_images(pattern_images, material_images, source_urls, errors)
+    validate_images(
+        pattern_images,
+        material_images,
+        source_urls,
+        source_dates,
+        errors,
+    )
 
     if errors:
         print("MCM leather knowledge validation failed:")
