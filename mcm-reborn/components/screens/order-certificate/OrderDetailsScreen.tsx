@@ -115,6 +115,12 @@ const STATUS_ORDER = [
   "CANCELED",
 ] as const;
 
+const SHIPMENT_AVAILABLE_STATUSES = new Set([
+  "SHIPPED",
+  "DELIVERED",
+  "COMPLETED",
+]);
+
 export function OrderDetailsScreen({
   applicationId,
   state,
@@ -163,20 +169,38 @@ export function OrderDetailsScreen({
         const detail = await customerFetch<CustomerApplicationDetail>(
           `/api/v2/applications/${applicationId}`,
         );
+        const timelineRequest = customerFetch<CustomerTimeline>(
+          `/api/v2/applications/${applicationId}/timeline`,
+        );
+        const shipmentAvailable = SHIPMENT_AVAILABLE_STATUSES.has(
+          detail.effectiveStatus,
+        );
+        const changeRequestRequest =
+          detail.effectiveStatus === "CHANGE_APPROVAL_REQUIRED"
+            ? customerFetch<CustomerChangeRequest>(
+                `/api/v2/applications/${applicationId}/change-request`,
+              )
+            : timelineRequest.then((timeline) =>
+                timeline.steps.some(
+                  (step) => step.status === "CHANGE_APPROVAL_REQUIRED",
+                )
+                  ? customerFetch<CustomerChangeRequest>(
+                      `/api/v2/applications/${applicationId}/change-request`,
+                    )
+                  : null,
+              );
         const [timelineResult, analysisResult, shipmentResult, changeResult] =
           await Promise.allSettled([
-            customerFetch<CustomerTimeline>(
-              `/api/v2/applications/${applicationId}/timeline`,
-            ),
+            timelineRequest,
             customerFetch<CustomerAnalysis>(
               `/api/v2/analyses/${detail.analysisId}`,
             ),
-            customerFetch<CustomerShipment>(
-              `/api/v2/applications/${applicationId}/shipment`,
-            ),
-            customerFetch<CustomerChangeRequest>(
-              `/api/v2/applications/${applicationId}/change-request`,
-            ),
+            shipmentAvailable
+              ? customerFetch<CustomerShipment>(
+                  `/api/v2/applications/${applicationId}/shipment`,
+                )
+              : Promise.resolve(null),
+            changeRequestRequest,
           ]);
         if (cancelled) {
           return;
@@ -197,7 +221,10 @@ export function OrderDetailsScreen({
           setShipment(shipmentResult.value);
         }
         if (changeResult.status === "fulfilled") {
-          setChangeRequest(changeResult.value);
+          setChangeRequest((current) =>
+            changeResult.value ??
+            (current?.status === "PENDING" ? null : current),
+          );
         } else if (initialLoad) {
           setChangeRequest(null);
         }
