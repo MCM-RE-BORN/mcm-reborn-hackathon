@@ -28,6 +28,9 @@
 - `data/sources.json`: 출처 레지스트리와 공개·확인 시기
 - `data/claims.jsonl`: 출처에 연결된 원자형 사실 및 명시적 미확인 값
 - `data/products.jsonl`: 대표 공식 SKU의 부품별 소재·구조 스냅샷
+- `data/pattern_image_references.jsonl`: 공식 패턴 편집·상품 이미지 URL과 자산 시기
+- `data/material_image_references.jsonl`: 공식 소재·표면 상품 이미지 URL과 자산 시기
+- `IMAGE_INDEX_KO.md`: 패턴·소재별 대표 이미지 갤러리와 전체 레지스트리 안내
 - `RESEARCH_REPORT_KO.md`: 조사 결과, 타임라인, 한계와 AI 적용 규칙
 - `CRAWL_LOG.md`: 수집 범위와 접근 제약
 - 저장소 루트의 `scripts/validate_mcm_leather_knowledge.py`: ID, 날짜, URL, 참조 무결성 검증
@@ -103,10 +106,10 @@
 python -X utf8 scripts/validate_mcm_leather_knowledge.py
 ```
 
-검증기는 JSON/JSONL 파싱, ID 중복, ISO 날짜, HTTPS 출처, claim·product의 출처 참조, 충돌 그룹과 목표·미확인 값의 AI 사용 제약을 확인한다.
+검증기는 JSON/JSONL 파싱, ID·이미지 자산 중복, ISO 날짜, HTTPS 출처, claim·product의 출처 참조, 공식 이미지 CDN·원본 페이지, 권리 상태, 충돌 그룹과 목표·미확인 값의 AI 사용 제약을 확인한다.
 
 ## 저작권·재현성
 
-원문 페이지 전체, 제품 이미지, 로고 파일은 저장하지 않는다. 출처 URL, 제목, 날짜, 페이지·섹션 위치와 짧은 요약만 보존한다. 직접 인용 대신 연구자가 작성한 한국어 의역을 사용한다.
+원문 페이지 전체, 제품 이미지, 로고 파일은 저장하지 않는다. 공식 CDN의 링크, 자산 ID, 출처 페이지, 확인 시점만 `unknown_reference_only`로 보존한다. 이는 재사용·재배포·모델 학습 허가가 아니다. 직접 인용 대신 연구자가 작성한 한국어 의역을 사용한다.
 
 공개 웹의 동적 재고·페이지 변경과 지역별 카탈로그 차이 때문에 이 버전은 절대적 전수조사가 아니라 `2026-08-21`에 재현 가능한 공개 근거의 스냅샷이다.

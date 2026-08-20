@@ -4,7 +4,8 @@
 The validator deliberately uses only the Python standard library so the
 research snapshot can be checked without installing a JSON Schema package.
 It covers the invariants that matter most for retrieval: parseability,
-identity, dates, source links, conflict groups, and product component shape.
+identity, dates, source links, conflict groups, product component shape,
+and first-party image-reference provenance.
 """
 
 from __future__ import annotations
@@ -24,12 +25,15 @@ KB_ROOT = REPO_ROOT / "docs" / "knowledge-base" / "mcm-leather-bags"
 SOURCE_PATH = KB_ROOT / "data" / "sources.json"
 CLAIM_PATH = KB_ROOT / "data" / "claims.jsonl"
 PRODUCT_PATH = KB_ROOT / "data" / "products.jsonl"
+PATTERN_IMAGE_PATH = KB_ROOT / "data" / "pattern_image_references.jsonl"
+MATERIAL_IMAGE_PATH = KB_ROOT / "data" / "material_image_references.jsonl"
 SCHEMA_PATH = KB_ROOT / "schema" / "knowledge-record.schema.json"
 
 SOURCE_ID_RE = re.compile(r"^SRC-[0-9]{3}$")
 CLAIM_ID_RE = re.compile(r"^CLM-[0-9]{3}$")
 PRODUCT_ID_RE = re.compile(r"^PRD-[0-9]{3}$")
 CONFLICT_ID_RE = re.compile(r"^CONFLICT-[0-9]{3}$")
+IMAGE_ID_RE = re.compile(r"^[PM]IMG-[0-9]{3}$")
 ISO_DATE_RE = re.compile(r"^[0-9]{4}-[0-9]{2}-[0-9]{2}$")
 LANGUAGE_RE = re.compile(r"^[a-z]{2}(-[A-Z]{2})?$")
 MARKET_RE = re.compile(r"^[A-Z]{2}$")
@@ -110,6 +114,25 @@ ATTRIBUTE_FIELDS = {
 }
 TIME_REQUIRED = {"label", "start", "end", "precision", "status"}
 EVIDENCE_REQUIRED = {"source_id", "locator", "support"}
+IMAGE_REQUIRED = {
+    "record_type",
+    "image_id",
+    "subject_type",
+    "subject",
+    "style_number",
+    "tags",
+    "asset_id",
+    "image_url",
+    "source_page_url",
+    "caption",
+    "asset_published_at",
+    "asset_date_precision",
+    "observed_at",
+    "officiality",
+    "rights_status",
+    "confidence",
+    "notes",
+}
 
 FACT_SCOPES = {
     "mcm_brand",
@@ -193,6 +216,12 @@ MATERIAL_CLASSES = {
     "unknown",
 }
 ATTRIBUTE_STATES = {"reported", "unknown", "not_applicable"}
+IMAGE_DATE_PRECISIONS = {"day", "month", "year", "unknown"}
+FIRST_PARTY_IMAGE_HOSTS = {
+    "images.mcmworldwide.com",
+    "cdn.media.amplience.net",
+    "i1.adis.ws",
+}
 
 
 def load_json(path: Path, errors: list[str]) -> Any:
@@ -606,6 +635,121 @@ def validate_products(
     check_unique(snapshot_keys, "(style_number, market, observed_at)", errors)
 
 
+def validate_images(images: list[dict[str, Any]], errors: list[str]) -> None:
+    image_ids: list[str] = []
+    asset_ids: list[str] = []
+    image_urls: list[str] = []
+
+    if not images:
+        errors.append("image reference registries must contain at least one record")
+        return
+
+    for index, record in enumerate(images, start=1):
+        label = f"image[{index}]"
+        check_required(record, IMAGE_REQUIRED, label, errors)
+        check_allowed(record, IMAGE_REQUIRED, label, errors)
+
+        image_id = record.get("image_id")
+        if not isinstance(image_id, str) or not IMAGE_ID_RE.fullmatch(image_id):
+            errors.append(f"{label}: invalid image_id {image_id!r}")
+        else:
+            image_ids.append(image_id)
+
+        if record.get("record_type") != "image_reference":
+            errors.append(f"{label}: record_type must be 'image_reference'")
+
+        subject_type = record.get("subject_type")
+        if subject_type not in {"pattern", "material"}:
+            errors.append(f"{label}: invalid subject_type {subject_type!r}")
+        elif isinstance(image_id, str):
+            expected_prefix = "PIMG-" if subject_type == "pattern" else "MIMG-"
+            if not image_id.startswith(expected_prefix):
+                errors.append(
+                    f"{label}: {subject_type} image_id must start with {expected_prefix}"
+                )
+
+        check_non_empty_string(record.get("subject"), f"{label}.subject", errors)
+        style_number = record.get("style_number")
+        if style_number is not None:
+            check_non_empty_string(style_number, f"{label}.style_number", errors)
+
+        tags = record.get("tags")
+        if not isinstance(tags, list) or not tags:
+            errors.append(f"{label}: tags must be a non-empty array")
+        else:
+            for tag_index, tag in enumerate(tags, start=1):
+                check_non_empty_string(tag, f"{label}.tags[{tag_index}]", errors)
+            if len(tags) != len(set(tags)):
+                errors.append(f"{label}: tags must be unique")
+
+        asset_id = record.get("asset_id")
+        check_non_empty_string(asset_id, f"{label}.asset_id", errors)
+        if isinstance(asset_id, str):
+            asset_ids.append(asset_id)
+
+        image_url = record.get("image_url")
+        if not isinstance(image_url, str):
+            errors.append(f"{label}: image_url must be a string")
+        else:
+            parsed_image = urlparse(image_url)
+            if parsed_image.scheme != "https" or not parsed_image.netloc:
+                errors.append(f"{label}: image_url must be an absolute HTTPS URL")
+            elif parsed_image.hostname not in FIRST_PARTY_IMAGE_HOSTS:
+                errors.append(
+                    f"{label}: image_url host is not an approved first-party CDN"
+                )
+            image_urls.append(image_url)
+
+        source_page_url = record.get("source_page_url")
+        if not isinstance(source_page_url, str):
+            errors.append(f"{label}: source_page_url must be a string")
+        else:
+            parsed_source = urlparse(source_page_url)
+            source_host = parsed_source.hostname or ""
+            if (
+                parsed_source.scheme != "https"
+                or not source_host
+                or not (
+                    source_host == "mcmworldwide.com"
+                    or source_host.endswith(".mcmworldwide.com")
+                )
+            ):
+                errors.append(
+                    f"{label}: source_page_url must be an official MCM HTTPS page"
+                )
+
+        check_non_empty_string(record.get("caption"), f"{label}.caption", errors)
+        check_date(
+            record.get("asset_published_at"),
+            f"{label}.asset_published_at",
+            errors,
+            True,
+        )
+        precision = record.get("asset_date_precision")
+        if precision not in IMAGE_DATE_PRECISIONS:
+            errors.append(f"{label}: invalid asset_date_precision {precision!r}")
+        elif record.get("asset_published_at") is None and precision != "unknown":
+            errors.append(
+                f"{label}: null asset_published_at requires unknown precision"
+            )
+        check_date(record.get("observed_at"), f"{label}.observed_at", errors)
+
+        if record.get("officiality") != "first_party":
+            errors.append(f"{label}: officiality must be 'first_party'")
+        if record.get("rights_status") != "unknown_reference_only":
+            errors.append(
+                f"{label}: rights_status must be 'unknown_reference_only'"
+            )
+        if record.get("confidence") not in {"high", "medium", "low"}:
+            errors.append(f"{label}: invalid confidence {record.get('confidence')!r}")
+        if not isinstance(record.get("notes"), str):
+            errors.append(f"{label}: notes must be a string")
+
+    check_unique(image_ids, "image_id", errors)
+    check_unique(asset_ids, "image asset_id", errors)
+    check_unique(image_urls, "image_url", errors)
+
+
 def main() -> int:
     errors: list[str] = []
     schema = load_json(SCHEMA_PATH, errors)
@@ -615,10 +759,13 @@ def main() -> int:
     sources = load_json(SOURCE_PATH, errors)
     claims = load_jsonl(CLAIM_PATH, errors)
     products = load_jsonl(PRODUCT_PATH, errors)
+    pattern_images = load_jsonl(PATTERN_IMAGE_PATH, errors)
+    material_images = load_jsonl(MATERIAL_IMAGE_PATH, errors)
 
     source_ids = validate_sources(sources, errors)
     validate_claims(claims, source_ids, errors)
     validate_products(products, source_ids, errors)
+    validate_images(pattern_images + material_images, errors)
 
     if errors:
         print("MCM leather knowledge validation failed:")
@@ -636,7 +783,9 @@ def main() -> int:
     print(
         "Validated MCM leather knowledge: "
         f"{len(sources)} sources, {len(claims)} claims, "
-        f"{len(products)} products, {conflict_count} conflict groups."
+        f"{len(products)} products, {len(pattern_images)} pattern images, "
+        f"{len(material_images)} material images, "
+        f"{conflict_count} conflict groups."
     )
     return 0
 

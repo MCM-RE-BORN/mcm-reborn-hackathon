@@ -5,7 +5,8 @@
   "oneOf": [
     { "$ref": "#/$defs/source" },
     { "$ref": "#/$defs/claim" },
-    { "$ref": "#/$defs/product" }
+    { "$ref": "#/$defs/product" },
+    { "$ref": "#/$defs/imageReference" }
   ],
   "$defs": {
     "dateOrNull": {
@@ -309,6 +310,56 @@
           "minItems": 1
         },
         "confidence": { "enum": ["high", "medium", "low", "unknown"] },
+        "notes": { "type": "string" }
+      }
+    },
+    "imageReference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "record_type",
+        "image_id",
+        "subject_type",
+        "subject",
+        "style_number",
+        "tags",
+        "asset_id",
+        "image_url",
+        "source_page_url",
+        "caption",
+        "asset_published_at",
+        "asset_date_precision",
+        "observed_at",
+        "officiality",
+        "rights_status",
+        "confidence",
+        "notes"
+      ],
+      "properties": {
+        "record_type": { "const": "image_reference" },
+        "image_id": {
+          "type": "string",
+          "pattern": "^[PM]IMG-[0-9]{3}$"
+        },
+        "subject_type": { "enum": ["pattern", "material"] },
+        "subject": { "type": "string", "minLength": 1 },
+        "style_number": { "type": ["string", "null"] },
+        "tags": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "asset_id": { "type": "string", "minLength": 1 },
+        "image_url": { "type": "string", "format": "uri", "pattern": "^https://" },
+        "source_page_url": { "type": "string", "format": "uri", "pattern": "^https://" },
+        "caption": { "type": "string", "minLength": 1 },
+        "asset_published_at": { "$ref": "#/$defs/dateOrNull" },
+        "asset_date_precision": { "enum": ["day", "month", "year", "unknown"] },
+        "observed_at": { "type": "string", "format": "date" },
+        "officiality": { "const": "first_party" },
+        "rights_status": { "const": "unknown_reference_only" },
+        "confidence": { "enum": ["high", "medium", "low"] },
         "notes": { "type": "string" }
       }
     }

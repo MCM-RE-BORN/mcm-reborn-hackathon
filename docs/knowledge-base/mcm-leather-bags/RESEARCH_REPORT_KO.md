@@ -268,3 +268,14 @@ LWG가 실제로 인증하는 주체와 주장 범위는 [LWG FAQ](https://www.l
 이 버전은 공개 웹에서 확인 가능한 정보의 폭넓은 스냅샷이지 브랜드 내부 PLM·BOM·CAD·공장 SOP의 전수본이 아니다. MCM의 지역별 동적 페이지와 2024 보고서 원문은 직접 비인증 요청에서 Cloudflare 차단이 발생해 검색 인덱스·공개 렌더 경로와 페이지 위치로 교차 확인했다.
 
 업데이트 시에는 기존 값을 덮어쓰기보다 새 `source_id`, `observed_at`, `valid_time`을 추가한다. 수치가 다르더라도 상·하한, 보고기간, 범위가 양립 가능한지 먼저 판정하고, 서로 양립할 수 없는 주장만 `conflict_group_id`로 묶는다.
+
+## 13. 패턴·소재 이미지 레지스트리
+
+공식 MCM 편집·상품 페이지에서 패턴 이미지 96개와 12개 소재 SKU의 상품 이미지 83개, 합계 179개 고유 자산을 확인했다. 자산 ID를 기준으로 반응형 리사이즈와 DOM 중복을 제거했으며 이미지 파일은 저장소에 복제하지 않았다.
+
+- 패턴: Visetos·AW19 변형, Vintage Monogram Jacquard, Cubic, Lauretos, Maxi Monogram Leather, Disco Visetos, Diamond Jacquard
+- 소재·표면: coated canvas+calf nappa, calf nappa, full-grain leather, goatskin, quilted nappa, raffia jacquard, MIRUM, recycled nylon, lambskin, studded calfskin, croco emboss, sequin lambskin
+- 전체 메타데이터: `data/pattern_image_references.jsonl`, `data/material_image_references.jsonl`
+- 탐색용 대표 갤러리: [IMAGE_INDEX_KO.md](IMAGE_INDEX_KO.md)
+
+모든 자산은 MCM 공식 마케팅 저작물이며 권리 상태를 `unknown_reference_only`로 기록했다. 사진의 조명·보정·축척 때문에 소재 판정 ground truth로 단독 사용하지 않고, 반드시 공식 제품 문구와 연결한다. CDN의 `asset_published_at`은 제품 출시일이 아니라 자산 공개·재게시 시각이다.
