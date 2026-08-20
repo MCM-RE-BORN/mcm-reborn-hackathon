@@ -48,6 +48,7 @@ export const GENERAL_CAPTURE_SLOTS = CAPTURE_SLOTS.filter(
 );
 
 export const DEMO_SERIAL_NUMBER = "MK123456789";
+export const SERIAL_NUMBER_PATTERN = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z0-9]{11}$/;
 
 export type CaptureSlotId = (typeof CAPTURE_SLOTS)[number]["id"];
 

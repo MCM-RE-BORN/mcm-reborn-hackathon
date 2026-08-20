@@ -140,7 +140,7 @@ export function ProductCapturePhotos({
 
       <div className={styles.captureSecondaryAction}>
         <Button
-          aria-describedby="album-selection-note"
+          aria-describedby="capture-upload-rule capture-storage-note"
           disabled={!nextAlbumSlot}
           fullWidth
           loading={isProcessing}
@@ -159,19 +159,24 @@ export function ProductCapturePhotos({
           ref={albumInputRef}
           type="file"
         />
-        <p
-          aria-live="polite"
-          className={albumMessage ? styles.captureAlbumMessage : undefined}
-          id="album-selection-note"
-        >
-          {albumMessage ??
-            "촬영본은 제품 등록을 마칠 때까지 브라우저에만 임시 보관됩니다."}
-        </p>
+        <div className={styles.captureUploadNotes}>
+          <p className={styles.captureRule} id="capture-upload-rule">
+            JPG, PNG 6장 · 파일당 최대 10MB
+          </p>
+          <p id="capture-storage-note">
+            촬영본은 제품 등록을 마칠 때까지 브라우저에만 임시 보관됩니다.
+          </p>
+        </div>
+        {albumMessage ? (
+          <p
+            aria-live="polite"
+            className={styles.captureAlbumMessage}
+            id="album-selection-message"
+          >
+            {albumMessage}
+          </p>
+        ) : null}
       </div>
-      <p className={styles.captureRule}>
-        정면, 후면, 상단, 하단, 좌측면, 우측면 필수 · JPG, PNG 6장 ·
-        파일당 최대 10MB · 시리얼 번호 사진 선택
-      </p>
 
       <SerialNumberCapture completedSlotIds={completedSlotIds} />
     </section>

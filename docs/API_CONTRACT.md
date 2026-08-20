@@ -27,7 +27,7 @@
 
 ## 현재 MVP 불변조건
 
-- 분석 업로드는 정면·후면·상단·하단·좌측면·우측면 총 6슬롯이 모두 필수다. 허용 형식은 JPG/JPEG·PNG, 파일당 최대 10MB다. Presign은 점진 업로드를 위해 한 번에 1~4개를 허용하므로 6장은 여러 요청으로 올릴 수 있고, 최종 `POST /analyses`는 여섯 자산 ID를 이 슬롯 순서대로 받는다. 시리얼 번호 사진은 브라우저 자동 입력용 선택 기능이며 분석 자산에는 포함하지 않는다.
+- 분석 업로드는 정면·후면·상단·하단·좌측면·우측면 총 6슬롯이 모두 필수다. 허용 형식은 JPG/JPEG·PNG, 파일당 최대 10MB다. Presign은 점진 업로드를 위해 한 번에 1~4개를 허용하므로 6장은 여러 요청으로 올릴 수 있고, 최종 `POST /analyses`는 여섯 자산 ID를 이 슬롯 순서대로 받는다. 시리얼 번호 사진은 브라우저 자동 입력용 선택 기능이며 분석 자산에는 포함하지 않는다. 신규 분석 요청의 `serialNumber` 텍스트는 필수이고, trim 후 ASCII 영문자와 숫자를 각각 하나 이상 포함하는 정확히 11자리여야 한다. 기존 분석 이력을 읽을 수 있도록 DB nullable 컬럼은 유지하고 신규 쓰기 경계에서만 이를 강제한다.
 - private Storage INSERT는 같은 사용자·경로의 `PENDING` `media_assets` metadata가 먼저 존재해야 한다. 고객 삭제는 소유 `PENDING` 자산이면서 분석에 연결되지 않은 경우만 허용한다.
 - `POST /analyses`의 사진 품질 미달은 `422 IMAGE_QUALITY_INSUFFICIENT`다. `details.imageQuality.status`는 `RECAPTURE_REQUIRED`이며 각 문제에는 `assetId`, 문제 코드와 `guidanceKo`가 있다.
 - 사진 품질 미달은 AI 제공자 장애가 아니므로 hybrid 폴백으로 성공 처리하지 않고 성공 분석도 생성하지 않는다.

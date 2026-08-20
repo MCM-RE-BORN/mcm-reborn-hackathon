@@ -13,7 +13,9 @@ export function ProductCaptureDetails() {
 
   return (
     <section aria-labelledby="product-info-title" className={styles.productInfo}>
-      <div className={styles.captureSectionHeading}>
+      <div
+        className={`${styles.captureSectionHeading} ${styles.productInfoHeading}`}
+      >
         <div>
           <h2 id="product-info-title">제품 정보</h2>
           <p>사진과 함께 분석할 제품 정보를 확인해주세요.</p>

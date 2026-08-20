@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/Button";
 import {
   GENERAL_CAPTURE_SLOTS,
   MIN_REQUIRED_CAPTURES,
+  SERIAL_NUMBER_PATTERN,
   type CaptureSlotId,
 } from "./capture-config";
 import { captureCount } from "./capture-progress";
@@ -34,11 +35,16 @@ export function ProductCaptureAction({
     productDetails.useDuration.trim() || USE_DURATION_OPTIONS[0];
   const normalizedDesiredUse =
     productDetails.desiredUse.trim() || DESIRED_USE_OPTIONS[0];
+  const hasSerialNumber = Boolean(productDetails.serialNumber.trim());
+  const hasValidSerialNumber = SERIAL_NUMBER_PATTERN.test(
+    productDetails.serialNumber.trim(),
+  );
   const hasRequiredDetails = Boolean(
     productDetails.category &&
       productDetails.purchaseYear.trim() &&
       normalizedUseDuration &&
-      normalizedDesiredUse,
+      normalizedDesiredUse &&
+      hasValidSerialNumber,
   );
 
   async function submitAnalysis() {
@@ -99,7 +105,7 @@ export function ProductCaptureAction({
           imageAssetIds: presignedAssets.map((asset) => asset.assetId),
           locale: "ko-KR",
           purchaseYear: Number(productDetails.purchaseYear),
-          serialNumber: productDetails.serialNumber || undefined,
+          serialNumber: productDetails.serialNumber.trim(),
           useDuration: normalizedUseDuration,
         }),
         method: "POST",
@@ -123,6 +129,12 @@ export function ProductCaptureAction({
           onClick={() => void submitAnalysis()}
         >
           AI 분석 접수하기
+        </Button>
+      ) : remainingCount === 0 && !hasValidSerialNumber ? (
+        <Button disabled fullWidth>
+          {hasSerialNumber
+            ? "시리얼 번호 형식을 확인해 주세요"
+            : "시리얼 번호를 입력해 주세요"}
         </Button>
       ) : remainingCount === 0 ? (
         <Button disabled fullWidth>

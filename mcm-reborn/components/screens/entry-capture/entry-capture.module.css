@@ -792,6 +792,21 @@
   flex: none;
 }
 
+.productInfoHeading h2 {
+  color: var(--color-ink);
+  font-size: var(--font-size-title);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
+  letter-spacing: var(--letter-spacing-tight);
+}
+
+.productInfoHeading p {
+  color: var(--color-ink-soft);
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-light);
+  line-height: var(--line-height-tight);
+}
+
 .captureGrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(var(--space-0), 1fr));
@@ -865,7 +880,7 @@
   position: absolute;
   z-index: var(--z-sticky);
   right: var(--space-7);
-  bottom: var(--space-7);
+  bottom: var(--space-5);
   left: var(--space-7);
   padding: var(--space-5) var(--space-7);
   background: var(--color-transparent);
@@ -889,6 +904,11 @@
   display: grid;
   gap: var(--space-5);
   text-align: center;
+}
+
+.captureUploadNotes {
+  display: grid;
+  gap: var(--space-2);
 }
 
 .captureSecondaryAction .captureAlbumMessage {

@@ -33,7 +33,7 @@ function CaptureStatePanel({ state }: { state: PageState }) {
             카메라 화면 열기
           </ButtonLink>
         }
-        description="분석 요청에는 정면, 후면, 상단, 하단, 좌측면, 우측면 JPG 또는 PNG 사진이 모두 필요해요. 시리얼 번호 사진은 선택 사항이에요."
+        description="분석 요청에는 정면, 후면, 상단, 하단, 좌측면, 우측면 JPG 또는 PNG 사진과 시리얼 번호 입력이 필요해요. 시리얼 번호 사진 촬영은 선택 사항이에요."
         title="등록된 제품 사진이 없어요"
         tone="empty"
       />
@@ -95,7 +95,7 @@ export function ProductCaptureScreen({
       header={
         <PageHeader
           backHref="/home"
-          description="정면, 후면, 상단, 하단, 좌측면, 우측면 사진을 모두 선명하게 등록해주세요. 시리얼 번호 사진과 번호 입력은 선택 사항이에요."
+          description="정면, 후면, 상단, 하단, 좌측면, 우측면 사진을 모두 선명하게 등록하고 시리얼 번호를 입력해주세요."
           title="제품 사진 등록"
         />
       }

@@ -16,9 +16,9 @@
 }
 
 .captureButton.captureButton {
-  min-height: var(--space-24);
+  min-height: var(--touch-target-min);
   justify-content: flex-start;
-  padding: var(--space-8) var(--space-9);
+  padding: var(--space-4) var(--space-7);
   border: var(--space-0);
   background: var(--color-surface);
   color: var(--color-ink);
@@ -31,7 +31,7 @@
 
 .captureButton > img {
   width: auto;
-  height: var(--space-17);
+  height: var(--space-9);
   flex: none;
 }
 
@@ -41,9 +41,9 @@
   flex: 1;
 }
 
-.captureButtonCopy strong {
-  font-size: var(--font-size-control);
-  font-weight: var(--font-weight-semibold);
+.captureButtonCopy span {
+  font-size: var(--font-size-label);
+  font-weight: var(--font-weight-medium);
   line-height: var(--line-height-tight);
 }
 
@@ -60,6 +60,13 @@
 .verificationForm {
   display: grid;
   gap: var(--space-4);
+}
+
+.labelRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-5);
 }
 
 .label {
@@ -111,7 +118,9 @@
 }
 
 .hint {
+  flex: 1;
   color: var(--color-muted);
+  text-align: right;
 }
 
 .successMessage {

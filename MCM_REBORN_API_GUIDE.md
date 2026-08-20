@@ -42,7 +42,7 @@
 | Presign 1회 요청 | 1~4개 |
 | 분석 생성에 연결할 사진 | 정면·후면·상단·하단·좌측면·우측면 6개 |
 
-`POST /uploads/presign`은 점진 업로드를 위해 한 번에 1~4개 사진을 요청할 수 있습니다. 최종 `POST /analyses`에서는 업로드가 완료된 서로 다른 자산 6개를 정면·후면·상단·하단·좌측면·우측면 순서로 전달해야 합니다. 배열 0~1의 정면·후면은 `SOURCE_FRONT`, 배열 2~5의 상단·하단·좌측면·우측면은 `SOURCE_SIDE` purpose여야 하며, `INTERIOR`·`ENGRAVING` 자산은 분석 입력으로 거부합니다. 선택 촬영한 일련번호 사진은 `imageAssetIds`에 포함하지 않으며, 일련번호 문자열은 선택 필드인 `serialNumber`로만 전달합니다. 촬영 방향은 프런트 세션과 배열 순서로 관리하며 기존 Storage `purpose` enum을 방향별로 확장하지 않습니다. Route Handler는 자산 소유자, 업로드 완료 여부와 배열 위치별 purpose를 다시 검증합니다.
+`POST /uploads/presign`은 점진 업로드를 위해 한 번에 1~4개 사진을 요청할 수 있습니다. 최종 `POST /analyses`에서는 업로드가 완료된 서로 다른 자산 6개를 정면·후면·상단·하단·좌측면·우측면 순서로 전달해야 합니다. 배열 0~1의 정면·후면은 `SOURCE_FRONT`, 배열 2~5의 상단·하단·좌측면·우측면은 `SOURCE_SIDE` purpose여야 하며, `INTERIOR`·`ENGRAVING` 자산은 분석 입력으로 거부합니다. 선택 촬영한 일련번호 사진은 `imageAssetIds`에 포함하지 않습니다. 신규 분석 요청의 일련번호 문자열은 필수 `serialNumber`로 전달하며, trim 후 ASCII 영문자와 숫자를 각각 하나 이상 포함하는 정확히 11자리여야 합니다. 촬영 방향은 프런트 세션과 배열 순서로 관리하며 기존 Storage `purpose` enum을 방향별로 확장하지 않습니다. Route Handler는 자산 소유자, 업로드 완료 여부, 배열 위치별 purpose와 일련번호 형식을 다시 검증합니다.
 
 `mock-data.json.primaryScenario.source.images`의 WebP 경로는 앱에 번들된 표시용 Fixture입니다. 고객이 Presign으로 올리는 소스 파일의 허용 MIME에는 WebP가 포함되지 않습니다.
 
@@ -77,15 +77,18 @@
   "purchaseYear": 2019,
   "useDuration": "5년 이상",
   "desiredUse": "여권지갑",
+  "serialNumber": "MK123456789",
   "conditionNote": "하단 모서리에 가벼운 마모가 있어요.",
   "locale": "ko-KR",
   "demoScenarioKey": "MCM_BACKPACK_CHANGE_APPROVED_20260817"
 }
 ```
 
-필수: `category`, `purchaseYear`, `useDuration`, `desiredUse`
+필수: `category`, `purchaseYear`, `useDuration`, `desiredUse`, `serialNumber`
 
-선택: `serialNumber`, `conditionNote`
+선택: `conditionNote`
+
+`serialNumber`는 앞뒤 공백 제거 후 ASCII 영문자와 숫자를 각각 하나 이상 포함하는 정확히 11자리여야 합니다. 기존 분석 행의 nullable 시리얼 값을 읽는 호환성은 유지하므로 DB 컬럼을 `NOT NULL`로 바꾸지 않고 신규 `POST /analyses` 쓰기 경계에서만 필수 조건을 적용합니다.
 
 분석 상태는 아래 다섯 값만 사용합니다.
 

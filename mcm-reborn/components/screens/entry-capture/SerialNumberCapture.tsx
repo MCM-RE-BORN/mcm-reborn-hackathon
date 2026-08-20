@@ -3,11 +3,12 @@
 import Image from "next/image";
 import { useState, type FormEvent } from "react";
 import { Button, ButtonLink } from "@/components/ui/Button";
-import type { CaptureSlotId } from "./capture-config";
+import {
+  SERIAL_NUMBER_PATTERN,
+  type CaptureSlotId,
+} from "./capture-config";
 import { useCaptureSession } from "./CaptureSessionProvider";
 import styles from "./serial-number-capture.module.css";
-
-const SERIAL_NUMBER_PATTERN = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z0-9]{11}$/;
 
 type SerialNumberCaptureProps = {
   completedSlotIds: CaptureSlotId[];
@@ -56,9 +57,14 @@ export function SerialNumberCapture({
       </h3>
 
       <form className={styles.verificationForm} noValidate onSubmit={handleSubmit}>
-        <label className={styles.label} htmlFor="product-serial-number">
-          시리얼 번호 (선택)
-        </label>
+        <div className={styles.labelRow}>
+          <label className={styles.label} htmlFor="product-serial-number">
+            시리얼 번호 <b aria-hidden="true">*</b>
+          </label>
+          <p className={styles.hint} id="serial-number-format-hint">
+            영문과 숫자를 조합한 11자리 번호를 입력해주세요.
+          </p>
+        </div>
         <div className={styles.verificationRow}>
           <input
             aria-describedby={[
@@ -79,6 +85,7 @@ export function SerialNumberCapture({
             }}
             pattern="(?=.*[A-Za-z])(?=.*[0-9])[A-Za-z0-9]{11}"
             placeholder="예: MK123456789"
+            required
             spellCheck={false}
             value={productDetails.serialNumber}
           />
@@ -86,9 +93,6 @@ export function SerialNumberCapture({
             인증
           </Button>
         </div>
-        <p className={styles.hint} id="serial-number-format-hint">
-          영문과 숫자를 조합한 11자리 번호를 입력해주세요.
-        </p>
         {visibleVerification ? (
           <p
             aria-live={visibleVerification.kind === "error" ? "assertive" : "polite"}
@@ -122,7 +126,7 @@ export function SerialNumberCapture({
           width={50}
         />
         <span className={styles.captureButtonCopy}>
-          <strong>시리얼 번호 촬영하여 입력</strong>
+          <span>시리얼 번호 촬영하여 입력</span>
         </span>
         <span aria-hidden="true" className={styles.captureButtonChevron} />
       </ButtonLink>

@@ -21,7 +21,13 @@ const CreateAnalysisRequestSchema = z.object({
   purchaseYear: z.number().int().min(1976).max(2100),
   useDuration: z.string().trim().min(1).max(80),
   desiredUse: z.string().trim().min(1).max(200),
-  serialNumber: z.string().trim().min(1).max(100).optional(),
+  serialNumber: z
+    .string()
+    .trim()
+    .regex(
+      /^(?=.*[A-Za-z])(?=.*[0-9])[A-Za-z0-9]{11}$/,
+      'serialNumber must be exactly 11 ASCII alphanumeric characters and include at least one letter and one digit',
+    ),
   conditionNote: z.string().trim().max(500).optional(),
   locale: z.literal('ko-KR'),
   demoScenarioKey: z

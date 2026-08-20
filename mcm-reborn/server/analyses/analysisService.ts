@@ -67,7 +67,7 @@ export interface CreateAnalysisInput {
   purchaseYear?: number;
   useDuration?: string;
   desiredUse?: string;
-  serialNumber?: string | null;
+  serialNumber: string;
   conditionNote?: string | null;
   locale: string;
   demoScenarioKey?: string | null;
@@ -231,7 +231,7 @@ type NormalizedProductInput = {
   purchaseYear: number;
   useDuration: string;
   desiredUse: string;
-  serialNumber: string | null;
+  serialNumber: string;
   conditionNote: string | null;
 };
 
@@ -1110,12 +1110,22 @@ function normalizeProductInput(input: CreateAnalysisInput): NormalizedProductInp
   if (!useDuration || !desiredUse) {
     throw new ValidationError('useDuration and desiredUse are required');
   }
+  const serialNumber = input.serialNumber?.trim();
+  if (
+    !serialNumber
+    || !/^(?=.*[A-Za-z])(?=.*[0-9])[A-Za-z0-9]{11}$/.test(serialNumber)
+  ) {
+    throw new ValidationError(
+      'serialNumber must be exactly 11 ASCII alphanumeric characters and include at least one letter and one digit',
+      { field: 'serialNumber' },
+    );
+  }
   return {
     category,
     purchaseYear: input.purchaseYear!,
     useDuration,
     desiredUse,
-    serialNumber: input.serialNumber?.trim() || null,
+    serialNumber,
     conditionNote: input.conditionNote?.trim() || null,
   };
 }

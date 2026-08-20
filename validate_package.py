@@ -387,6 +387,8 @@ def validate_openapi(openapi: dict[str, Any]) -> tuple[int, int]:
     for fragment in (
         '배열 0~1의 purpose는 SOURCE_FRONT, 2~5는 SOURCE_SIDE여야 합니다.',
         'INTERIOR 또는 ENGRAVING 자산과 일련번호 사진은 imageAssetIds에 포함하지 않습니다.',
+        'serialNumber는 신규 분석 접수에 필수이며',
+        'ASCII 영문·숫자 11자리여야 합니다.',
     ):
         if fragment not in analysis_description:
             fail('POST /analyses must enforce directional purposes and exclude the serial photo')
@@ -397,11 +399,17 @@ def validate_openapi(openapi: dict[str, Any]) -> tuple[int, int]:
         'purchaseYear',
         'useDuration',
         'desiredUse',
+        'serialNumber',
     }
     if set(create_analysis['required']) != required_input:
         fail(f'CreateAnalysisRequest required fields must be {sorted(required_input)}')
-    if {'serialNumber', 'conditionNote'} & set(create_analysis['required']):
-        fail('serialNumber and conditionNote must remain optional')
+    if 'conditionNote' in set(create_analysis['required']):
+        fail('conditionNote must remain optional')
+    serial_number = create_analysis['properties']['serialNumber']
+    if (serial_number.get('minLength'), serial_number.get('maxLength')) != (11, 11):
+        fail('CreateAnalysisRequest serialNumber must be exactly 11 characters')
+    if serial_number.get('pattern') != r'^(?=.*[A-Za-z])(?=.*[0-9])[A-Za-z0-9]{11}$':
+        fail('CreateAnalysisRequest serialNumber must require ASCII letters and digits')
     scenario_enum = create_analysis['properties']['demoScenarioKey']['enum']
     if PRIMARY_SCENARIO_KEY not in scenario_enum or 'PRIMARY_REBORN_BACKPACK' in scenario_enum:
         fail('CreateAnalysisRequest must expose only the canonical v2 primary scenario key')
@@ -1441,6 +1449,10 @@ def validate_capture_six_view_migrations(up_migration: str, rollback: str) -> No
             'transaction start': 'begin;',
             'transaction commit': 'commit;',
             'private serial-link backup': 'private.mcm_capture_six_view_backup_20260821',
+            'private serial-link backup rls': (
+                'alter table private.mcm_capture_six_view_backup_20260821\n'
+                '  enable row level security;'
+            ),
             'serial-link selection': 'where ai.display_order = 6',
             'serial-link removal': 'delete from public.analysis_images\nwhere display_order = 6',
             'media preservation': 'media_assets row and private Storage object are retained',
@@ -1634,6 +1646,10 @@ def validate_capture_ui(
             'general capture slots': 'GENERAL_CAPTURE_SLOTS = CAPTURE_SLOTS.filter',
             'six directional slots required': 'MIN_REQUIRED_CAPTURES = GENERAL_CAPTURE_SLOTS.length',
             'serial full-width slot': 'className: "captureSlotSerial"',
+            'shared serial format': (
+                'SERIAL_NUMBER_PATTERN = '
+                '/^(?=.*[A-Za-z])(?=.*\\d)[A-Za-z0-9]{11}$/'
+            ),
         },
     )
     require_fragments(
@@ -1644,8 +1660,7 @@ def validate_capture_ui(
             'required slot grid': 'GENERAL_CAPTURE_SLOTS.map',
             'album slot label': '`앨범에서 ${nextAlbumSlot.label} 사진 선택`',
             'dynamic completion count': '`사진 ${GENERAL_CAPTURE_SLOTS.length}장 등록 완료`',
-            'six-photo rule': 'JPG, PNG 6장',
-            'optional serial rule': '시리얼 번호 사진 선택',
+            'six-photo rule': 'JPG, PNG 6장 · 파일당 최대 10MB',
         },
     )
     require_fragments(
@@ -1653,8 +1668,8 @@ def validate_capture_ui(
         'ProductCaptureScreen.tsx',
         {
             'six required labels': '정면, 후면, 상단, 하단, 좌측면, 우측면',
-            'all photos required': '사진이 모두 필요해요.',
-            'optional serial photo': '시리얼 번호 사진은 선택 사항이에요.',
+            'photos and serial required': '사진과 시리얼 번호 입력이 필요해요.',
+            'optional serial photo': '시리얼 번호 사진 촬영은 선택 사항이에요.',
         },
     )
     require_fragments(
@@ -1662,9 +1677,12 @@ def validate_capture_ui(
         'SerialNumberCapture.tsx',
         {
             'serial capture label': '시리얼 번호 촬영하여 입력',
-            'optional serial text': '시리얼 번호 (선택)',
+            'required serial marker': '<b aria-hidden="true">*</b>',
+            'required serial input': 'required',
         },
     )
+    if '시리얼 번호 (선택)' in serial_capture:
+        fail('SerialNumberCapture.tsx must not label required serial text as optional')
     require_fragments(
         camera_screen,
         'CameraScreen.tsx',
@@ -1709,6 +1727,8 @@ def validate_capture_ui(
         {
             'canonical minimum gate': 'MIN_REQUIRED_CAPTURES - completedCount',
             'zero remaining submit gate': 'remainingCount === 0 && hasRequiredDetails',
+            'required serial gate': 'hasValidSerialNumber',
+            'required serial copy': '시리얼 번호를 입력해 주세요',
             'six-view upload order': 'const orderedCaptures = GENERAL_CAPTURE_SLOTS.map',
             'six required upload guard': '필수 사진 6장을 모두 등록해 주세요.',
             'analysis submission CTA': 'AI 분석 접수하기',
@@ -1815,7 +1835,11 @@ def validate_runtime_analysis_contract(
         {
             'exactly-six request schema': 'z.array(z.string().uuid()).length(6)',
             'unique image IDs': 'new Set(ids).size === ids.length',
-            'optional serial text': 'serialNumber: z.string().trim().min(1).max(100).optional()',
+            'required serial regex': '/^(?=.*[A-Za-z])(?=.*[0-9])[A-Za-z0-9]{11}$/',
+            'serial validation message': (
+                'serialNumber must be exactly 11 ASCII alphanumeric characters '
+                'and include at least one letter and one digit'
+            ),
         },
     )
     require_fragments(
@@ -1829,7 +1853,10 @@ def validate_runtime_analysis_contract(
             'ordered purpose check': 'asset.purpose !== expectedPurpose',
             'purpose mismatch rejection': 'Image asset purpose does not match required capture slot',
             'ordered display persistence': 'display_order: displayOrder',
-            'optional serial normalization': 'serialNumber: input.serialNumber?.trim() || null',
+            'required serial input type': 'serialNumber: string;',
+            'serial normalization': 'const serialNumber = input.serialNumber?.trim();',
+            'serial service validation': '/^(?=.*[A-Za-z])(?=.*[0-9])[A-Za-z0-9]{11}$/.test(serialNumber)',
+            'normalized serial persistence': 'serialNumber,',
         },
     )
     purpose_mapping = re.search(
@@ -1942,7 +1969,9 @@ def validate_guide(guide: str) -> None:
         '정면·후면·상단·하단·좌측면·우측면 6개',
         '배열 0~1의 정면·후면은 `SOURCE_FRONT`',
         '배열 2~5의 상단·하단·좌측면·우측면은 `SOURCE_SIDE`',
-        '일련번호 사진은 `imageAssetIds`에 포함하지 않으며',
+        '일련번호 사진은 `imageAssetIds`에 포함하지 않습니다.',
+        '신규 분석 요청의 일련번호 문자열은 필수 `serialNumber`로 전달하며',
+        'DB 컬럼을 `NOT NULL`로 바꾸지 않고',
     ):
         if fragment not in current_guidance:
             fail(f'API guide is missing canonical v2 value: {fragment}')
@@ -2003,6 +2032,8 @@ def validate_runtime_migration_docs(
         {
             'six required captures': '정면·후면·상단·하단·좌측면·우측면 총 6슬롯',
             'serial photo excluded': '시리얼 번호 사진은 브라우저 자동 입력용 선택 기능',
+            'required serial text': '신규 분석 요청의 `serialNumber` 텍스트는 필수',
+            'legacy nullable compatibility': 'DB nullable 컬럼은 유지',
             'forward six-view migration': six_view_name,
             'exact-six database guard': '정확히 6장 조건',
             'reverse migration order': '롤백은 008부터 역순',
