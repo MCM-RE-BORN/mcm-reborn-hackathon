@@ -784,6 +784,14 @@ async function analyzeImages(input: CreateAnalysisInput, imageUrls: string[]) {
     if (isAppError(error)) {
       throw error;
     }
+    // The original error is discarded below so it never reaches the client,
+    // but that also erased it from server logs. Log only the safe,
+    // non-sensitive shape (no image URLs, tokens, or provider payloads) so a
+    // provider failure can actually be diagnosed from Vercel/server logs.
+    console.error('[analyzeImages] vision provider threw an unexpected error', {
+      name: error instanceof Error ? error.name : typeof error,
+      message: error instanceof Error ? error.message : String(error),
+    });
     throw new UpstreamError('Analysis provider failed');
   }
 }
