@@ -31,7 +31,7 @@ Rules:
    - Use INELIGIBLE when it is not sufficient to accept an order.
    - estimatePercent is an integer from 0 to 100 and notice must explicitly say this is not an official authenticity determination.
 4. Use UNKNOWN_BAG or UNKNOWN material when uncertain.
-5. conditionGrade meaning: A minimal wear, B moderate localized wear, C significant wear with selected reusable panels, D widespread damage.
+5. conditionGrade describes the dominant reusable surface, not the worst isolated accessory: A has a sufficiently large low-damage main surface; B has visible wear and mainly supports small applications such as pockets, tags, or trim; C has partial damage and only visibly undamaged sections are selectable; D has widespread severe damage in the dominant material and excludes it from production reuse.
 6. overallDamageSeverity is an integer from 0 to 100. Report at most eight distinct visible damages and avoid duplicates across views.
 7. longStripAvailable means a visibly long, continuous, low-damage strip suitable for a strap-like component; use false when uncertain.
 8. confidence must reflect image quality and ambiguity. A visible logo alone does not justify high confidence.
