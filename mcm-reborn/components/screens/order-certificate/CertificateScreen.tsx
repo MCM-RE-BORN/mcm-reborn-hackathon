@@ -137,10 +137,12 @@ export function CertificateScreen({
             description="원본 제품의 AI 분석부터 전문가 실물 검수, 장인 제작과 품질 확인까지의 기록입니다."
             title="업사이클링 여정"
           >
-            <ProgressStepper
-              currentIndex={5}
-              items={["AI 분석", "수거", "실물 검수", "장인 제작", "품질 확인", "Passport"]}
-            />
+            <div className={styles.deliveryStepper}>
+              <ProgressStepper
+                currentIndex={5}
+                items={["AI 분석", "수거", "실물 검수", "장인 제작", "품질 확인", "Passport"]}
+              />
+            </div>
           </Section>
 
           <div className={styles.certificateActions}>
