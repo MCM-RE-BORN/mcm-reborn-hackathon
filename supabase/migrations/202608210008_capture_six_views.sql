@@ -16,6 +16,12 @@ create table if not exists private.mcm_capture_six_view_backup_20260821 (
 revoke all on private.mcm_capture_six_view_backup_20260821
 from public, anon, authenticated;
 
+-- The private schema and explicit revokes already keep this migration backup
+-- out of PostgREST. RLS adds a deny-by-default guard if schema exposure or
+-- grants change later; no client policies are intentionally created.
+alter table private.mcm_capture_six_view_backup_20260821
+  enable row level security;
+
 do $$
 begin
   if exists (
