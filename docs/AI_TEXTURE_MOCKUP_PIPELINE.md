@@ -25,7 +25,7 @@ MVP의 최종 대상은 `RE:BORN 여권 지갑` 외관 하나다. `BODY`가 필�
 
 `LIVE` 분석은 공식 OpenAI JavaScript SDK와 Zod Structured Outputs를 사용한다. 6장 순서는 정면, 후면, 상단, 하단, 좌측면, 우측면이다. 모델은 관찰 가능한 카테고리, 소재, 상태, 손상, 이미지 품질과 연속 영역 신호만 반환하며 재사용률, 면적, 추천 점수, 가격과 탄소 수치는 애플리케이션 규칙이 계산한다.
 
-`MCM_REUSE_GUIDE_2026_08_21_V1`은 전달받은 소재·구성·재사용 참고 자료를 정규화한 prompt grounding이다. 사진 증거를 대체하거나 제품 계열, 진위, 숨은 소재를 추정하는 근거로 사용하지 않는다. 자세한 기준은 [`AI_ANALYSIS_DOMAIN_KNOWLEDGE.md`](./AI_ANALYSIS_DOMAIN_KNOWLEDGE.md)에 기록한다.
+`MCM_REUSE_GUIDE_2026_08_21_V1`은 전달받은 소재·구성·재사용 참고 자료를 정규화한 짧은 prompt grounding이다. 공개 조사본 `MCM_LEATHER_BAGS_PUBLIC_RESEARCH_2026_08_21_V1` 전체는 프롬프트에 넣지 않는다. LIVE 분석이 먼저 서버 전용 `search_mcm_leather_wiki`를 정확히 한 번 호출하고, 결정론적 top-K 결과만 최종 Structured Output 호출에 전달한다. 두 자료 모두 사진 증거를 대체하거나 제품 계열, 진위, 숨은 소재를 추정하는 근거가 아니다. 자세한 기준은 [`AI_ANALYSIS_DOMAIN_KNOWLEDGE.md`](./AI_ANALYSIS_DOMAIN_KNOWLEDGE.md)와 [런타임 위키 계약](./knowledge-base/mcm-leather-bags/RUNTIME_WIKI_KO.md)에 기록한다.
 
 추천은 제품의 필수 면적을 hard gate로 사용하고 면적 여유, 상태, 손상, 패턴 노출, 긴 스트립, 잔여 조각과 고객 희망 용도를 설명 가능한 점수로 합산한다. 이는 제작 BOM과 재단 패턴을 푸는 생산 최적화 ML이 아니라 시연용 휴리스틱이다.
 

@@ -34,6 +34,8 @@
 - `RESEARCH_REPORT_KO.md`: 조사 결과, 타임라인, 한계와 AI 적용 규칙
 - `CRAWL_LOG.md`: 수집 범위와 접근 제약
 - 저장소 루트의 `scripts/validate_mcm_leather_knowledge.py`: ID, 날짜, URL, 참조 무결성 검증
+- 저장소 루트의 `scripts/build_mcm_leather_wiki.py`: 앱이 정적으로 번들할 서버 전용 위키 스냅샷 생성·동기화 검사
+- `RUNTIME_WIKI_KO.md`: LIVE 분석이 전체 자료를 프롬프트에 복사하지 않고 조회하는 방식과 안전 경계
 
 ## 시간 모델
 
@@ -107,9 +109,22 @@
 
 ```text
 python -X utf8 scripts/validate_mcm_leather_knowledge.py
+python -X utf8 scripts/build_mcm_leather_wiki.py --check
 ```
 
-검증기는 저장된 JSON Schema 계약을 모든 레코드에 실제 적용하고, ID·출처 URL·이미지 자산 중복, ISO 날짜, HTTPS 출처, claim·product·image의 출처 참조, 제품의 단일 본체와 부품 역할, 이미지 파일별 유형·공식 채널 URL·원본 페이지, 날짜 근거, 권리 상태, 충돌 그룹과 목표·미확인 값의 AI 사용 제약을 추가로 확인한다.
+검증기는 저장된 JSON Schema 계약을 모든 레코드에 실제 적용하고, ID·출처 URL·이미지 자산 중복, ISO 날짜, HTTPS 출처, claim·product·image의 출처 참조, 제품의 단일 본체와 부품 역할, 이미지 파일별 유형·공식 채널 URL·원본 페이지, 날짜 근거, 권리 상태, 충돌 그룹과 목표·미확인 값의 AI 사용 제약을 추가로 확인한다. 또한 앱의 생성 위키가 `sources.json`·`claims.jsonl`·`products.jsonl`과 레코드 단위로 같고 원본 SHA-256 및 버전이 최신인지 검사한다.
+
+## LIVE 분석의 내부 위키 사용
+
+전체 지식 베이스를 고정 developer prompt에 붙이지 않는다. LIVE 분석은 먼저 제출 사진에서 관찰 가능한 일반 용어만으로 서버 전용 `search_mcm_leather_wiki` 조회를 정확히 한 번 요청한다. 서버의 결정론적 검색기는 최대 6개 항목과 8,000자 이하의 출처·시기·적용 경계만 반환하고, 그 결과를 받은 두 번째 Structured Output 호출이 최종 분석을 만든다.
+
+- 작성 원본: 이 디렉터리의 `sources.json`, `claims.jsonl`, `products.jsonl`
+- 배포 산출물: `mcm-reborn/server/knowledge/mcmLeatherWiki.generated.json`
+- 검색 구현: `mcm-reborn/server/knowledge/mcmLeatherWiki.ts`
+- 감사 정보: 통합 지식 버전, 검색 요청 ID, query hash, 조회 레코드·출처 ID, 전달 컨텍스트 SHA-256
+- 외부 계약: 기존 분석 API·DB 스키마는 바꾸지 않고 `analyses.provider_result` JSON에만 내부 감사 정보를 남긴다.
+
+이미지 263건은 이 위키의 사람용 패턴·소재 참고 레지스트리로 유지한다. `rights_status: unknown_reference_only`이므로 LIVE 분석 검색 결과에는 이미지 URL·바이너리를 넣지 않고, 고객 사진과 공식 이미지를 자동 비교하거나 정품·SKU 판별 데이터로 사용하지 않는다.
 
 ## 저작권·재현성
 

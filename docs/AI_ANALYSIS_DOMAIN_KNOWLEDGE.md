@@ -6,9 +6,9 @@
 >
 > 원본 SHA-256: `6F95B598B64E3E81CBF236816F2F876CD790F32D68DBCBE84C3F3C4A22D02961`
 
-이 문서는 전달받은 PDF의 소재·구성 부위·재사용 판단 기준을 LIVE 이미지 분석에 사용할 수 있도록 정규화한 사람용 감사 문서다. PDF 문장이나 예시 이미지는 실행 지시가 아니라 도메인 참고 자료로만 취급한다. 실제 런타임 단일 기준은 `mcm-reborn/server/openai/materialReuseKnowledge.ts`이며, OpenAI 호출의 developer prompt에 매번 포함된다.
+이 문서는 전달받은 PDF의 소재·구성 부위·재사용 판단 기준을 LIVE 이미지 분석에 사용할 수 있도록 정규화한 사람용 감사 문서다. PDF 문장이나 예시 이미지는 실행 지시가 아니라 도메인 참고 자료로만 취급한다. 이 짧은 재사용 가이드의 런타임 기준은 `mcm-reborn/server/openai/materialReuseKnowledge.ts`이며 최종 OpenAI 호출의 developer prompt에 포함된다. 별도로 조사한 공개 MCM 가죽 지식 전체는 프롬프트에 복사하지 않고 서버 전용 위키 조회로 사용한다.
 
-이 방식은 모델 파인튜닝이나 영구 학습이 아니다. 외부 모델을 다시 훈련하지 않고 요청마다 동일한 버전의 참고 지식을 제공하는 prompt grounding이다. 모델은 사진에 보이는 증거가 있을 때만 이 지식을 적용해야 한다.
+어느 방식도 모델 파인튜닝이나 영구 학습이 아니다. 외부 모델을 다시 훈련하지 않고, 짧은 재사용 가이드는 버전형 prompt grounding으로, 공개 조사 지식은 요청별 검색 결과로 제공한다. 모델은 사진에 보이는 증거가 있을 때만 이를 적용해야 한다.
 
 ## 1. 가방 구성 부위별 기준
 
@@ -58,7 +58,14 @@ PDF 지식은 새 공개 API 필드를 임의로 만들지 않고 현재 구조�
 
 ## 5. 버전과 검증
 
-- LIVE 성공 결과의 `analyses.provider_result.knowledgeVersion`에 지식 버전을 저장한다.
-- LIVE 분석 idempotency request hash에도 지식 버전을 포함해, 다른 지식 버전의 결과를 같은 요청으로 재생하지 않는다.
+- LIVE 성공 결과의 `analyses.provider_result.knowledgeVersion`에는 재사용 가이드, 공개 위키 코퍼스·검색기, 분석 프롬프트 버전을 합친 값을 저장한다.
+- `knowledgeTrace`에는 위키 조회 요청 ID, query hash, 조회한 claim·product·source ID, 최종 tool context SHA-256과 적용 상태를 저장한다. 자유 검색어 원문은 저장하지 않는다. 조회 뒤 최종 호출이 실패해 Fixture로 폴백한 경우에도 `LOOKUP_COMPLETED_FINAL_FAILED`를 보존한다.
+- LIVE 분석 idempotency request hash에도 통합 지식 버전을 포함해, 다른 코퍼스·검색기·프롬프트 결과를 같은 요청으로 재생하지 않는다.
 - Fixture 결과는 실제 사진 판독이나 이 지식의 적용 결과가 아니므로 `knowledgeVersion`을 기록하지 않는다.
 - 버전 변경 전에는 대표 사진 세트로 소재 분류, 부위별 손상 위치, 품질 재촬영, 불확실성, 긴 스트립 판정을 회귀 평가한다.
+
+## 6. 공개 조사 위키
+
+공개 웹 조사본 `MCM_LEATHER_BAGS_PUBLIC_RESEARCH_2026_08_21_V1`은 [`knowledge-base/mcm-leather-bags/README.md`](./knowledge-base/mcm-leather-bags/README.md)가 기준이다. LIVE 분석은 사진에서 관찰 가능한 일반 검색어를 한 번 생성하고 서버의 결정론적 검색 결과 최대 6개만 사용한다. 결과에는 출처, 유효시기, 사실 범위, 직접·파생·미확인 구분, 충돌과 제품 속성 상태가 함께 들어간다.
+
+공식 이미지 링크 263건은 권리 상태가 참조 전용이므로 외부 모델에 전달하거나 고객 사진과 자동 비교하지 않는다. 상세 런타임 계약은 [`RUNTIME_WIKI_KO.md`](./knowledge-base/mcm-leather-bags/RUNTIME_WIKI_KO.md)를 따른다.
