@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef } from "react";
 import { AppShell } from "@/components/layout/AppShell";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -14,12 +14,9 @@ import { DemoLogoutButton } from "./DemoLogoutButton";
 import { DemoStatePanel } from "./DemoStatePanel";
 import {
   applicationStatusToOrderStage,
-  customerFetch,
   readJsonString,
-  type CustomerApplicationDetail,
-  type CustomerApplicationPage,
-  type CustomerMe,
 } from "./customer-client";
+import { useCustomerData } from "./CustomerDataProvider";
 import fieldStyles from "@/components/ui/ui.module.css";
 import styles from "./order-certificate.module.css";
 
@@ -40,46 +37,28 @@ function AccordionChevron() {
 }
 
 export function MyPageScreen({ state }: MyPageScreenProps) {
-  const [profile, setProfile] = useState<CustomerMe | null>(null);
-  const [latestApplication, setLatestApplication] =
-    useState<CustomerApplicationDetail | null>(null);
-  const [hasIssuedCertificate, setHasIssuedCertificate] = useState(false);
-  const [requestError, setRequestError] = useState(false);
+  const { bootstrap, data, revalidateHistory, status } = useCustomerData();
+  const requestedOnEntryRef = useRef(false);
+  const profile = data?.profile ?? null;
+  const latestApplication = data?.latestApplication ?? null;
+  const hasIssuedCertificate =
+    data?.applications.items.some(
+      (application) =>
+        applicationStatusToOrderStage(application.status) === "completed",
+    ) ?? false;
+  const requestError = status === "error" && data === null;
 
   useEffect(() => {
-    let cancelled = false;
-    async function loadProfile() {
-      try {
-        const [me, applications] = await Promise.all([
-          customerFetch<CustomerMe>("/api/v2/me"),
-          customerFetch<CustomerApplicationPage>("/api/v2/applications?size=50"),
-        ]);
-        const latest = applications.items[0];
-        const detail = latest
-          ? await customerFetch<CustomerApplicationDetail>(
-              `/api/v2/applications/${latest.id}`,
-            )
-          : null;
-        const issuedCertificate = applications.items.some(
-          (application) =>
-            applicationStatusToOrderStage(application.status) === "completed",
-        );
-        if (!cancelled) {
-          setProfile(me);
-          setLatestApplication(detail);
-          setHasIssuedCertificate(issuedCertificate);
-        }
-      } catch {
-        if (!cancelled) {
-          setRequestError(true);
-        }
-      }
+    if (state !== "normal" || requestedOnEntryRef.current) {
+      return;
     }
-    void loadProfile();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+    requestedOnEntryRef.current = true;
+    if (data) {
+      void revalidateHistory().catch(() => undefined);
+    } else {
+      void bootstrap().catch(() => undefined);
+    }
+  }, [bootstrap, data, revalidateHistory, state]);
 
   const address = latestApplication?.shippingAddress;
   const addressText = [

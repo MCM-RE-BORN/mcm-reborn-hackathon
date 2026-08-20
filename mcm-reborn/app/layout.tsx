@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { CaptureSessionProvider } from "@/components/screens/entry-capture/CaptureSessionProvider";
+import { CustomerDataProvider } from "@/components/screens/order-certificate/CustomerDataProvider";
 import { OrderDraftProvider } from "@/components/screens/order-certificate/OrderDraftProvider";
 import "./globals.css";
 
@@ -51,9 +52,11 @@ export default function RootLayout({
       </head>
       {/* Browser extensions such as Grammarly may inject body attributes before hydration. */}
       <body suppressHydrationWarning>
-        <CaptureSessionProvider>
-          <OrderDraftProvider>{children}</OrderDraftProvider>
-        </CaptureSessionProvider>
+        <CustomerDataProvider>
+          <CaptureSessionProvider>
+            <OrderDraftProvider>{children}</OrderDraftProvider>
+          </CaptureSessionProvider>
+        </CustomerDataProvider>
       </body>
     </html>
   );

@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef } from "react";
 import { AppShell } from "@/components/layout/AppShell";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -12,13 +12,11 @@ import type { DemoState } from "./demo-state";
 import { DemoStatePanel } from "./DemoStatePanel";
 import {
   applicationStatusToOrderStage,
-  customerFetch,
   readImageUrl,
   type CustomerAnalysisListItem,
-  type CustomerAnalysisPage,
-  type CustomerApplicationPage,
   type CustomerApplicationSummary,
 } from "./customer-client";
+import { useCustomerData } from "./CustomerDataProvider";
 import styles from "./order-certificate.module.css";
 
 type OrdersListScreenProps = {
@@ -30,53 +28,23 @@ type OrdersListScreenProps = {
 };
 
 export function OrdersListScreen({ state, view }: OrdersListScreenProps) {
-  const [applications, setApplications] = useState<
-    CustomerApplicationSummary[] | null
-  >(null);
-  const [analyses, setAnalyses] = useState<CustomerAnalysisListItem[] | null>(
-    null,
-  );
-  const [requestError, setRequestError] = useState(false);
+  const { bootstrap, data, revalidateHistory, status } = useCustomerData();
+  const requestedOnEntryRef = useRef(false);
+  const applications = data?.applications.items ?? null;
+  const analyses = data?.analyses.items ?? null;
+  const requestError = status === "error" && data === null;
 
   useEffect(() => {
-    let cancelled = false;
-    let loading = false;
-    let firstLoad = true;
-    async function loadApplications() {
-      if (loading || document.visibilityState !== "visible") {
-        return;
-      }
-      loading = true;
-      const initialLoad = firstLoad;
-      firstLoad = false;
-      try {
-        const [applicationResponse, analysisResponse] = await Promise.all([
-          customerFetch<CustomerApplicationPage>(
-            "/api/v2/applications?size=50",
-          ),
-          customerFetch<CustomerAnalysisPage>("/api/v2/analyses?size=50"),
-        ]);
-        if (!cancelled) {
-          setApplications(applicationResponse.items);
-          setAnalyses(analysisResponse.items);
-          setRequestError(false);
-        }
-      } catch {
-        if (!cancelled && initialLoad) {
-          setRequestError(true);
-        }
-      } finally {
-        loading = false;
-      }
+    if (state !== "normal" || requestedOnEntryRef.current) {
+      return;
     }
-    void loadApplications();
-    const pollId = window.setInterval(() => void loadApplications(), 3000);
-
-    return () => {
-      cancelled = true;
-      window.clearInterval(pollId);
-    };
-  }, []);
+    requestedOnEntryRef.current = true;
+    if (data) {
+      void revalidateHistory().catch(() => undefined);
+    } else {
+      void bootstrap().catch(() => undefined);
+    }
+  }, [bootstrap, data, revalidateHistory, state]);
 
   return (
     <AppShell
