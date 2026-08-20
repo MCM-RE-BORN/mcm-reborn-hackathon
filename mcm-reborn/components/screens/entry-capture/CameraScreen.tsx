@@ -16,6 +16,7 @@ import { LoadingIndicator } from "@/components/ui/LoadingIndicator";
 import { StatusPanel } from "@/components/ui/StatusPanel";
 import {
   CAPTURE_SLOTS,
+  GENERAL_CAPTURE_SLOTS,
   getCaptureSlot,
   type CaptureSlotId,
 } from "./capture-config";
@@ -277,7 +278,9 @@ export function CameraScreen({
   const [retryKey, setRetryKey] = useState(0);
   const [isCapturing, setIsCapturing] = useState(false);
   const slotConfig = getCaptureSlot(slot);
-  const slotIndex = CAPTURE_SLOTS.findIndex((item) => item.id === slot);
+  const slotIndex = GENERAL_CAPTURE_SLOTS.findIndex(
+    (item) => item.id === slot,
+  );
 
   const stopCurrentStream = useCallback(() => {
     stopStream(streamRef.current);
@@ -620,7 +623,9 @@ export function CameraScreen({
               ) : null}
             </button>
             <span>
-              {slotIndex + 1} / {CAPTURE_SLOTS.length}
+              {slot === "serialNumber"
+                ? "선택"
+                : `${slotIndex + 1} / ${GENERAL_CAPTURE_SLOTS.length}`}
             </span>
           </div>
         </>

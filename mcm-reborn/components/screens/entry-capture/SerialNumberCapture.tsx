@@ -52,32 +52,12 @@ export function SerialNumberCapture({
       className={styles.serialNumberCapture}
     >
       <h3 className={styles.visuallyHidden} id="serial-number-capture-title">
-        시리얼번호 등록
+        시리얼 번호 등록
       </h3>
-
-      <ButtonLink
-        aria-label={`시리얼번호 사진 ${isCaptured ? "다시 " : ""}촬영`}
-        className={styles.captureButton}
-        fullWidth
-        href={`/products/new/camera?slot=serialNumber${completedQuery}`}
-        variant="outline"
-      >
-        <Image
-          alt=""
-          aria-hidden="true"
-          height={31}
-          src="/assets/mvp-beta/icon-barcode.svg"
-          width={50}
-        />
-        <span className={styles.captureButtonCopy}>
-          <strong>시리얼번호 촬영</strong>
-        </span>
-        <span aria-hidden="true" className={styles.captureButtonChevron} />
-      </ButtonLink>
 
       <form className={styles.verificationForm} noValidate onSubmit={handleSubmit}>
         <label className={styles.label} htmlFor="product-serial-number">
-          시리얼번호
+          시리얼 번호 (선택)
         </label>
         <div className={styles.verificationRow}>
           <input
@@ -99,7 +79,6 @@ export function SerialNumberCapture({
             }}
             pattern="(?=.*[A-Za-z])(?=.*[0-9])[A-Za-z0-9]{11}"
             placeholder="예: MK123456789"
-            required
             spellCheck={false}
             value={productDetails.serialNumber}
           />
@@ -122,11 +101,31 @@ export function SerialNumberCapture({
             role={visibleVerification.kind === "error" ? "alert" : "status"}
           >
             {visibleVerification.kind === "success"
-              ? "시리얼번호 인증이 완료되었습니다."
-              : "시리얼번호는 영문과 숫자 11자리로 입력해주세요."}
+              ? "시리얼 번호 인증이 완료되었습니다."
+              : "시리얼 번호는 영문과 숫자 11자리로 입력해주세요."}
           </p>
         ) : null}
       </form>
+
+      <ButtonLink
+        aria-label={`시리얼 번호 사진 ${isCaptured ? "다시 " : ""}촬영하여 입력`}
+        className={styles.captureButton}
+        fullWidth
+        href={`/products/new/camera?slot=serialNumber${completedQuery}`}
+        variant="outline"
+      >
+        <Image
+          alt=""
+          aria-hidden="true"
+          height={31}
+          src="/assets/mvp-beta/icon-barcode.svg"
+          width={50}
+        />
+        <span className={styles.captureButtonCopy}>
+          <strong>시리얼 번호 촬영하여 입력</strong>
+        </span>
+        <span aria-hidden="true" className={styles.captureButtonChevron} />
+      </ButtonLink>
     </section>
   );
 }

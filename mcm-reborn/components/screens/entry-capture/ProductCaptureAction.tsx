@@ -5,7 +5,7 @@ import { useState } from "react";
 import { StickyActionBar } from "@/components/layout/StickyActionBar";
 import { Button } from "@/components/ui/Button";
 import {
-  CAPTURE_SLOTS,
+  GENERAL_CAPTURE_SLOTS,
   MIN_REQUIRED_CAPTURES,
   type CaptureSlotId,
 } from "./capture-config";
@@ -49,9 +49,11 @@ export function ProductCaptureAction({
     setIsSubmitting(true);
     setSubmitError(null);
     try {
-      const orderedCaptures = CAPTURE_SLOTS.map((slot) => captures[slot.id]);
+      const orderedCaptures = GENERAL_CAPTURE_SLOTS.map(
+        (slot) => captures[slot.id],
+      );
       if (orderedCaptures.some((capture) => !capture)) {
-        throw new Error("필수 사진 7장을 모두 등록해 주세요.");
+        throw new Error("필수 사진 6장을 모두 등록해 주세요.");
       }
 
       const presignedAssets: Array<{ assetId: string; headers: Record<string, string>; uploadUrl: string }> = [];
@@ -64,7 +66,9 @@ export function ProductCaptureAction({
             files: chunk.map((capture, chunkIndex) => ({
               contentType: capture!.blob.type === "image/png" ? "image/png" : "image/jpeg",
               fileName: capture!.fileName,
-              purpose: purposeForSlot(CAPTURE_SLOTS[index + chunkIndex].id),
+              purpose: purposeForSlot(
+                GENERAL_CAPTURE_SLOTS[index + chunkIndex].id,
+              ),
               sizeBytes: capture!.blob.size,
             })),
           }),

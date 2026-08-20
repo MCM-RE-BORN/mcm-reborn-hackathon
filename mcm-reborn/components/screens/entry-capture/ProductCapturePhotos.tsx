@@ -5,11 +5,11 @@ import Link from "next/link";
 import { useRef, useState, type ChangeEvent } from "react";
 import { Button } from "@/components/ui/Button";
 import {
-  CAPTURE_SLOTS,
   GENERAL_CAPTURE_SLOTS,
   type CaptureSlotId,
 } from "./capture-config";
 import {
+  captureCount,
   completedCaptureSlotIds,
   isCaptureSlotCompleted,
   nextEmptyCaptureSlot,
@@ -36,7 +36,7 @@ export function ProductCapturePhotos({
   const [isProcessing, setIsProcessing] = useState(false);
   const capturedSlotSet = new Set(capturedSlots);
   const completedSlotIds = completedCaptureSlotIds(captures, capturedSlots);
-  const completedCount = completedSlotIds.length;
+  const completedCount = captureCount(captures, capturedSlots);
   const nextAlbumSlot = nextEmptyCaptureSlot(captures, capturedSlots);
   const completedQuery = completedSlotIds.length
     ? `&completed=${completedSlotIds.join(",")}`
@@ -77,11 +77,11 @@ export function ProductCapturePhotos({
   return (
     <section aria-labelledby="capture-guide-title" className={styles.captureGuide}>
       <h2 className={styles.visuallyHidden} id="capture-guide-title">
-        제품 사진 {completedCount}/{CAPTURE_SLOTS.length}
+        제품 사진 {completedCount}/{GENERAL_CAPTURE_SLOTS.length}
       </h2>
       <p className={styles.visuallyHidden}>
-        정면, 후면, 상단, 하단, 좌측면, 우측면, 시리얼번호를 차례로
-        등록해주세요. 일곱 사진이 모두 필요합니다.
+        정면, 후면, 상단, 하단, 좌측면, 우측면 사진을 차례로 등록해주세요.
+        여섯 사진이 필요하며 시리얼 번호 사진은 선택 사항입니다.
       </p>
 
       <div className={styles.captureGrid}>
@@ -138,8 +138,6 @@ export function ProductCapturePhotos({
         })}
       </div>
 
-      <SerialNumberCapture completedSlotIds={completedSlotIds} />
-
       <div className={styles.captureSecondaryAction}>
         <Button
           aria-describedby="album-selection-note"
@@ -151,8 +149,8 @@ export function ProductCapturePhotos({
           variant="outline"
         >
           {nextAlbumSlot
-            ? `앨범에서 ${nextAlbumSlot.label} 선택`
-            : `사진 ${CAPTURE_SLOTS.length}장 등록 완료`}
+            ? `앨범에서 ${nextAlbumSlot.label} 사진 선택`
+            : `사진 ${GENERAL_CAPTURE_SLOTS.length}장 등록 완료`}
         </Button>
         <input
           accept="image/jpeg,image/png"
@@ -171,9 +169,11 @@ export function ProductCapturePhotos({
         </p>
       </div>
       <p className={styles.captureRule}>
-        정면, 후면, 상단, 하단, 좌측면, 우측면, 시리얼번호 필수 · JPG, PNG
-        7장 · 파일당 최대 10MB
+        정면, 후면, 상단, 하단, 좌측면, 우측면 필수 · JPG, PNG 6장 ·
+        파일당 최대 10MB · 시리얼 번호 사진 선택
       </p>
+
+      <SerialNumberCapture completedSlotIds={completedSlotIds} />
     </section>
   );
 }
