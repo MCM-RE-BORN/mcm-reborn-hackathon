@@ -926,6 +926,20 @@ def validate_products(
                             f"{component_label}: leather coating_polymer must be "
                             "reported or unknown, not not_applicable"
                         )
+                    if material_class == "metal":
+                        for field in {
+                            "animal_species",
+                            "leather_type",
+                            "grain_structure",
+                            "tannage",
+                            "substrate_fiber",
+                            "coating_polymer",
+                        }:
+                            if attribute_state.get(field) != "not_applicable":
+                                errors.append(
+                                    f"{component_label}: metal {field} must be "
+                                    "not_applicable"
+                                )
                 grain = component.get("grain_structure")
                 if isinstance(grain, str) and "nappa" in grain.lower():
                     errors.append(
