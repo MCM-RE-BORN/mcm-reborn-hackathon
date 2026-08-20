@@ -55,12 +55,17 @@ function errorName(error: unknown) {
 }
 
 async function requestCameraStream() {
+  // Only hint the aspect ratio here (a soft "ideal"), not a hard portrait
+  // width/height. Requesting a tall resolution like 1080x1920 forces many
+  // webcams/drivers whose sensors are natively landscape to digitally crop
+  // and upscale their feed to approximate that aspect, which shows up as an
+  // unwanted zoomed-in preview. Cropping to fit the on-screen frame is left
+  // to CSS `object-fit: cover`, which doesn't magnify the image.
   const preferredConstraints: MediaStreamConstraints = {
     audio: false,
     video: {
+      aspectRatio: { ideal: 3 / 4 },
       facingMode: { ideal: "environment" },
-      height: { ideal: 1920 },
-      width: { ideal: 1080 },
     },
   };
 
