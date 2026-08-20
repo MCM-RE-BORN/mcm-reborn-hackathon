@@ -13,6 +13,7 @@ import type { DemoState } from "./demo-state";
 import { DemoLogoutButton } from "./DemoLogoutButton";
 import { DemoStatePanel } from "./DemoStatePanel";
 import {
+  applicationStatusToOrderStage,
   customerFetch,
   readJsonString,
   type CustomerApplicationDetail,
@@ -42,6 +43,7 @@ export function MyPageScreen({ state }: MyPageScreenProps) {
   const [profile, setProfile] = useState<CustomerMe | null>(null);
   const [latestApplication, setLatestApplication] =
     useState<CustomerApplicationDetail | null>(null);
+  const [hasIssuedCertificate, setHasIssuedCertificate] = useState(false);
   const [requestError, setRequestError] = useState(false);
 
   useEffect(() => {
@@ -50,7 +52,7 @@ export function MyPageScreen({ state }: MyPageScreenProps) {
       try {
         const [me, applications] = await Promise.all([
           customerFetch<CustomerMe>("/api/v2/me"),
-          customerFetch<CustomerApplicationPage>("/api/v2/applications?size=1"),
+          customerFetch<CustomerApplicationPage>("/api/v2/applications?size=50"),
         ]);
         const latest = applications.items[0];
         const detail = latest
@@ -58,9 +60,14 @@ export function MyPageScreen({ state }: MyPageScreenProps) {
               `/api/v2/applications/${latest.id}`,
             )
           : null;
+        const issuedCertificate = applications.items.some(
+          (application) =>
+            applicationStatusToOrderStage(application.status) === "completed",
+        );
         if (!cancelled) {
           setProfile(me);
           setLatestApplication(detail);
+          setHasIssuedCertificate(issuedCertificate);
         }
       } catch {
         if (!cancelled) {
@@ -82,10 +89,9 @@ export function MyPageScreen({ state }: MyPageScreenProps) {
     .filter(Boolean)
     .join(" ");
   const phone = readJsonString(address, "phone");
-  const certificateHref =
-    latestApplication?.effectiveStatus === "COMPLETED"
-      ? `/certificates/demo?applicationId=${latestApplication.id}&state=issued`
-      : "/certificates/demo?state=locked";
+  const certificateHref = hasIssuedCertificate
+    ? "/orders?view=applications"
+    : "/certificates/demo?state=locked";
 
   return (
     <AppShell

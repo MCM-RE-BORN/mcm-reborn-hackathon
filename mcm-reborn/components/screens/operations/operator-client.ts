@@ -129,14 +129,11 @@ export class OperatorApiError extends Error {
   }
 }
 
-let sessionPromise: Promise<OperatorSession> | null = null;
-
 export function clearOperatorSession() {
   if (typeof window !== "undefined") {
     window.sessionStorage.removeItem(OPERATOR_SESSION_KEY);
     window.dispatchEvent(new Event(OPERATOR_SESSION_EVENT));
   }
-  sessionPromise = null;
 }
 
 export function hasOperatorSession(): boolean {
@@ -156,21 +153,16 @@ export async function getOperatorSession(): Promise<OperatorSession> {
     throw new OperatorApiError("운영자 세션은 브라우저에서만 사용할 수 있습니다.", 0);
   }
 
-  if (sessionPromise) {
-    return sessionPromise;
-  }
-
   const stored = readStoredSession();
   if (stored) {
     return stored;
   }
 
-  sessionPromise = loginOperator();
-  try {
-    return await sessionPromise;
-  } finally {
-    sessionPromise = null;
-  }
+  // Every OPERATOR route requires an explicit, credentialed login via
+  // OperatorLoginPanel. This must never fall back to the demo account on its
+  // own, or any visitor who loads /operations would be silently signed in
+  // as OPERATOR without entering credentials.
+  throw new OperatorApiError("운영자 로그인이 필요합니다.", 401);
 }
 
 export async function loginOperatorCredentials(
@@ -217,7 +209,6 @@ export async function loginOperatorCredentials(
     },
   };
   storeOperatorSession(result);
-  sessionPromise = null;
   return result;
 }
 
@@ -284,51 +275,6 @@ export function readOperatorImageUrl(value: unknown): string | null {
   const record = readRecord(value);
   const url = record?.url;
   return typeof url === "string" && url.trim() ? url : null;
-}
-
-function loginOperator(): Promise<OperatorSession> {
-  return fetch("/api/v2/auth/demo-login", {
-    body: JSON.stringify({ demoAccount: "OPERATOR" }),
-    headers: { "Content-Type": "application/json" },
-    method: "POST",
-    cache: "no-store",
-  }).then(async (response) => {
-    const payload = await response.json().catch(() => null);
-    if (!response.ok) {
-      const message =
-        readString(readRecord(payload)?.error, "message") ??
-        "운영자 인증을 완료하지 못했습니다.";
-      throw new OperatorApiError(message, response.status);
-    }
-
-    const session = payload?.session;
-    const user = payload?.user;
-    if (
-      !session ||
-      typeof session.accessToken !== "string" ||
-      typeof session.expiresAt !== "string" ||
-      !user ||
-      user.role !== "OPERATOR" ||
-      typeof user.id !== "string" ||
-      typeof user.email !== "string" ||
-      typeof user.displayName !== "string"
-    ) {
-      throw new OperatorApiError("운영자 인증 응답이 올바르지 않습니다.", 502);
-    }
-
-    const result: OperatorSession = {
-      accessToken: session.accessToken,
-      expiresAt: session.expiresAt,
-      user: {
-        displayName: user.displayName,
-        email: user.email,
-        id: user.id,
-        role: "OPERATOR",
-      },
-    };
-    storeOperatorSession(result);
-    return result;
-  });
 }
 
 function storeOperatorSession(session: OperatorSession) {

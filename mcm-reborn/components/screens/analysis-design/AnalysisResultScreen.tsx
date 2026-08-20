@@ -19,6 +19,7 @@ import {
 
 type AnalysisResultScreenProps = {
   analysisId?: string;
+  backHref?: string;
   ineligibleReason?: "precheck" | "quality";
   state: DemoState;
 };
@@ -59,6 +60,7 @@ function IneligibleAnalysis({
 
 export function AnalysisResultScreen({
   analysisId,
+  backHref = "/products/new",
   ineligibleReason,
   state,
 }: AnalysisResultScreenProps) {
@@ -88,7 +90,7 @@ export function AnalysisResultScreen({
 
   if (state !== "normal") {
     return (
-      <AppShell header={<PageHeader backHref="/products/new" title="AI 예상 재활용률" />}>
+      <AppShell header={<PageHeader backHref={backHref} title="AI 예상 재활용률" />}>
         <div className={styles.statePage}>
           <DemoStatePanel
             actionHref="/submissions/demo"
@@ -103,7 +105,7 @@ export function AnalysisResultScreen({
 
   if (ineligibleReason) {
     return (
-      <AppShell header={<PageHeader backHref="/products/new" title="신청 전 확인" />}>
+      <AppShell header={<PageHeader backHref={backHref} title="신청 전 확인" />}>
         <IneligibleAnalysis reason={ineligibleReason} />
       </AppShell>
     );
@@ -111,7 +113,7 @@ export function AnalysisResultScreen({
 
   if (requestError || !analysisId) {
     return (
-      <AppShell header={<PageHeader backHref="/products/new" title="AI 예상 재활용률" />}>
+      <AppShell header={<PageHeader backHref={backHref} title="AI 예상 재활용률" />}>
         <div className={styles.statePage}>
           <DemoStatePanel
             actionHref="/products/new"
@@ -126,7 +128,7 @@ export function AnalysisResultScreen({
 
   if (!analysis) {
     return (
-      <AppShell header={<PageHeader backHref="/products/new" title="AI 예상 재활용률" />}>
+      <AppShell header={<PageHeader backHref={backHref} title="AI 예상 재활용률" />}>
         <div className={styles.statePage}>
           <StatusPanel
             description="Supabase에 저장된 분석 결과를 불러오고 있습니다."
@@ -141,7 +143,7 @@ export function AnalysisResultScreen({
   const isIneligible = analysis.authenticityPrecheck?.status === "INELIGIBLE";
   if (isIneligible) {
     return (
-      <AppShell header={<PageHeader backHref="/products/new" title="신청 전 확인" />}>
+      <AppShell header={<PageHeader backHref={backHref} title="신청 전 확인" />}>
         <IneligibleAnalysis reason="precheck" />
       </AppShell>
     );
@@ -156,7 +158,7 @@ export function AnalysisResultScreen({
           </ButtonLink>
         </StickyActionBar>
       }
-      header={<PageHeader backHref="/products/new" title="AI 예상 재활용률" />}
+      header={<PageHeader backHref={backHref} title="AI 예상 재활용률" />}
     >
       <div className={styles.analysisContent}>
         <RecycleGauge
