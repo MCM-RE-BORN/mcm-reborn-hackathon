@@ -1,7 +1,6 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
 import { useEffect, useState } from "react";
 import { AppShell } from "@/components/layout/AppShell";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -22,13 +21,11 @@ type CertificateScreenProps = {
     DemoState,
     "normal" | "loading" | "empty" | "error" | "permission" | "locked"
   >;
-  verification?: "nfc" | "qr";
 };
 
 export function CertificateScreen({
   applicationId,
   state,
-  verification,
 }: CertificateScreenProps) {
   const [certificate, setCertificate] = useState<CustomerCertificate | null>(null);
   const [requestError, setRequestError] = useState(false);
@@ -59,8 +56,6 @@ export function CertificateScreen({
   const backHref = applicationId
     ? `/orders/demo?applicationId=${applicationId}`
     : "/orders";
-  const verificationHref = (kind: "nfc" | "qr") =>
-    `/certificates/demo?applicationId=${applicationId ?? ""}&state=issued&verify=${kind}#passport-verification`;
 
   return (
     <AppShell header={<PageHeader backHref={backHref} />}>
@@ -146,38 +141,6 @@ export function CertificateScreen({
               currentIndex={5}
               items={["AI 분석", "수거", "실물 검수", "장인 제작", "품질 확인", "Passport"]}
             />
-          </Section>
-
-          <Section
-            description="제품에 적용될 NFC·QR 검증 화면을 미리 확인할 수 있습니다."
-            title="보증서 검증 미리보기"
-          >
-            <div className={styles.passportEntryGrid}>
-              <Link className={styles.passportEntry} href={verificationHref("nfc")}>
-                <span aria-hidden="true" className={styles.nfcMark}>NFC</span>
-                <span>NFC 화면 미리보기</span>
-              </Link>
-              <Link className={styles.passportEntry} href={verificationHref("qr")}>
-                <Image
-                  alt=""
-                  aria-hidden="true"
-                  className={styles.passportBarcode}
-                  height={15}
-                  src="/assets/mvp-beta/icon-barcode.svg"
-                  width={18}
-                />
-                <span>QR 화면 미리보기</span>
-              </Link>
-            </div>
-            {verification ? (
-              <div className={styles.verificationPanel} id="passport-verification">
-                <StatusPanel
-                  description={`보증서 번호 ${certificate.certificateNumber}와 검증 코드 ${certificate.verificationCode}를 표시합니다. 실제 태그 스캔이나 외부 검증은 수행하지 않습니다.`}
-                  title="검증 화면 미리보기"
-                  tone="permission"
-                />
-              </div>
-            ) : null}
           </Section>
 
           <div className={styles.certificateActions}>
