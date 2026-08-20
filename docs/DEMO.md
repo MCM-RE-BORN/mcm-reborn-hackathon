@@ -10,7 +10,7 @@
 - 화면과 발표에서 AI 값은 사진 기반 예상, 결제·물류·탄소·보증서는 Mock임을 밝힌다.
 - 주문 전에는 정품·제작 가능·원단 활용·견적을 확정 표현으로 말하지 않는다.
 - 공식 장인 실물 검수는 주문·Mock 결제와 제품 수거가 끝난 뒤에만 수행한다.
-- 기본 브라우저 데모는 외부 API를 호출하지 않고 `DEMO_FIXTURE`와 기본 여권 지갑 GLB로 같은 주문과 보증서까지 진행한다. 별도 동의·키·배포 gate가 준비된 경우에만 OpenAI 분석·외관 소재 계획과 Meshy source/target 작업을 선택적으로 시연하며, 항상 같은 Fixture·기본 GLB 복구 경로를 유지한다.
+- 기본 브라우저 데모는 외부 API를 호출하지 않고 `DEMO_FIXTURE`와 여권 지갑 전면 placeholder로 같은 주문과 보증서까지 진행한다. 통합 동의·키·배포 gate가 준비된 경우에만 사용자가 목업 화면 버튼을 눌러 OpenAI 외관 소재 계획과 Meshy source/target 작업을 선택적으로 시연한다. 생성 전·중·실패에는 placeholder를 유지하고 최종 텍스처 적용 뒤에만 3D를 공개한다.
 
 ## 중앙 시나리오 빠른 참조
 
@@ -40,7 +40,7 @@
 
 현재 고객·운영 브라우저 여정에는 Supabase 환경변수와 적용된 schema·migration·Auth 역할 연결이 필요하다. 분석을 `DEMO_FIXTURE`로 실행하면 OpenAI 키는 필요하지 않다. `.env.example`을 `mcm-reborn/.env.local`로 복사하고 Supabase URL·publishable key·service role key를 설정한다. 서버 전용인 `SUPABASE_SERVICE_ROLE_KEY`와 `OPENAI_API_KEY`에는 절대 `NEXT_PUBLIC_` 접두사를 붙이지 않는다.
 
-선택형 OpenAI/Meshy 외관 목업의 키, 공개 GLB, 별도 동의, 보존 기간, quota와 비용 준비는 [`AI_TEXTURE_MOCKUP_PIPELINE.md`](./AI_TEXTURE_MOCKUP_PIPELINE.md)를 따른다. 단일 `외관 목업 생성` 버튼은 기본값 `ENABLE_TEXTURE_AI=false`에서 비활성이다.
+선택형 OpenAI/Meshy 외관 목업의 키, 공개 GLB, 분석 접수 시 통합 동의, 보존 기간, quota와 비용 준비는 [`AI_TEXTURE_MOCKUP_PIPELINE.md`](./AI_TEXTURE_MOCKUP_PIPELINE.md)를 따른다. 단일 `외관 목업 생성` 버튼은 기본값 `ENABLE_TEXTURE_AI=false`에서 비활성이다. 분석 생성만으로 외관 작업을 자동 시작하지 않는다.
 
 ```powershell
 Copy-Item .\.env.example .\mcm-reborn\.env.local
@@ -69,10 +69,10 @@ npm --prefix mcm-reborn run build
 1. 서비스 소개를 거쳐 홈의 실제 hero 영상과 `상품 진단하기` CTA를 확인하고 CTA를 선택한다.
 2. 모바일 카메라를 열어 정면 사진을 촬영하고 미리보기에서 `이 사진 사용`을 선택한다.
 3. 후면·상단·하단·좌측면·우측면 사진을 차례로 추가해 필수 6슬롯을 모두 채운다. 필요하면 시리얼 번호를 촬영해 입력란 자동 채우기를 시연한다.
-4. 카테고리 가방, 2019년, 5년 이상, 희망 제품 RE:BORN 여권지갑을 확인하고 `AI 분석 접수하기`를 누른다.
+4. 카테고리 가방, 2019년, 5년 이상, 희망 제품 RE:BORN 여권지갑을 확인한다. OpenAI 분석과 이후 목업 버튼 클릭 시 OpenAI/Meshy 외관 생성·보존·비용성 호출을 함께 설명하는 R4 통합 안내에 동의한 뒤 `AI 분석 접수하기`를 누른다.
 5. 최초 접수에서 `SUBMITTED → AI_ANALYZING`을 1~2초 보여 준 뒤 접수 `SUB-RB-20260817-0001`의 결과를 연다. 이후 접수 현황에 재진입하면 AI 결과로 바로 이동하는지 확인한다.
 6. 외관·손상·오염, 예상 재활용 가능률 72%, 정품 사전 적합도 예상 91%를 보여 준다. 91%가 정품 확정이 아님을 설명한다.
-7. 추천 화면의 `트래블·지갑·파우치·키링` 탭을 전환한다. 트래블의 `여권 지갑` 카드만 선택해 RE:BORN 여권지갑 목업으로 이동한다. 외부 키 없이 기본 GLB가 표시되는지 확인한다. 외부 provider를 준비한 시연에서만 별도 동의 후 `외관 목업 생성`을 한 번 누르고 외관 4면, 소재 계획, 선택형 source 3D, 목표 UV, 외피 마스크 합성 단계를 확인한 뒤 기본/맞춤 외관을 비교한다.
+7. 추천 화면의 `트래블·지갑·파우치·키링` 탭을 전환한다. 트래블의 `여권 지갑` 카드만 선택해 RE:BORN 여권지갑 목업으로 이동하고 전면 placeholder가 표시되는지 확인한다. 외부 provider를 준비한 시연에서만 `외관 목업 생성`을 한 번 누른다. 화면에는 분석 결과·외관 4면·소재 분류·5단계 절차 대신 진행률과 최소 상태만 표시한다. 생성 텍스처가 스티치 보존 마스크를 거쳐 PNG로 합성되고 실제 3D material에 적용된 뒤에만 회전 가능한 3D가 나타나는지 확인하고, 이후 기본/맞춤 외관을 비교한다.
 8. 수거 정보를 입력하고 최초 예상 제작비 180,000원, 수거 무료, 실물 검수 후 변경 가능 안내를 확인한다.
 9. Mock 결제를 완료하고 주문 `RB-20260817-0001`, `ORDER_PLACED`를 보여 준다.
 10. 하단 `신청 내역`을 선택해 `/orders` 목록을 열고 `RE:BORN 여권지갑`을 선택해 `/orders/demo` 상세로 이동한다. 진행 상태와 배송 정보의 인접 점이 선으로 연결되어 있는지 확인한다.
@@ -95,7 +95,7 @@ npm --prefix mcm-reborn run build
 - 카메라 권한 거부: 권한 안내 뒤 `기기에서 사진 선택`으로 복구한다.
 - 사진 부족·형식·용량: JPG/JPEG·PNG, 필수 6면 6장, 장당 10MB 기준과 남은 슬롯을 안내한다.
 - 사진 품질 미달: 준비된 품질 미달 상태에서 `422 IMAGE_QUALITY_INSUFFICIENT` 계약과 이미지별 재촬영 안내를 설명한다. 현재 앱이 실제 사진 품질 API를 실행한다고 말하지 않는다.
-- OpenAI/Meshy 제공자 오류: 분석은 `DEMO_FIXTURE`, 목업은 기본 여권 지갑 GLB로 복구한다. 유료 요청을 연속 클릭하지 않고 동일 job token으로 상태를 재확인하며, source 3D 실패는 target 작업 실패로 표현하지 않는다.
+- OpenAI/Meshy 제공자 오류: 분석은 `DEMO_FIXTURE`로 복구하고 목업은 전면 placeholder를 유지한다. 유료 요청을 연속 클릭하지 않고 동일 job token으로 상태를 재확인하며, source 3D 실패는 target 작업 실패로 표현하지 않는다.
 - AI 비대상: `AI_INELIGIBLE`을 공식 가품 판정이 아니라 사진·정보 기반 사전 접수 불가로 표현한다.
 - 변경 조건 거절: `CHANGE_APPROVAL_REQUIRED → CANCELED`와 Mock 결제 취소·환불 안내를 보여 준다.
 - 제작 불가: `/orders/demo?stage=canceled&reason=production-unavailable`에서 `PRODUCTION_UNAVAILABLE → CANCELED`와 상담·Mock 환불 경로를 보여 준다.
@@ -108,10 +108,10 @@ npm --prefix mcm-reborn run build
 |---|---|
 | 카메라 권한·장치 오류 | 파일 선택 폴백 또는 준비한 필수 구도 JPG/PNG 6장 사용 |
 | 사진 품질 미달 | 안내된 슬롯만 재촬영. 품질 오류를 Fixture 성공으로 위장하지 않음 |
-| OpenAI/Meshy 지연·오류 | 분석은 `DEMO_FIXTURE`, 목업은 기본 GLB로 복구하고 동일 유료 job을 새로 만들지 않음 |
+| OpenAI/Meshy 지연·오류 | 분석은 `DEMO_FIXTURE`, 목업은 전면 placeholder를 유지하고 동일 유료 job을 새로 만들지 않음 |
 | 분석 화면 진행 지연 | 접수 ID를 유지한 준비된 `AI_COMPLETED` 상태로 이동 |
 | 타임라인 진행 지연 | 빠른 데모 프로필 또는 준비된 상태 전이 사용 |
-| Storage 실패 | 현재는 Storage를 사용하지 않으므로 준비된 로컬 데모 자산으로 복구. 실제 Storage 연동 후 같은 슬롯·접수 연결을 검증 |
+| 파생 텍스처 Storage 실패 | 전면 placeholder를 유지하고 같은 task token·멱등 키로 파생 자산을 다시 확인. 새 유료 job은 만들지 않음 |
 | 변경 승인 처리 실패 | 준비된 `CHANGE_APPROVAL_REQUIRED`와 승인 완료 fixture로 복구 |
 | 네트워크 불안정 | 로컬 Fixture로 주문·보증서까지 완주하고 실제 연동은 녹화로 보조 |
 
@@ -138,8 +138,9 @@ npm --prefix mcm-reborn run build
 - [ ] JPG/JPEG·PNG, 필수 구도 6장, 장당 10MB 규칙이 UI와 계약에 일치한다.
 - [ ] `/operations` 목록→상세→다음 단계 진행과 관리자·장인 담당 표시를 PC 폭에서 확인했다.
 - [ ] 접수 `SUB-RB-20260817-0001`에서 72%·91% 예상치가 일관되게 표시된다.
-- [ ] 추천 순위·사유가 실제 API 제품과 분석 정보를 반영하고, 여권지갑 목업에서 추출·반복 텍스처와 GLB 결합을 비교했다.
-- [ ] 외부 texture 기능을 켠 경우 R2 동의, provider별 일회 생성, Meshy 상태 복구와 로컬 GLB 폴백을 확인했다.
+- [ ] 추천 순위·사유가 실제 API 제품과 분석 정보를 반영하고, 여권지갑 목업은 완료 전 placeholder와 완료 후 맞춤 3D를 명확히 구분한다.
+- [ ] 외부 texture 기능을 켠 경우 분석 접수의 R4 통합 동의, 버튼 시작, provider별 일회 생성과 Meshy 상태 복구를 확인했다.
+- [ ] 최종 atlas는 `stitch-preserve-mask.png`를 우선 적용해 원본 스티치 RGB를 보존하며 PNG로 합성되고, 실제 적용 전에는 3D가 공개되지 않는다.
 - [ ] 91%가 정품 확정이 아니라는 안내가 있다.
 - [ ] Mock 결제 뒤 주문 `RB-20260817-0001`이 생성된다.
 - [ ] 전문가 실물 검수는 `PRODUCT_RECEIVED` 뒤에만 나타난다.
@@ -148,6 +149,6 @@ npm --prefix mcm-reborn run build
 - [ ] 승인 뒤 제작·품질·배송·완료가 같은 주문으로 이어진다.
 - [ ] OpenAPI와 `mock-data.json`의 배송 Fixture가 `DEMO-RB-20260817-0001`, `DELIVERED`로 일치한다.
 - [ ] `COMPLETED` 뒤 보증서 `ESG-RB-20260817-0001`, 68%, 3.43kg CO2e가 표시된다.
-- [ ] 현재 인증·외부 API·Storage 미연동 사실과 `DEMO_FIXTURE` 복구 경계를 발표자에게 공유했다.
+- [ ] 실제 외부 API 호출을 검증한 환경과 `DEMO_FIXTURE` 복구 경계를 발표자에게 공유했다.
 - [ ] 비밀값·개인정보가 화면과 로그에 노출되지 않는다.
 - [ ] 데모 값과 Mock 기능 표시를 확인했다.
