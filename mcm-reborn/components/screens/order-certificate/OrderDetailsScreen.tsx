@@ -363,7 +363,7 @@ export function OrderDetailsScreen({
       ) : !application || !changeRequestResolved || !stage || !stageCopy ? (
         <div className={styles.stateInset}>
           <StatusPanel
-            description="Supabase에서 신청 상태와 분석 결과를 불러오고 있습니다."
+            description="정보를 불러오고 있습니다."
             title="신청 상세를 확인하고 있어요"
             tone="permission"
           />
