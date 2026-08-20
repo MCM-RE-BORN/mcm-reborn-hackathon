@@ -53,7 +53,7 @@
 }
 
 .statusCardHeader strong {
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
   font-size: var(--font-size-control);
   font-weight: var(--font-weight-semibold);
   line-height: var(--line-height-tight);
@@ -120,7 +120,7 @@
 }
 
 .sourceSummaryCopy h2 {
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
   font-size: var(--font-size-body);
   font-weight: var(--font-weight-semibold);
   line-height: var(--line-height-tight);
@@ -412,7 +412,7 @@
   font-size: var(--font-size-label);
   font-weight: var(--font-weight-regular);
   line-height: var(--line-height-tight);
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 
 .recommendationMetrics {

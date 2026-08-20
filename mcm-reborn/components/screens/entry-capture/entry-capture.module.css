@@ -42,8 +42,36 @@
   background: rgb(18 18 18 / 48%);
 }
 
+.startBrand {
+  position: absolute;
+  z-index: 1;
+  top: 45%;
+  right: var(--layout-gutter);
+  left: var(--layout-gutter);
+  display: grid;
+  justify-items: center;
+  gap: var(--space-2);
+  color: var(--color-canvas);
+  text-align: center;
+  transform: translateY(-50%);
+}
+
+.startBrand h1 {
+  font-size: var(--font-size-display);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-relaxed);
+  letter-spacing: var(--letter-spacing-tight);
+}
+
+.startBrand p {
+  font-size: var(--font-size-control);
+  font-weight: var(--font-weight-light);
+  line-height: var(--line-height-tight);
+}
+
 .startTagline {
   position: absolute;
+  z-index: 1;
   right: var(--layout-gutter);
   bottom: calc(var(--safe-area-bottom) + var(--space-25));
   left: var(--layout-gutter);
@@ -56,6 +84,7 @@
 
 .startTransitionStatus {
   position: absolute;
+  z-index: 1;
   right: var(--layout-gutter);
   bottom: calc(var(--safe-area-bottom) + var(--space-9));
   left: var(--layout-gutter);

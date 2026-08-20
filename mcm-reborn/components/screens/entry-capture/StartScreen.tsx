@@ -80,7 +80,10 @@ export function StartScreen({ bootstrapCustomer = false }: StartScreenProps) {
           src="/assets/mvp-beta/intro-start-hero.png"
         />
         <span aria-hidden="true" className={styles.startScrim} />
-        <h1 className={styles.visuallyHidden}>MCM RE:BORN</h1>
+        <div className={styles.startBrand}>
+          <h1>MCM RE:BORN</h1>
+          <p>MODERN CREATION, REBORN</p>
+        </div>
         <span className={styles.startTagline}>
           EST 1976. HERITAGE UPCYCLING
         </span>
