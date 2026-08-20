@@ -595,7 +595,7 @@
 .consentGroup label {
   display: flex;
   min-height: var(--touch-target-min);
-  align-items: center;
+  align-items: flex-start;
   gap: var(--space-7);
   color: var(--color-ink-soft);
   font-size: var(--font-size-body);

@@ -290,7 +290,7 @@
   grid-template-columns: minmax(var(--space-0), 1fr) minmax(var(--space-0), 2fr);
   gap: var(--space-9);
   min-height: var(--space-17);
-  align-items: center;
+  align-items: start;
   padding-block: var(--space-4);
   font-size: var(--font-size-body);
   line-height: var(--line-height-tight);
@@ -389,7 +389,8 @@
 .stepper {
   position: relative;
   display: grid;
-  grid-template-columns: repeat(var(--step-count), minmax(var(--space-0), 1fr));
+    --grid-step-columns: repeat(var(--step-count), minmax(var(--space-0), 1fr));
+    grid-template-columns: var(--grid-step-columns);;
   width: 100%;
 }
 
