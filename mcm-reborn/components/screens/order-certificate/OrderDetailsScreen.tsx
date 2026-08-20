@@ -365,7 +365,7 @@ export function OrderDetailsScreen({
           <StatusPanel
             description="정보를 불러오고 있습니다."
             title="신청 상세를 확인하고 있어요"
-            tone="permission"
+            tone="loading"
           />
         </div>
       ) : (

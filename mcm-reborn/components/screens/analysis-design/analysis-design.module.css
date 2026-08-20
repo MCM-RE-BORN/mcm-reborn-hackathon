@@ -198,6 +198,8 @@
   position: absolute;
   inset: var(--space-0);
   display: grid;
+  align-content: center;
+  gap: var(--space-5);
   place-items: center;
   font-size: var(--font-size-metric);
   font-weight: var(--font-weight-bold);
@@ -476,6 +478,11 @@
   place-items: center;
   color: var(--color-muted);
   font-size: var(--font-size-label);
+}
+
+.modelViewerLoadingSpinner {
+  width: var(--control-height-sm);
+  height: var(--control-height-sm);
 }
 
 .modelViewerFallback {

@@ -337,7 +337,7 @@
   color: var(--color-danger);
 }
 
-.statusSpinner {
+.loadingIndicator {
   display: inline-block;
   width: var(--control-height-xl);
   height: var(--control-height-xl);

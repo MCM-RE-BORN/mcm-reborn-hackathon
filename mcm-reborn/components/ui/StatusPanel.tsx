@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { LoadingIndicator } from "./LoadingIndicator";
 import styles from "./ui.module.css";
 
 export type StatusTone =
@@ -40,7 +41,7 @@ export function StatusPanel({
       role={isUrgent ? "alert" : "status"}
     >
       {isLoading ? (
-        <span aria-hidden="true" className={styles.statusSpinner} />
+        <LoadingIndicator />
       ) : (
         <span aria-hidden="true" className={styles.statusMark}>
           {MARKS[tone]}
