@@ -1,8 +1,11 @@
 # MCM 가죽 가방 공개 지식 베이스
 
-버전: `MCM_LEATHER_BAGS_PUBLIC_RESEARCH_2026_08_21_V1`  
-조사 기준일: `2026-08-21` (Asia/Seoul)  
-언어: 한국어 요약, 원문 용어 병기  
+버전: `MCM_LEATHER_BAGS_PUBLIC_RESEARCH_2026_08_21_V1`
+
+조사 기준일: `2026-08-21` (Asia/Seoul)
+
+언어: 한국어 요약, 원문 용어 병기
+
 범위: 공개 웹에서 검증 가능한 MCM 가방의 패턴, 패턴 디자인, 소재, 구조 설계, 가죽 종류, 조달 및 공정
 
 ## 목적
@@ -27,7 +30,7 @@
 - `data/products.jsonl`: 대표 공식 SKU의 부품별 소재·구조 스냅샷
 - `RESEARCH_REPORT_KO.md`: 조사 결과, 타임라인, 한계와 AI 적용 규칙
 - `CRAWL_LOG.md`: 수집 범위와 접근 제약
-- `scripts/validate_mcm_leather_knowledge.py`: ID, 날짜, URL, 참조 무결성 검증
+- 저장소 루트의 `scripts/validate_mcm_leather_knowledge.py`: ID, 날짜, URL, 참조 무결성 검증
 
 ## 시간 모델
 
@@ -87,6 +90,16 @@
 - 2024 보고서는 2024년 가죽을 100% LWG Gold/Silver 제혁소에서 조달했다고 주장하지만, 현재 지속가능성 페이지에는 최소 78%라는 값이 함께 남아 있다. `conflict_group_id`로 묶고 덮어쓰지 않는다.
 - 2024 소재 로드맵은 코팅 캔버스를 과거 표준 PVC, 2024년 lower-impact PU로 설명하지만 개별 SKU의 코팅 수지는 보통 공개하지 않는다.
 - 일반 공정은 가능한 공정 지식일 뿐, 개별 MCM SKU의 확정 라우팅이나 BOM이 아니다.
+
+## 검증
+
+저장소 루트에서 표준 라이브러리만 사용하는 검증기를 실행한다.
+
+```text
+python -X utf8 scripts/validate_mcm_leather_knowledge.py
+```
+
+검증기는 JSON/JSONL 파싱, ID 중복, ISO 날짜, HTTPS 출처, claim·product의 출처 참조, 충돌 그룹과 목표·미확인 값의 AI 사용 제약을 확인한다.
 
 ## 저작권·재현성
 
