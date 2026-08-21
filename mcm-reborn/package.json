@@ -7,7 +7,6 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test:openai-policy": "node --test server/openai/openAiRequestPolicy.test.mjs",
     "typecheck": "tsc --noEmit --incremental false"
   },
   "dependencies": {
