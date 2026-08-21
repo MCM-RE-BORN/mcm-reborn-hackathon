@@ -9,6 +9,25 @@ export interface VisionAnalyzeInput {
   demoScenarioKey?: string | null;
 }
 
+export interface VisionKnowledgeTrace {
+  applicationStatus:
+    | 'APPLIED_TO_LIVE_RESULT'
+    | 'LOOKUP_EMPTY_SAFETY_USED'
+    | 'LOOKUP_FAILED_SAFETY_USED'
+    | 'LOOKUP_COMPLETED_FINAL_FAILED';
+  alwaysOnRecordIds: string[];
+  contextSha256: string | null;
+  lookupRequestId: string | null;
+  promptVersion: string;
+  queryHash: string | null;
+  retrievedRecordIds: string[];
+  retrievedSourceIds: string[];
+  reuseGuideVersion: string;
+  wikiCorpusVersion: string;
+  wikiCorpusSha256: string;
+  wikiRetrieverVersion: string;
+}
+
 export interface FixtureEstimateOverrides {
   authenticityPrecheck: BagVisionResult['authenticityPrecheck'];
   esgPreview: {
@@ -38,6 +57,8 @@ export interface VisionAnalyzeResult {
   model: string;
   providerRequestId: string | null;
   modeUsed: AnalysisModeUsed;
+  knowledgeVersion?: string;
+  knowledgeTrace?: VisionKnowledgeTrace;
   fixtureEstimate?: FixtureEstimateOverrides;
   warnings?: Array<{ code: string; message: string }>;
 }
@@ -56,5 +77,16 @@ export class VisionImageQualityError extends Error {
   ) {
     super('IMAGE_QUALITY_INSUFFICIENT');
     this.name = 'VisionImageQualityError';
+  }
+}
+
+export class VisionWikiGroundingError extends Error {
+  constructor(
+    public readonly knowledgeTrace: VisionKnowledgeTrace,
+    cause: unknown,
+  ) {
+    super(cause instanceof Error ? cause.message : 'OPENAI_FINAL_ANALYSIS_FAILED');
+    this.name = 'VisionWikiGroundingError';
+    this.cause = cause;
   }
 }

@@ -9,14 +9,13 @@ import { StatusPanel } from "@/components/ui/StatusPanel";
 import { DemoStatePanel } from "./DemoStatePanel";
 import {
   RECOMMENDATION_CATEGORIES,
-  RECOMMENDATION_PRODUCTS,
-  DEMO_PASSPORT_PRODUCT_ID,
   type RecommendationCategory,
 } from "./recommendation-catalog";
 import styles from "./analysis-design.module.css";
 import type { DemoState } from "./types";
 import {
   customerFetch,
+  readImageUrl,
   type CustomerProduct,
 } from "../order-certificate/customer-client";
 
@@ -29,6 +28,29 @@ type RecommendationScreenProps = {
 type ProductPage = {
   items: CustomerProduct[];
   totalElements: number;
+};
+
+const PRODUCT_CATEGORY_TABS: Record<string, RecommendationCategory> = {
+  CARD_WALLET: "wallet",
+  KEYRING: "keyring",
+  NAME_TAG: "travel",
+  PASSPORT_WALLET: "travel",
+};
+
+const PRODUCT_IMAGE_FALLBACKS: Record<string, string> = {
+  REBORN_CARD_WALLET: "/assets/mvp-beta/recommendation-card-holder.png",
+  REBORN_KEYRING: "/assets/mvp-beta/recommendation-keyring-v2.webp",
+  REBORN_NAME_TAG: "/assets/mvp-beta/recommendation-luggage-name-tag-v2.webp",
+  REBORN_PASSPORT_WALLET:
+    "/assets/mvp-beta/recommendation-passport-wallet.png",
+};
+
+const RECOMMENDATION_REASON_LABELS: Record<string, string> = {
+  LONG_STRIP_AVAILABLE: "긴 재단면 확보",
+  LOW_DAMAGE_REGION_AVAILABLE: "손상이 적은 영역 확보",
+  PATTERN_VISIBILITY: "원제품 패턴 보존",
+  SUFFICIENT_AREA: "재사용 면적 충분",
+  USES_SMALL_REMNANTS: "자투리 소재 활용",
 };
 
 function RecommendationHeader({
@@ -92,18 +114,21 @@ export function RecommendationScreen({
     };
   }, [analysisId, state]);
 
-  const visibleProducts = useMemo(
-    () => RECOMMENDATION_PRODUCTS[category],
-    [category],
+  const eligibleProducts = useMemo(
+    () =>
+      (products ?? []).filter(
+        (product) => product.recommendation?.eligible === true,
+      ),
+    [products],
   );
-
-  const passportProductId =
-    products?.find((product) => product.code === "REBORN_PASSPORT_WALLET")?.id ??
-    DEMO_PASSPORT_PRODUCT_ID;
-
-  const passportMockupHref = analysisId
-    ? `/submissions/demo/designs/passport-wallet?analysisId=${encodeURIComponent(analysisId)}&productId=${encodeURIComponent(passportProductId)}`
-    : "/submissions/demo/designs/passport-wallet";
+  const visibleProducts = useMemo(
+    () =>
+      eligibleProducts.filter(
+        (product) =>
+          PRODUCT_CATEGORY_TABS[product.category ?? ""] === category,
+      ),
+    [category, eligibleProducts],
+  );
 
   if (state !== "normal") {
     return (
@@ -166,33 +191,70 @@ export function RecommendationScreen({
             aria-label={`${RECOMMENDATION_CATEGORIES.find((item) => item.id === category)?.label} 추천 디자인 목록`}
             className={styles.recommendationTrack}
           >
-            {visibleProducts.map((item, index) => {
+            {visibleProducts.map((product, index) => {
+              const recommendation = product.recommendation;
+              const rank = eligibleProducts.findIndex(
+                (candidate) => candidate.id === product.id,
+              ) + 1;
+              const mockupAvailable =
+                product.code === "REBORN_PASSPORT_WALLET";
+              const mockupHref = `/submissions/demo/designs/passport-wallet?analysisId=${encodeURIComponent(analysisId)}&productId=${encodeURIComponent(product.id)}`;
+              const reasonLabels = (recommendation?.reasonCodes ?? [])
+                .map((code) => RECOMMENDATION_REASON_LABELS[code])
+                .filter((label): label is string => Boolean(label));
               const cardContent = (
                 <>
                   <span className={styles.productImage}>
                     <Image
-                      alt={`${item.name} 예상 디자인`}
+                      alt={`${product.name} 예상 디자인`}
                       fill
                       loading={index < 4 ? "eager" : "lazy"}
                       sizes="(max-width: 402px) 42vw, 168px"
-                      src={item.image}
+                      src={readImageUrl(
+                        product.listImage,
+                        PRODUCT_IMAGE_FALLBACKS[product.code ?? ""] ??
+                          "/assets/mvp-beta/recommendation-passport-wallet.png",
+                      )}
                     />
-                    <span aria-hidden="true" className={styles.productHoverLabel}>
-                      3D 목업 보기
+                    <span className={styles.recommendationBadge}>
+                      AI 추천 {rank}위
+                    </span>
+                    {mockupAvailable ? (
+                      <span aria-hidden="true" className={styles.productHoverLabel}>
+                        맞춤 3D 목업 보기
+                      </span>
+                    ) : null}
+                  </span>
+                  <span className={styles.productName}>{product.name}</span>
+                  <span className={styles.recommendationMetrics}>
+                    <strong>적합도 {recommendation?.score ?? 0}점</strong>
+                    <span>
+                      {reasonLabels.length > 0
+                        ? reasonLabels.join(" · ")
+                        : "분석 결과와 제작 면적 기준 충족"}
                     </span>
                   </span>
-                  <span className={styles.productName}>{item.name}</span>
+                  <span className={styles.recommendationConstraint}>
+                    필요 면적 {product.requiredAreaCm2?.toLocaleString("ko-KR") ?? "-"}cm²
+                    · 예상 {product.estimatedDuration}
+                  </span>
                 </>
               );
               return (
-                <li key={item.id}>
-                  <Link
-                    aria-label={`${item.name} 선택하고 여권지갑 목업 확인하기`}
-                    className={`${styles.productCard} ${styles.productCardCandidate}`}
-                    href={passportMockupHref}
-                  >
-                    {cardContent}
-                  </Link>
+                <li key={product.id}>
+                  {mockupAvailable ? (
+                    <Link
+                      aria-label={`${product.name} 선택하고 맞춤 3D 목업 확인하기`}
+                      className={`${styles.productCard} ${styles.productCardCandidate}`}
+                      href={mockupHref}
+                    >
+                      {cardContent}
+                    </Link>
+                  ) : (
+                    <article className={styles.productCard}>
+                      {cardContent}
+                    </article>
+                  )}
                 </li>
               );
             })}

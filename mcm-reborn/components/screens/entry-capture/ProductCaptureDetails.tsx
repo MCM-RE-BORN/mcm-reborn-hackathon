@@ -1,6 +1,11 @@
 "use client";
 
+import { useId, useState } from "react";
 import { TextField } from "@/components/ui/TextField";
+import {
+  TEXTURE_PRIVACY_NOTICE_KO,
+  TEXTURE_PRIVACY_NOTICE_VERSION,
+} from "@/lib/texture-preview";
 import {
   DESIRED_USE_OPTIONS,
   USE_DURATION_OPTIONS,
@@ -10,6 +15,9 @@ import styles from "./entry-capture.module.css";
 
 export function ProductCaptureDetails() {
   const { productDetails, updateProductDetails } = useCaptureSession();
+  const [consentDetailsExpanded, setConsentDetailsExpanded] = useState(false);
+  const consentDetailsId = useId();
+  const consentDetailsToggleId = useId();
 
   return (
     <section aria-labelledby="product-info-title" className={styles.productInfo}>
@@ -94,6 +102,53 @@ export function ProductCaptureDetails() {
         placeholder="오염이나 손상 부위를 알려주세요"
         value={productDetails.conditionNote}
       />
+
+      <fieldset className={styles.consentGroup}>
+        <legend className={styles.visuallyHidden}>
+          AI 분석 및 3D 목업 외부 처리 동의
+        </legend>
+        <div className={styles.externalAiConsentSummary}>
+          <label>
+            <input
+              checked={productDetails.externalAiProcessingConsentAccepted}
+              onChange={(event) =>
+                updateProductDetails({
+                  externalAiProcessingConsentAccepted:
+                    event.currentTarget.checked,
+                })
+              }
+              required
+              type="checkbox"
+            />
+            <span>AI 분석을 위한 사진 활용 동의</span>
+          </label>
+          <button
+            aria-label={`AI 분석을 위한 사진 활용 동의 ${
+              consentDetailsExpanded ? "내용접기" : "내용보기"
+            }`}
+            aria-controls={consentDetailsId}
+            aria-expanded={consentDetailsExpanded}
+            className={styles.externalAiConsentToggle}
+            id={consentDetailsToggleId}
+            onClick={() => setConsentDetailsExpanded((expanded) => !expanded)}
+            type="button"
+          >
+            {consentDetailsExpanded ? "내용접기" : "내용보기"}
+          </button>
+        </div>
+        <div
+          aria-labelledby={consentDetailsToggleId}
+          className={styles.externalAiConsentDetails}
+          hidden={!consentDetailsExpanded}
+          id={consentDetailsId}
+          role="region"
+        >
+          <p>{TEXTURE_PRIVACY_NOTICE_KO}</p>
+          <p className={styles.externalAiNoticeVersion}>
+            개인정보 처리 안내 버전 {TEXTURE_PRIVACY_NOTICE_VERSION}
+          </p>
+        </div>
+      </fieldset>
     </section>
   );
 }

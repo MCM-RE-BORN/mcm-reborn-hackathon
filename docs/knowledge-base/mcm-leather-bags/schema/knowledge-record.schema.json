@@ -1,0 +1,420 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mcm-reborn.local/schemas/mcm-leather-bag-knowledge-record.json",
+  "title": "MCM leather bag public knowledge record",
+  "oneOf": [
+    { "$ref": "#/$defs/source" },
+    { "$ref": "#/$defs/claim" },
+    { "$ref": "#/$defs/product" },
+    { "$ref": "#/$defs/imageReference" }
+  ],
+  "$defs": {
+    "dateOrNull": {
+      "oneOf": [
+        { "type": "string", "format": "date" },
+        { "type": "null" }
+      ]
+    },
+    "timeContext": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["label", "start", "end", "precision", "status"],
+      "properties": {
+        "label": { "type": "string", "minLength": 1 },
+        "start": { "$ref": "#/$defs/dateOrNull" },
+        "end": { "$ref": "#/$defs/dateOrNull" },
+        "precision": {
+          "enum": ["day", "month", "year", "season", "range", "unknown"]
+        },
+        "status": {
+          "enum": [
+            "current_snapshot",
+            "historical_snapshot",
+            "launch_or_release",
+            "first_verified_presence",
+            "reporting_period",
+            "target",
+            "legal_event",
+            "standard_version",
+            "reference_snapshot",
+            "unknown"
+          ]
+        }
+      }
+    },
+    "evidenceRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source_id", "locator", "support"],
+      "properties": {
+        "source_id": { "type": "string", "pattern": "^SRC-[0-9]{3}$" },
+        "locator": { "type": "string", "minLength": 1 },
+        "support": { "enum": ["supports", "contradicts", "context_only"] }
+      }
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "record_type",
+        "source_id",
+        "publisher",
+        "title",
+        "url",
+        "source_class",
+        "authority_grade",
+        "published_at",
+        "date_precision",
+        "observed_at",
+        "language",
+        "access_status",
+        "notes"
+      ],
+      "properties": {
+        "record_type": { "const": "source" },
+        "source_id": { "type": "string", "pattern": "^SRC-[0-9]{3}$" },
+        "publisher": { "type": "string", "minLength": 1 },
+        "title": { "type": "string", "minLength": 1 },
+        "url": { "type": "string", "format": "uri", "pattern": "^https://" },
+        "source_class": {
+          "enum": [
+            "mcm_official",
+            "mcm_report",
+            "group_official",
+            "public_registry",
+            "standards_body",
+            "intergovernmental",
+            "industry_press",
+            "major_press",
+            "retailer_or_catalog",
+            "legal_filing",
+            "legal_aggregator"
+          ]
+        },
+        "authority_grade": { "enum": ["A", "S", "B", "C", "D"] },
+        "published_at": { "$ref": "#/$defs/dateOrNull" },
+        "date_precision": { "enum": ["day", "month", "year", "unknown"] },
+        "observed_at": { "type": "string", "format": "date" },
+        "language": { "type": "string", "pattern": "^[a-z]{2}(-[A-Z]{2})?$" },
+        "access_status": {
+          "enum": [
+            "open",
+            "indexed_only",
+            "pdf_indexed",
+            "blocked_direct_fetch",
+            "indexed_and_direct_fetch_blocked"
+          ]
+        },
+        "notes": { "type": "string" }
+      }
+    },
+    "claim": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "record_type",
+        "claim_id",
+        "topic",
+        "subject",
+        "claim_ko",
+        "fact_scope",
+        "claim_owner",
+        "evidence_mode",
+        "confidence",
+        "valid_time",
+        "observed_at",
+        "evidence",
+        "conflict_group_id",
+        "ai_use",
+        "notes"
+      ],
+      "properties": {
+        "record_type": { "const": "claim" },
+        "claim_id": { "type": "string", "pattern": "^CLM-[0-9]{3}$" },
+        "topic": {
+          "enum": [
+            "history",
+            "pattern",
+            "design",
+            "material",
+            "leather_type",
+            "construction",
+            "process",
+            "sourcing",
+            "sustainability",
+            "care",
+            "legal",
+            "unknown"
+          ]
+        },
+        "subject": { "type": "string", "minLength": 1 },
+        "claim_ko": { "type": "string", "minLength": 1 },
+        "fact_scope": {
+          "enum": [
+            "mcm_brand",
+            "mcm_product",
+            "supplier_historical",
+            "industry_general",
+            "legal_record"
+          ]
+        },
+        "claim_owner": { "type": "string", "minLength": 1 },
+        "evidence_mode": { "enum": ["direct", "derived", "inferred", "unknown"] },
+        "confidence": { "enum": ["high", "medium", "low", "unknown"] },
+        "valid_time": { "$ref": "#/$defs/timeContext" },
+        "observed_at": { "type": "string", "format": "date" },
+        "evidence": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/evidenceRef" },
+          "minItems": 1
+        },
+        "conflict_group_id": {
+          "oneOf": [
+            { "type": "string", "pattern": "^CONFLICT-[0-9]{3}$" },
+            { "type": "null" }
+          ]
+        },
+        "ai_use": { "enum": ["grounding", "context_only", "negative_constraint", "exclude"] },
+        "notes": { "type": "string" }
+      }
+    },
+    "component": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "role",
+        "material_class",
+        "material_label",
+        "animal_species",
+        "leather_type",
+        "grain_structure",
+        "surface_finish",
+        "tannage",
+        "substrate_fiber",
+        "coating_polymer",
+        "material_origin_country",
+        "attribute_state"
+      ],
+      "properties": {
+        "role": {
+          "enum": ["body", "flap", "side_panel", "trim", "lining", "handle", "strap", "reinforcement", "hardware", "decoration", "pouch"]
+        },
+        "material_class": {
+          "enum": [
+            "leather",
+            "coated_canvas",
+            "textile",
+            "metal",
+            "mixed",
+            "regenerated_leather",
+            "alternative_material",
+            "decoration",
+            "unknown"
+          ]
+        },
+        "material_label": { "type": "string", "minLength": 1 },
+        "animal_species": { "type": ["string", "null"] },
+        "leather_type": { "type": ["string", "null"] },
+        "grain_structure": { "type": ["string", "null"] },
+        "surface_finish": { "type": ["string", "null"] },
+        "tannage": { "type": ["string", "null"] },
+        "substrate_fiber": { "type": ["string", "null"] },
+        "coating_polymer": {
+          "type": ["string", "null"],
+          "description": "Polymer coating or finish on any component. Leather does not make this axis not_applicable; use unknown when the public source is silent."
+        },
+        "material_origin_country": { "type": ["string", "null"] },
+        "attribute_state": { "$ref": "#/$defs/attributeState" }
+      }
+    },
+    "attributeState": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "animal_species",
+        "leather_type",
+        "grain_structure",
+        "surface_finish",
+        "tannage",
+        "substrate_fiber",
+        "coating_polymer",
+        "material_origin_country"
+      ],
+      "properties": {
+        "animal_species": { "enum": ["reported", "unknown", "not_applicable"] },
+        "leather_type": { "enum": ["reported", "unknown", "not_applicable"] },
+        "grain_structure": { "enum": ["reported", "unknown", "not_applicable"] },
+        "surface_finish": { "enum": ["reported", "unknown", "not_applicable"] },
+        "tannage": { "enum": ["reported", "unknown", "not_applicable"] },
+        "substrate_fiber": { "enum": ["reported", "unknown", "not_applicable"] },
+        "coating_polymer": { "enum": ["reported", "unknown", "not_applicable"] },
+        "material_origin_country": { "enum": ["reported", "unknown", "not_applicable"] }
+      }
+    },
+    "measurement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "raw_value", "unit", "values", "value_order", "notes"],
+      "properties": {
+        "kind": { "enum": ["overall_dimensions", "strap_length", "handle_drop"] },
+        "raw_value": { "type": "string", "minLength": 1 },
+        "unit": { "enum": ["cm"] },
+        "values": {
+          "type": "array",
+          "items": { "type": "number" },
+          "minItems": 1
+        },
+        "value_order": { "enum": ["source_order_unlabeled", "min_max", "single"] },
+        "notes": { "type": "string" }
+      }
+    },
+    "product": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "record_type",
+        "product_id",
+        "style_number",
+        "name",
+        "family",
+        "collection_or_season",
+        "market",
+        "pattern_family",
+        "silhouette",
+        "components",
+        "product_made_in",
+        "observed_at",
+        "source_ids",
+        "evidence",
+        "confidence",
+        "notes"
+      ],
+      "properties": {
+        "record_type": { "const": "product_snapshot" },
+        "product_id": {
+          "type": "string",
+          "pattern": "^PRD-[0-9]{3}$",
+          "description": "Unique snapshot record ID; style_number may repeat across market and observed_at."
+        },
+        "style_number": { "type": "string", "minLength": 1 },
+        "name": { "type": "string", "minLength": 1 },
+        "family": { "type": ["string", "null"] },
+        "collection_or_season": { "type": ["string", "null"] },
+        "market": { "type": "string", "pattern": "^[A-Z]{2}$" },
+        "pattern_family": { "type": ["string", "null"] },
+        "silhouette": { "type": "string", "minLength": 1 },
+        "components": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/component" },
+          "minItems": 1
+        },
+        "construction_features": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "composition_claims": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "minItems": 1
+        },
+        "measurements": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/measurement" },
+          "minItems": 1
+        },
+        "product_made_in": { "type": ["string", "null"] },
+        "observed_at": { "type": "string", "format": "date" },
+        "source_ids": {
+          "type": "array",
+          "items": { "type": "string", "pattern": "^SRC-[0-9]{3}$" },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "evidence": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/evidenceRef" },
+          "minItems": 1
+        },
+        "confidence": { "enum": ["high", "medium", "low", "unknown"] },
+        "notes": { "type": "string" }
+      }
+    },
+    "imageReference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "record_type",
+        "image_id",
+        "subject_type",
+        "subject",
+        "style_number",
+        "market",
+        "tags",
+        "asset_id",
+        "image_url",
+        "source_id",
+        "source_page_url",
+        "source_page_redirected_from",
+        "caption",
+        "raw_alt_text",
+        "published_at",
+        "date_precision",
+        "date_basis",
+        "observed_at",
+        "checked_at",
+        "http_status",
+        "content_type",
+        "verification_method",
+        "channel_status",
+        "rights_status",
+        "association_confidence",
+        "tag_evidence_mode",
+        "notes"
+      ],
+      "properties": {
+        "record_type": { "const": "image_reference" },
+        "image_id": {
+          "type": "string",
+          "pattern": "^(PIMG|MIMG|CIMG)-[0-9]{3}$"
+        },
+        "subject_type": { "enum": ["pattern", "material", "editorial_context"] },
+        "subject": { "type": "string", "minLength": 1 },
+        "style_number": { "type": ["string", "null"] },
+        "market": { "type": "string", "pattern": "^[A-Z]{2}$" },
+        "tags": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "asset_id": { "type": "string", "minLength": 1 },
+        "image_url": { "type": "string", "format": "uri", "pattern": "^https://" },
+        "source_id": { "type": "string", "pattern": "^SRC-[0-9]{3}$" },
+        "source_page_url": { "type": "string", "format": "uri", "pattern": "^https://" },
+        "source_page_redirected_from": {
+          "oneOf": [
+            { "type": "string", "format": "uri", "pattern": "^https://" },
+            { "type": "null" }
+          ]
+        },
+        "caption": { "type": "string", "minLength": 1 },
+        "raw_alt_text": { "type": ["string", "null"] },
+        "published_at": { "$ref": "#/$defs/dateOrNull" },
+        "date_precision": { "enum": ["day", "month", "year", "unknown"] },
+        "date_basis": { "enum": ["source_page_publication", "cdn_asset_header", "unknown"] },
+        "observed_at": { "type": "string", "format": "date" },
+        "checked_at": { "type": "string", "format": "date" },
+        "http_status": { "const": 200 },
+        "content_type": { "enum": ["image/jpeg", "image/webp"] },
+        "verification_method": { "type": "string", "minLength": 1 },
+        "channel_status": { "const": "mcm_official_channel" },
+        "rights_status": { "const": "unknown_reference_only" },
+        "association_confidence": { "enum": ["high", "medium", "low"] },
+        "tag_evidence_mode": { "enum": ["source_metadata", "dom_context", "mixed", "context_only"] },
+        "content_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "response_bytes": { "type": "integer" },
+        "notes": { "type": "string" }
+      }
+    }
+  }
+}

@@ -1,0 +1,1041 @@
+{
+  "record_type": "mcm_leather_wiki_runtime_snapshot",
+  "knowledge_base_version": "MCM_LEATHER_BAGS_PUBLIC_RESEARCH_2026_08_21_V1",
+  "full_corpus_sha256": "e0bda28918ccbc1e29d7e8246a569f04f290ace39468fa63fb52789e9b9996a0",
+  "retrieval_corpus_sha256": "6e2b016ab83d5d4fd609f19501a977a227a4cabef81cf68d8a23e01b45d52838",
+  "source_files": {
+    "sources.json": "451983780578641e9da50872e93d5c468374047b6c73f16b1118551ffebc6567",
+    "claims.jsonl": "7f013eb2b191c4b4c1aa43053a4203ab1f9fb9fb726da1ebec6e472e0ba26cc8",
+    "products.jsonl": "fec102cef63cfc6be5f44f17c01f02f858d0265c9817bea23ac297fb3584f429"
+  },
+  "ordered_claim_ids": [
+    "CLM-008",
+    "CLM-009",
+    "CLM-011",
+    "CLM-012",
+    "CLM-038",
+    "CLM-039",
+    "CLM-044",
+    "CLM-059",
+    "CLM-068",
+    "CLM-069",
+    "CLM-085",
+    "CLM-029",
+    "CLM-040",
+    "CLM-061",
+    "CLM-062",
+    "CLM-084",
+    "CLM-089",
+    "CLM-090"
+  ],
+  "dynamic_claim_ids": [
+    "CLM-008",
+    "CLM-009",
+    "CLM-011",
+    "CLM-012",
+    "CLM-038",
+    "CLM-039",
+    "CLM-044",
+    "CLM-059",
+    "CLM-068",
+    "CLM-069",
+    "CLM-085"
+  ],
+  "always_on_safety_claim_ids": [
+    "CLM-029",
+    "CLM-040",
+    "CLM-061",
+    "CLM-062",
+    "CLM-084",
+    "CLM-089",
+    "CLM-090"
+  ],
+  "counts": {
+    "authored_sources": 103,
+    "authored_claims": 97,
+    "authored_products": 36,
+    "runtime_sources": 31,
+    "runtime_claims": 18
+  },
+  "sources": [
+    {
+      "source_id": "SRC-001",
+      "publisher": "MCM",
+      "title": "Our Heritage, Since 1976",
+      "url": "https://us.mcmworldwide.com/en_US/heritage-edit",
+      "source_class": "mcm_official",
+      "authority_grade": "S",
+      "published_at": null,
+      "observed_at": "2026-08-21"
+    },
+    {
+      "source_id": "SRC-002",
+      "publisher": "MCM",
+      "title": "The Visetos",
+      "url": "https://au.mcmworldwide.com/en_AU/mcm-edit/mcm-visetos-aw-19",
+      "source_class": "mcm_official",
+      "authority_grade": "S",
+      "published_at": null,
+      "observed_at": "2026-08-21"
+    },
+    {
+      "source_id": "SRC-004",
+      "publisher": "MCM",
+      "title": "Spring Summer 2024 Lauretos Collection",
+      "url": "https://us.mcmworldwide.com/en_US/discover-mcm-ss24-lauretos-collection",
+      "source_class": "mcm_official",
+      "authority_grade": "S",
+      "published_at": "2023-11-01",
+      "observed_at": "2026-08-21"
+    },
+    {
+      "source_id": "SRC-005",
+      "publisher": "MCM Japan",
+      "title": "Lauretos Monogram Global Launch",
+      "url": "https://prtimes.jp/main/html/rd/p/000000066.000030922.html",
+      "source_class": "mcm_official",
+      "authority_grade": "S",
+      "published_at": "2023-11-02",
+      "observed_at": "2026-08-21"
+    },
+    {
+      "source_id": "SRC-006",
+      "publisher": "MCM",
+      "title": "Cubic Monogram Craftsmanship",
+      "url": "https://ca.mcmworldwide.com/mcm-edit/mcm-cubic-monogram-craftsmanship",
+      "source_class": "mcm_official",
+      "authority_grade": "S",
+      "published_at": "2022-02-01",
+      "observed_at": "2026-08-21"
+    },
+    {
+      "source_id": "SRC-007",
+      "publisher": "MCM Saudi Arabia",
+      "title": "Our History",
+      "url": "https://mcmworldwide.sa/pages/our-history",
+      "source_class": "mcm_official",
+      "authority_grade": "S",
+      "published_at": null,
+      "observed_at": "2026-08-21"
+    },
+    {
+      "source_id": "SRC-009",
+      "publisher": "MCM",
+      "title": "MCM Sustainability Report 2024",
+      "url": "https://www.mcmworldwide.com/downloads/MCM_sustainability_report_2024.pdf",
+      "source_class": "mcm_report",
+      "authority_grade": "S",
+      "published_at": "2025-01-01",
+      "observed_at": "2026-08-21"
+    },
+    {
+      "source_id": "SRC-016",
+      "publisher": "한국섬유신문",
+      "title": "[Interview] 월드컬렉션 최정달 대표 - 글로벌 핸드백 브랜드 일굴 패션기업과 만나고 싶다",
+      "url": "https://www.ktnews.com/news/articleView.html?idxno=80093",
+      "source_class": "industry_press",
+      "authority_grade": "B",
+      "published_at": "2013-07-01",
+      "observed_at": "2026-08-21"
+    },
+    {
+      "source_id": "SRC-019",
+      "publisher": "Leather Working Group",
+      "title": "LWG List of Definitions v1.1",
+      "url": "https://www.leatherworkinggroup.com/fileadmin/uploads/lwg/Knowledge/LWG_List_of_Definitions_v1.1.pdf",
+      "source_class": "standards_body",
+      "authority_grade": "A",
+      "published_at": "2024-01-01",
+      "observed_at": "2026-08-21"
+    },
+    {
+      "source_id": "SRC-027",
+      "publisher": "USPTO Trademark Trial and Appeal Board",
+      "title": "MCM repeating pattern opposition filing",
+      "url": "https://ttabvue.uspto.gov/ttabvue/ttabvue-91244898-OPP-1.pdf",
+      "source_class": "legal_filing",
+      "authority_grade": "A",
+      "published_at": null,
+      "observed_at": "2026-08-21"
+    },
+    {
+      "source_id": "SRC-030",
+      "publisher": "WWD via Yahoo",
+      "title": "MCM Introduces Logo Designs, First in 45 Years",
+      "url": "https://www.yahoo.com/lifestyle/mcm-introduces-logo-designs-first-040144766.html",
+      "source_class": "major_press",
+      "authority_grade": "B",
+      "published_at": "2021-06-01",
+      "observed_at": "2026-08-21"
+    },
+    {
+      "source_id": "SRC-032",
+      "publisher": "MCM",
+      "title": "Diamond Shoulder Bag in Visetos Leather Mix — MWRESAK02CO001",
+      "url": "https://us.mcmworldwide.com/en_US/women/bags/shoulder-crossbody-bags/diamond-shoulder-bag-in-visetos-leather-mix/MWRESAK02CO001.html",
+      "source_class": "mcm_official",
+      "authority_grade": "S",
+      "published_at": null,
+      "observed_at": "2026-08-21"
+    },
+    {
+      "source_id": "SRC-033",
+      "publisher": "MCM",
+      "title": "München Tote in Visetos — MWTCSBO02CO001",
+      "url": "https://us.mcmworldwide.com/en_US/women/bags/top-handle-bags/m%C3%BCnchen-tote-in-visetos/MWTCSBO02CO001.html",
+      "source_class": "mcm_official",
+      "authority_grade": "S",
+      "published_at": null,
+      "observed_at": "2026-08-21"
+    },
+    {
+      "source_id": "SRC-034",
+      "publisher": "MCM",
+      "title": "Aren Multi Backpack in Visetos — MMKEATA02CO001",
+      "url": "https://us.mcmworldwide.com/en_US/men/bags/backpacks/aren-multi-backpack-in-visetos/MMKEATA02CO001.html",
+      "source_class": "mcm_official",
+      "authority_grade": "S",
+      "published_at": null,
+      "observed_at": "2026-08-21"
+    },
+    {
+      "source_id": "SRC-036",
+      "publisher": "MCM",
+      "title": "München Tote in Maxi Monogram Leather — MWTDABO14BK001",
+      "url": "https://us.mcmworldwide.com/en_US/women/bags/totes-shoppers/m%C3%BCnchen-tote-in-maxi-monogram-leather/MWTDABO14BK001.html",
+      "source_class": "mcm_official",
+      "authority_grade": "S",
+      "published_at": null,
+      "observed_at": "2026-08-21"
+    },
+    {
+      "source_id": "SRC-037",
+      "publisher": "MCM",
+      "title": "Ella Boston Bag in Maxi Monogram Leather — MWBGSEA07BK001",
+      "url": "https://us.mcmworldwide.com/en_US/women/bags/top-handle-bags/ella-boston-bag-in-maxi-monogram-leather/MWBGSEA07BK001.html",
+      "source_class": "mcm_official",
+      "authority_grade": "S",
+      "published_at": null,
+      "observed_at": "2026-08-21"
+    },
+    {
+      "source_id": "SRC-039",
+      "publisher": "MCM",
+      "title": "Stark Backpack in Lauretos Monogram Jacquard — MMKFAVE01IG001",
+      "url": "https://us.mcmworldwide.com/en_US/bags/all-bags/stark-backpack-in-lauretos-monogram-jacquard/MMKFAVE01IG001.html",
+      "source_class": "mcm_official",
+      "authority_grade": "S",
+      "published_at": null,
+      "observed_at": "2026-08-21"
+    },
+    {
+      "source_id": "SRC-040",
+      "publisher": "MCM",
+      "title": "Ella Boston Bag in Lauretos Raffia Jacquard — MWBFSEA04IN001",
+      "url": "https://us.mcmworldwide.com/en_US/whats-new/womens-new-arrivals/ella-boston-bag-in-lauretos-raffia-jacquard/MWBFSEA04IN001.html",
+      "source_class": "mcm_official",
+      "authority_grade": "S",
+      "published_at": null,
+      "observed_at": "2026-08-21"
+    },
+    {
+      "source_id": "SRC-042",
+      "publisher": "MCM",
+      "title": "Soft Diamond Tote in Embossed Leather — MWREAAK02CK001",
+      "url": "https://us.mcmworldwide.com/en_US/women/bags/top-handle-bags/soft-diamond-tote-in-embossed-leather/MWREAAK02CK001.html",
+      "source_class": "mcm_official",
+      "authority_grade": "S",
+      "published_at": null,
+      "observed_at": "2026-08-21"
+    },
+    {
+      "source_id": "SRC-043",
+      "publisher": "MCM",
+      "title": "Diamond Tote in Sequin Lamb Leather — MWRFSAK06Q1001",
+      "url": "https://us.mcmworldwide.com/en_US/bags/all-bags/diamond-tote-in-sequin-lamb-leather/MWRFSAK06Q1001.html",
+      "source_class": "mcm_official",
+      "authority_grade": "S",
+      "published_at": null,
+      "observed_at": "2026-08-21"
+    },
+    {
+      "source_id": "SRC-044",
+      "publisher": "MCM",
+      "title": "Dessau Drawstring Bag in Visetos — MWDCSDU02WT001",
+      "url": "https://us.mcmworldwide.com/en_US/women/bags/shoulder-crossbody-bags/dessau-drawstring-bag-in-visetos/MWDCSDU02WT001.html",
+      "source_class": "mcm_official",
+      "authority_grade": "S",
+      "published_at": null,
+      "observed_at": "2026-08-21"
+    },
+    {
+      "source_id": "SRC-046",
+      "publisher": "MCM",
+      "title": "Pina Tambourine Bag in Studded Calfskin — MWRGAOB03BK001",
+      "url": "https://us.mcmworldwide.com/en_US/women/bags/shoulder-crossbody-bags/pina-tambourine-bag-in-studded-calfskin/MWRGAOB03BK001.html",
+      "source_class": "mcm_official",
+      "authority_grade": "S",
+      "published_at": null,
+      "observed_at": "2026-08-21"
+    },
+    {
+      "source_id": "SRC-047",
+      "publisher": "MCM France",
+      "title": "München Tote in Diamond Jacquard — MWTGABO01MT001",
+      "url": "https://fr.mcmworldwide.com/en_FR/women/bags/totes-shoppers/m%C3%BCnchen-tote-in-diamond-jacquard/MWTGABO01MT001.html",
+      "source_class": "mcm_official",
+      "authority_grade": "S",
+      "published_at": null,
+      "observed_at": "2026-08-21"
+    },
+    {
+      "source_id": "SRC-052",
+      "publisher": "MCM",
+      "title": "Diamant 3D Shoulder Bag in Calfskin — MWSEAAK01CK001",
+      "url": "https://us.mcmworldwide.com/en_US/women/bags/shoulder-crossbody-bags/diamant-3d-shoulder-bag-in-calfskin/MWSEAAK01CK001.html",
+      "source_class": "mcm_official",
+      "authority_grade": "S",
+      "published_at": null,
+      "observed_at": "2026-08-21"
+    },
+    {
+      "source_id": "SRC-053",
+      "publisher": "MCM",
+      "title": "Diamant 3D Belt Bag in Goatskin — MWZFSAK01BK001",
+      "url": "https://us.mcmworldwide.com/en_US/women/bags/backpacks-belt-bags/diamant-3d-belt-bag-in-goatskin-leather/MWZFSAK01BK001.html",
+      "source_class": "mcm_official",
+      "authority_grade": "S",
+      "published_at": null,
+      "observed_at": "2026-08-21"
+    },
+    {
+      "source_id": "SRC-054",
+      "publisher": "MCM",
+      "title": "Travia Cloud Quilted Shoulder Bag — MWSCALM03BK001",
+      "url": "https://us.mcmworldwide.com/en_US/women/bags/shoulder-crossbody-bags/travia-shoulder-bag-in-cloud-quilted-leather/MWSCALM03BK001.html",
+      "source_class": "mcm_official",
+      "authority_grade": "S",
+      "published_at": null,
+      "observed_at": "2026-08-21"
+    },
+    {
+      "source_id": "SRC-055",
+      "publisher": "MCM",
+      "title": "Aren East West Shoulder Bag in Maxi Monogram Leather — MWSGSTA01CC001",
+      "url": "https://us.mcmworldwide.com/en_US/women/bags/shoulder-crossbody-bags/aren-east-west-shoulder-bag-in-maxi-monogram-leather/MWSGSTA01CC001.html",
+      "source_class": "mcm_official",
+      "authority_grade": "S",
+      "published_at": null,
+      "observed_at": "2026-08-21"
+    },
+    {
+      "source_id": "SRC-057",
+      "publisher": "MCM UK",
+      "title": "Diamond Bag in Visetos and Croco Leather — MWREAAK01CO001",
+      "url": "https://uk.mcmworldwide.com/en_GB/women/bags/shoulder-crossbody-bags/diamond-bag-in-visetos-and-croco-leather/MWREAAK01CO001.html",
+      "source_class": "mcm_official",
+      "authority_grade": "S",
+      "published_at": null,
+      "observed_at": "2026-08-21"
+    },
+    {
+      "source_id": "SRC-066",
+      "publisher": "MCM",
+      "title": "Travia Studded Shoulder Bag in Crushed Leather — MWSDALM01BK001",
+      "url": "https://us.mcmworldwide.com/en_US/women/bags/shoulder-crossbody-bags/travia-studded-shoulder-bag-in-crushed-leather/MWSDALM01BK001.html",
+      "source_class": "mcm_official",
+      "authority_grade": "S",
+      "published_at": null,
+      "observed_at": "2026-08-21"
+    },
+    {
+      "source_id": "SRC-068",
+      "publisher": "MCM",
+      "title": "Tracy Shoulder Bag in Visetos — MWSCAXT01BK001",
+      "url": "https://us.mcmworldwide.com/en_US/women/bags/shoulder-crossbody-bags/tracy-shoulder-bag-in-visetos/MWSCAXT01BK001.html",
+      "source_class": "mcm_official",
+      "authority_grade": "S",
+      "published_at": null,
+      "observed_at": "2026-08-21"
+    },
+    {
+      "source_id": "SRC-093",
+      "publisher": "MCM",
+      "title": "Toni Top-Zip Shopper in Resetos Leather — MWPFAMT09Q5001",
+      "url": "https://jp.mcmworldwide.com/en_JP/women/bags/totes-shoppers/toni-top-zip-shopper-in-resetos-leather/MWPFAMT09Q5001.html",
+      "source_class": "mcm_official",
+      "authority_grade": "S",
+      "published_at": null,
+      "observed_at": "2026-08-21"
+    }
+  ],
+  "claims": [
+    {
+      "claim_id": "CLM-008",
+      "runtime_role": "dynamic",
+      "topic": "pattern",
+      "subject": "Vintage Monogram Jacquard",
+      "prompt_safe_text": "2021년 Vintage Monogram Jacquard는 Visetos를 낡고 직조된 듯한 자카드 실행으로 재구성한 신규 로고 표현 중 하나로 보도됐다.",
+      "prompt_safe_override": false,
+      "authored_text_sha256": "5a9df68ff081dc6e97eecd1cfc770bcaf3b034cb37580e46a22ff680b3874f98",
+      "fact_scope": "mcm_brand",
+      "claim_owner": "WWD reporting on MCM",
+      "evidence_mode": "direct",
+      "ai_use": "grounding",
+      "confidence": "medium",
+      "valid_time": {
+        "label": "2021-06 최초 확인",
+        "start": "2021-06-01",
+        "end": "2021-06-30",
+        "precision": "month",
+        "status": "first_verified_presence"
+      },
+      "observed_at": "2026-08-21",
+      "evidence": [
+        {
+          "source_id": "SRC-030",
+          "locator": "new logo designs and Vintage Monogram Jacquard",
+          "support": "supports"
+        }
+      ]
+    },
+    {
+      "claim_id": "CLM-009",
+      "runtime_role": "dynamic",
+      "topic": "pattern",
+      "subject": "Cubic Monogram",
+      "prompt_safe_text": "Cubic Monogram은 바이에른 다이아몬드를 반복되는 3차원 건축 구조처럼 변환하며 이탈리아 직물 자카드, 인쇄, Vachetta와 Spanish nappa 엠보싱으로 구현됐다.",
+      "prompt_safe_override": false,
+      "authored_text_sha256": "df8d581c1bb98669f550134e71ea410efd5754db921e50e435878a55219171ad",
+      "fact_scope": "mcm_brand",
+      "claim_owner": "MCM",
+      "evidence_mode": "direct",
+      "ai_use": "grounding",
+      "confidence": "high",
+      "valid_time": {
+        "label": "2021 도입, 2022-02 공식 공예 페이지",
+        "start": "2021-01-01",
+        "end": null,
+        "precision": "range",
+        "status": "launch_or_release"
+      },
+      "observed_at": "2026-08-21",
+      "evidence": [
+        {
+          "source_id": "SRC-006",
+          "locator": "3D construction; jacquard, print and embossed leather sections",
+          "support": "supports"
+        },
+        {
+          "source_id": "SRC-007",
+          "locator": "2021 New Cubic Monogram",
+          "support": "supports"
+        }
+      ]
+    },
+    {
+      "claim_id": "CLM-011",
+      "runtime_role": "dynamic",
+      "topic": "pattern",
+      "subject": "Lauretos",
+      "prompt_safe_text": "Lauretos는 월계수와 리본 각 측면의 끝을 이어 곡선형 연속 무늬를 만들고 고전 Visetos의 요소를 월계수 중심으로 재배치한 모노그램이다.",
+      "prompt_safe_override": false,
+      "authored_text_sha256": "11990772dd011d5292a7e0a49a929ed24760169dd08a4f0d893864960d17368b",
+      "fact_scope": "mcm_brand",
+      "claim_owner": "MCM",
+      "evidence_mode": "direct",
+      "ai_use": "grounding",
+      "confidence": "high",
+      "valid_time": {
+        "label": "SS24 설계·출시",
+        "start": "2024-01-01",
+        "end": "2024-12-31",
+        "precision": "season",
+        "status": "launch_or_release"
+      },
+      "observed_at": "2026-08-21",
+      "evidence": [
+        {
+          "source_id": "SRC-004",
+          "locator": "monogram construction description",
+          "support": "supports"
+        },
+        {
+          "source_id": "SRC-005",
+          "locator": "Lauretos reinterpretation and 2023-11-03 sale notice",
+          "support": "supports"
+        }
+      ]
+    },
+    {
+      "claim_id": "CLM-012",
+      "runtime_role": "dynamic",
+      "topic": "pattern",
+      "subject": "Maxi Visetos / Maxi Monogram",
+      "prompt_safe_text": "Maxi Visetos는 MCM 문자·월계수·다이아몬드를 확대하며, 공식 가죽 SKU에서는 천연 nappa 또는 full-grain leather에 엠보싱한 실행이 확인된다.",
+      "prompt_safe_override": false,
+      "authored_text_sha256": "aa5342c952ed6076279417e89c3395e0fdaf183b55dfe1a7ca64f2022d38a884",
+      "fact_scope": "mcm_product",
+      "claim_owner": "MCM",
+      "evidence_mode": "derived",
+      "ai_use": "grounding",
+      "confidence": "high",
+      "valid_time": {
+        "label": "2026-08-21 현행 SKU 스냅샷",
+        "start": "2026-08-21",
+        "end": "2026-08-21",
+        "precision": "day",
+        "status": "current_snapshot"
+      },
+      "observed_at": "2026-08-21",
+      "evidence": [
+        {
+          "source_id": "SRC-036",
+          "locator": "Body and embossed Maxi Visetos description",
+          "support": "supports"
+        },
+        {
+          "source_id": "SRC-037",
+          "locator": "natural full-grain leather and embossed Maxi Visetos",
+          "support": "supports"
+        },
+        {
+          "source_id": "SRC-055",
+          "locator": "full-grain embossed leather",
+          "support": "supports"
+        }
+      ]
+    },
+    {
+      "claim_id": "CLM-038",
+      "runtime_role": "dynamic",
+      "topic": "leather_type",
+      "subject": "Full-grain leather",
+      "prompt_safe_text": "LWG Definitions v1.1에서 full grain은 교정 목적의 기계 처리로 원래 그레인 표면을 제거하지 않은 가죽이다.",
+      "prompt_safe_override": false,
+      "authored_text_sha256": "7b295056afd27971059c2911c578ee7ef7f27239f7b2e7317346e4019753001d",
+      "fact_scope": "industry_general",
+      "claim_owner": "Leather Working Group",
+      "evidence_mode": "direct",
+      "ai_use": "grounding",
+      "confidence": "high",
+      "valid_time": {
+        "label": "LWG Definitions v1.1, January 2024",
+        "start": "2024-01-01",
+        "end": null,
+        "precision": "month",
+        "status": "standard_version"
+      },
+      "observed_at": "2026-08-21",
+      "evidence": [
+        {
+          "source_id": "SRC-019",
+          "locator": "Full grain definition",
+          "support": "supports"
+        }
+      ]
+    },
+    {
+      "claim_id": "CLM-039",
+      "runtime_role": "dynamic",
+      "topic": "leather_type",
+      "subject": "Napa/Nappa leather",
+      "prompt_safe_text": "LWG Definitions v1.1에서 Napa는 부드럽고 통염되며 가볍게 마감한 full-grain 계열 용어다.",
+      "prompt_safe_override": false,
+      "authored_text_sha256": "0f25d0a47e5822d21cb393f2f30e838dd2823e54e1de4637dbb65a00b7a8f85a",
+      "fact_scope": "industry_general",
+      "claim_owner": "Leather Working Group",
+      "evidence_mode": "direct",
+      "ai_use": "grounding",
+      "confidence": "high",
+      "valid_time": {
+        "label": "LWG Definitions v1.1, January 2024",
+        "start": "2024-01-01",
+        "end": null,
+        "precision": "month",
+        "status": "standard_version"
+      },
+      "observed_at": "2026-08-21",
+      "evidence": [
+        {
+          "source_id": "SRC-019",
+          "locator": "Napa definition",
+          "support": "supports"
+        }
+      ]
+    },
+    {
+      "claim_id": "CLM-044",
+      "runtime_role": "dynamic",
+      "topic": "process",
+      "subject": "MCM pattern implementation methods",
+      "prompt_safe_text": "MCM 공식 자료에서 직접 확인되는 표면·장식 구현은 Visetos 인쇄, Cubic·Maxi 엠보싱, 자카드 직조, 다이아몬드 퀼팅, 스터드, 금속 도금이다.",
+      "prompt_safe_override": false,
+      "authored_text_sha256": "a81af3892597ad1e2fe868434fcf8dc779d812c06e40ba08b8e9c725da1a87ea",
+      "fact_scope": "mcm_product",
+      "claim_owner": "MCM",
+      "evidence_mode": "derived",
+      "ai_use": "grounding",
+      "confidence": "high",
+      "valid_time": {
+        "label": "2026-08-21 공식 SKU·에디토리얼 표본",
+        "start": "2026-08-21",
+        "end": "2026-08-21",
+        "precision": "day",
+        "status": "current_snapshot"
+      },
+      "observed_at": "2026-08-21",
+      "evidence": [
+        {
+          "source_id": "SRC-002",
+          "locator": "Visetos print",
+          "support": "supports"
+        },
+        {
+          "source_id": "SRC-006",
+          "locator": "jacquard, print and embossed leather",
+          "support": "supports"
+        },
+        {
+          "source_id": "SRC-036",
+          "locator": "embossed Maxi Visetos",
+          "support": "supports"
+        },
+        {
+          "source_id": "SRC-047",
+          "locator": "Diamond jacquard",
+          "support": "supports"
+        },
+        {
+          "source_id": "SRC-054",
+          "locator": "geometric quilting",
+          "support": "supports"
+        },
+        {
+          "source_id": "SRC-046",
+          "locator": "logo metal studs",
+          "support": "supports"
+        }
+      ]
+    },
+    {
+      "claim_id": "CLM-059",
+      "runtime_role": "dynamic",
+      "topic": "leather_type",
+      "subject": "MCM leather vocabulary",
+      "prompt_safe_text": "공식 SKU에는 calf, lamb, goat 같은 동물 종과 nappa, full-grain, grained, embossed, quilted, crushed, croco-embossed 같은 가죽 유형·구조·표면 용어가 서로 다른 축으로 사용된다.",
+      "prompt_safe_override": false,
+      "authored_text_sha256": "825086cc776bb7389e3985d9731c0e27757c46643acd8481d3afc9ba454225f8",
+      "fact_scope": "mcm_product",
+      "claim_owner": "research synthesis",
+      "evidence_mode": "derived",
+      "ai_use": "grounding",
+      "confidence": "high",
+      "valid_time": {
+        "label": "2026-08-21 공식 SKU 표본",
+        "start": "2026-08-21",
+        "end": "2026-08-21",
+        "precision": "day",
+        "status": "current_snapshot"
+      },
+      "observed_at": "2026-08-21",
+      "evidence": [
+        {
+          "source_id": "SRC-042",
+          "locator": "embossed leather and calf nappa trim",
+          "support": "supports"
+        },
+        {
+          "source_id": "SRC-043",
+          "locator": "lamb leather and sequins",
+          "support": "supports"
+        },
+        {
+          "source_id": "SRC-052",
+          "locator": "calf nappa",
+          "support": "supports"
+        },
+        {
+          "source_id": "SRC-053",
+          "locator": "full-grain goatskin",
+          "support": "supports"
+        },
+        {
+          "source_id": "SRC-054",
+          "locator": "lamb nappa and quilting",
+          "support": "supports"
+        },
+        {
+          "source_id": "SRC-057",
+          "locator": "croco-embossed leather handle",
+          "support": "supports"
+        },
+        {
+          "source_id": "SRC-066",
+          "locator": "crushed lambskin and distressed finish",
+          "support": "supports"
+        }
+      ]
+    },
+    {
+      "claim_id": "CLM-068",
+      "runtime_role": "dynamic",
+      "topic": "material",
+      "subject": "Lauretos substrate variants",
+      "prompt_safe_text": "Lauretos는 monogram canvas, textile jacquard, Italian raffia jacquard 등 서로 다른 기재에서 구현되며 보통 nappa 또는 natural leather trim과 결합된다.",
+      "prompt_safe_override": false,
+      "authored_text_sha256": "bb4950ec9b12ac33bcf29b18b52aad7a6da0258815d259e883241d13757ff314",
+      "fact_scope": "mcm_product",
+      "claim_owner": "MCM",
+      "evidence_mode": "derived",
+      "ai_use": "grounding",
+      "confidence": "high",
+      "valid_time": {
+        "label": "2026-08-21 공식 SKU 표본",
+        "start": "2026-08-21",
+        "end": "2026-08-21",
+        "precision": "day",
+        "status": "current_snapshot"
+      },
+      "observed_at": "2026-08-21",
+      "evidence": [
+        {
+          "source_id": "SRC-039",
+          "locator": "Lauretos monogram jacquard and trim",
+          "support": "supports"
+        },
+        {
+          "source_id": "SRC-040",
+          "locator": "Italian raffia textile jacquard and nappa trim",
+          "support": "supports"
+        },
+        {
+          "source_id": "SRC-005",
+          "locator": "canvas and jacquard launch context",
+          "support": "supports"
+        }
+      ]
+    },
+    {
+      "claim_id": "CLM-069",
+      "runtime_role": "dynamic",
+      "topic": "material",
+      "subject": "Mixed-material Visetos bag construction",
+      "prompt_safe_text": "대표 Visetos 가방은 coated-canvas body, nappa·calf leather trim, textile 또는 microfiber lining, plated metal hardware가 결합된 복합 제품이다.",
+      "prompt_safe_override": false,
+      "authored_text_sha256": "d42d8968c71c54d13761b7a6776d97cc25a30567c4ddf18da325dd67d4532752",
+      "fact_scope": "mcm_product",
+      "claim_owner": "research synthesis",
+      "evidence_mode": "derived",
+      "ai_use": "grounding",
+      "confidence": "high",
+      "valid_time": {
+        "label": "2026-08-21 공식 SKU 표본",
+        "start": "2026-08-21",
+        "end": "2026-08-21",
+        "precision": "day",
+        "status": "current_snapshot"
+      },
+      "observed_at": "2026-08-21",
+      "evidence": [
+        {
+          "source_id": "SRC-032",
+          "locator": "Visetos body, calf nappa trim, microfiber lining and hardware",
+          "support": "supports"
+        },
+        {
+          "source_id": "SRC-033",
+          "locator": "coated canvas, nappa, microfiber and hardware",
+          "support": "supports"
+        },
+        {
+          "source_id": "SRC-034",
+          "locator": "Visetos, nappa, nylon and hardware",
+          "support": "supports"
+        }
+      ]
+    },
+    {
+      "claim_id": "CLM-085",
+      "runtime_role": "dynamic",
+      "topic": "material",
+      "subject": "Visetos representative current description",
+      "prompt_safe_text": "MCM의 현행 공개 설명은 대표 Cognac Visetos를 이탈리아산 코팅 캔버스 위에 검정 MCM 로고와 다이아몬드 모티프가 반복되는 소재로 제시한다.",
+      "prompt_safe_override": false,
+      "authored_text_sha256": "4fd97c2f2aa7deab7f8a088919754fe902b3e4d1c4c91844a3a6c12d07855a87",
+      "fact_scope": "mcm_brand",
+      "claim_owner": "MCM",
+      "evidence_mode": "direct",
+      "ai_use": "grounding",
+      "confidence": "high",
+      "valid_time": {
+        "label": "2026-08-21 현행 설명 스냅샷",
+        "start": "2026-08-21",
+        "end": "2026-08-21",
+        "precision": "day",
+        "status": "current_snapshot"
+      },
+      "observed_at": "2026-08-21",
+      "evidence": [
+        {
+          "source_id": "SRC-001",
+          "locator": "The Visetos section: coated canvas and repeated motifs",
+          "support": "supports"
+        },
+        {
+          "source_id": "SRC-002",
+          "locator": "Cognac colorway and Italian material description",
+          "support": "supports"
+        }
+      ]
+    },
+    {
+      "claim_id": "CLM-029",
+      "runtime_role": "always_on_safety",
+      "topic": "material",
+      "subject": "Individual Visetos coating polymer",
+      "prompt_safe_text": "현행 개별 Visetos SKU는 대체로 coated canvas까지만 기재하므로 특정 SKU의 코팅 수지를 PU 또는 PVC로 확정할 공개 근거가 없다.",
+      "prompt_safe_override": false,
+      "authored_text_sha256": "fde6b5a5911daa11330f54505335e1f3b89f7a749da19e9c9bfbcee8bbe99a2c",
+      "fact_scope": "mcm_product",
+      "claim_owner": "research synthesis",
+      "evidence_mode": "unknown",
+      "ai_use": "negative_constraint",
+      "confidence": "high",
+      "valid_time": {
+        "label": "2026-08-21 제품 페이지 조사",
+        "start": "2026-08-21",
+        "end": "2026-08-21",
+        "precision": "day",
+        "status": "current_snapshot"
+      },
+      "observed_at": "2026-08-21",
+      "evidence": [
+        {
+          "source_id": "SRC-033",
+          "locator": "Body: Visetos monogram coated canvas",
+          "support": "supports"
+        },
+        {
+          "source_id": "SRC-044",
+          "locator": "Body: Visetos monogram coated canvas",
+          "support": "supports"
+        },
+        {
+          "source_id": "SRC-009",
+          "locator": "category-level polymer roadmap",
+          "support": "context_only"
+        }
+      ]
+    },
+    {
+      "claim_id": "CLM-040",
+      "runtime_role": "always_on_safety",
+      "topic": "leather_type",
+      "subject": "Suede and suede-finish microfiber",
+      "prompt_safe_text": "동물성 suede는 기계 처리로 벨벳 같은 nap을 만든 가죽 또는 split leather를 가리키지만, MCM의 microfiber lining with suede finish는 마이크로화이버 안감의 촉감 마감 표현이다.",
+      "prompt_safe_override": false,
+      "authored_text_sha256": "783a7673490d377b8e6fb5e20cf3fea0dd5471dc1ec684adf5066ad8cfbf0dfa",
+      "fact_scope": "mcm_product",
+      "claim_owner": "LWG definition and MCM product specification",
+      "evidence_mode": "derived",
+      "ai_use": "negative_constraint",
+      "confidence": "high",
+      "valid_time": {
+        "label": "2026-08-21 용어 적용",
+        "start": "2026-08-21",
+        "end": "2026-08-21",
+        "precision": "day",
+        "status": "current_snapshot"
+      },
+      "observed_at": "2026-08-21",
+      "evidence": [
+        {
+          "source_id": "SRC-019",
+          "locator": "Suede definition",
+          "support": "supports"
+        },
+        {
+          "source_id": "SRC-033",
+          "locator": "Microfiber lining with suede finish",
+          "support": "supports"
+        }
+      ]
+    },
+    {
+      "claim_id": "CLM-061",
+      "runtime_role": "always_on_safety",
+      "topic": "material",
+      "subject": "Visetos substrate fiber",
+      "prompt_safe_text": "공개 자료는 Visetos를 coated canvas로 부르지만 기재 직물의 정확한 섬유 조성, 직조 조직, 중량을 개별 SKU 수준에서 공개하지 않는다.",
+      "prompt_safe_override": false,
+      "authored_text_sha256": "fe2ed07dfab9b9bb4fd0a39013bec3716434444a4c824d22233e505bda1cf409",
+      "fact_scope": "mcm_product",
+      "claim_owner": "research synthesis",
+      "evidence_mode": "unknown",
+      "ai_use": "negative_constraint",
+      "confidence": "high",
+      "valid_time": {
+        "label": "2026-08-21 공개자료 조사",
+        "start": "2026-08-21",
+        "end": "2026-08-21",
+        "precision": "day",
+        "status": "current_snapshot"
+      },
+      "observed_at": "2026-08-21",
+      "evidence": [
+        {
+          "source_id": "SRC-001",
+          "locator": "Italian coated canvas description",
+          "support": "context_only"
+        },
+        {
+          "source_id": "SRC-033",
+          "locator": "Visetos monogram coated canvas specification",
+          "support": "context_only"
+        }
+      ]
+    },
+    {
+      "claim_id": "CLM-062",
+      "runtime_role": "always_on_safety",
+      "topic": "process",
+      "subject": "Undisclosed process parameters",
+      "prompt_safe_text": "공개 자료에서 Visetos 인쇄법·잉크·탑코트 순서, 코팅 두께, 엠보싱 금형 깊이·압력·온도, 실 소재·호수·SPI, 접착제, 엣지페인트 조성·도포 횟수, 도금 두께는 확인되지 않았다.",
+      "prompt_safe_override": false,
+      "authored_text_sha256": "4505619506de1fac1470a1186a190aece7eeac231755779c333d993186e283c6",
+      "fact_scope": "mcm_brand",
+      "claim_owner": "research synthesis",
+      "evidence_mode": "unknown",
+      "ai_use": "negative_constraint",
+      "confidence": "high",
+      "valid_time": {
+        "label": "2026-08-21 공개자료 조사",
+        "start": "2026-08-21",
+        "end": "2026-08-21",
+        "precision": "day",
+        "status": "current_snapshot"
+      },
+      "observed_at": "2026-08-21",
+      "evidence": [
+        {
+          "source_id": "SRC-006",
+          "locator": "public Cubic craft detail boundary",
+          "support": "context_only"
+        },
+        {
+          "source_id": "SRC-009",
+          "locator": "public materials roadmap boundary",
+          "support": "context_only"
+        },
+        {
+          "source_id": "SRC-016",
+          "locator": "historical high-level process only",
+          "support": "context_only"
+        }
+      ]
+    },
+    {
+      "claim_id": "CLM-084",
+      "runtime_role": "always_on_safety",
+      "topic": "pattern",
+      "subject": "Undisclosed production pattern specifications",
+      "prompt_safe_text": "조사한 공개 자료만으로는 MCM 반복 타일의 실측 치수, 모티프 간격·배율, 패널별 방향·배치와 봉제선 정합, 정품 제작용 벡터 마스터, Pantone·잉크값을 확인할 수 없다.",
+      "prompt_safe_override": false,
+      "authored_text_sha256": "152f86671b927900b4660605f30baea5a38ae4cb0717c19cca2886181f18ec6f",
+      "fact_scope": "mcm_brand",
+      "claim_owner": "research synthesis",
+      "evidence_mode": "unknown",
+      "ai_use": "negative_constraint",
+      "confidence": "high",
+      "valid_time": {
+        "label": "2026-08-21 공개자료 조사",
+        "start": "2026-08-21",
+        "end": "2026-08-21",
+        "precision": "day",
+        "status": "current_snapshot"
+      },
+      "observed_at": "2026-08-21",
+      "evidence": [
+        {
+          "source_id": "SRC-001",
+          "locator": "motif history and composition only",
+          "support": "context_only"
+        },
+        {
+          "source_id": "SRC-006",
+          "locator": "Cubic concept and media executions only",
+          "support": "context_only"
+        },
+        {
+          "source_id": "SRC-027",
+          "locator": "registered repeating-pattern specimen and legal description only",
+          "support": "context_only"
+        }
+      ]
+    },
+    {
+      "claim_id": "CLM-089",
+      "runtime_role": "always_on_safety",
+      "topic": "material",
+      "subject": "Resetos exact composition and Responsible Features scope",
+      "prompt_safe_text": "Resetos=regenerated leather 표기만으로 함량·결합재·동물종·무두질·코팅·비건 여부를 확정하지 않는다.",
+      "prompt_safe_override": true,
+      "authored_text_sha256": "3af9cab4c600e5fc2ffd126abbd6051f177844d81164e69f7b5093d947837dd1",
+      "fact_scope": "mcm_product",
+      "claim_owner": "research synthesis",
+      "evidence_mode": "unknown",
+      "ai_use": "negative_constraint",
+      "confidence": "high",
+      "valid_time": {
+        "label": "2026-08-21 공개 SKU 조사",
+        "start": "2026-08-21",
+        "end": "2026-08-21",
+        "precision": "day",
+        "status": "current_snapshot"
+      },
+      "observed_at": "2026-08-21",
+      "evidence": [
+        {
+          "source_id": "SRC-093",
+          "locator": "Body label at lines 368–377 and category-level Responsible Features boilerplate at lines 390–397",
+          "support": "context_only"
+        }
+      ]
+    },
+    {
+      "claim_id": "CLM-090",
+      "runtime_role": "always_on_safety",
+      "topic": "leather_type",
+      "subject": "MCM Vachetta terminology",
+      "prompt_safe_text": "Vachetta 명칭만으로 동물종·grain·vegetable tannage를 확정하지 않는다.",
+      "prompt_safe_override": true,
+      "authored_text_sha256": "9f2294baf7a04f2a57bc28a3fa3ca14b601f3f38e859207bfb767ddc166cfd12",
+      "fact_scope": "mcm_brand",
+      "claim_owner": "research synthesis",
+      "evidence_mode": "unknown",
+      "ai_use": "negative_constraint",
+      "confidence": "high",
+      "valid_time": {
+        "label": "2026-08-21 공개자료 조사",
+        "start": "2026-08-21",
+        "end": "2026-08-21",
+        "precision": "day",
+        "status": "current_snapshot"
+      },
+      "observed_at": "2026-08-21",
+      "evidence": [
+        {
+          "source_id": "SRC-006",
+          "locator": "Cubic craftsmanship Vachetta emboss description",
+          "support": "context_only"
+        },
+        {
+          "source_id": "SRC-068",
+          "locator": "Product details: Vachetta leather trim",
+          "support": "context_only"
+        }
+      ]
+    }
+  ]
+}

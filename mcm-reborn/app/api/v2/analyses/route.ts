@@ -11,6 +11,7 @@ import { authenticate, requireRole } from '@/server/auth/middleware';
 import { readJsonBody } from '@/server/http/json';
 
 export const runtime = 'nodejs';
+export const maxDuration = 180;
 
 const CreateAnalysisRequestSchema = z.object({
   imageAssetIds: z.array(z.string().uuid()).length(6).refine(

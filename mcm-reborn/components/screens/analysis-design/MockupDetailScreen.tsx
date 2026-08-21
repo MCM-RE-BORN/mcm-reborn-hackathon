@@ -8,7 +8,7 @@ import { StickyActionBar } from "@/components/layout/StickyActionBar";
 import { ButtonLink } from "@/components/ui/Button";
 import { StatusPanel } from "@/components/ui/StatusPanel";
 import { DemoStatePanel } from "./DemoStatePanel";
-import { MockupViewer } from "./MockupViewer";
+import { TextureMockupStudio } from "./TextureMockupStudio";
 import {
   customerFetch,
   type CustomerProductDetail,
@@ -133,7 +133,7 @@ export function MockupDetailScreen({ analysisId, productId, state }: MockupDetai
       ) : (
         <article className={styles.mockupContent}>
           <div className={styles.mockupStage}>
-            <MockupViewer />
+            <TextureMockupStudio analysisId={analysisId} />
           </div>
 
           <header className={styles.productDetailHeader}>

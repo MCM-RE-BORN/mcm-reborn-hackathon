@@ -27,7 +27,8 @@
 | `mock-data.json` | 최종 제품 4종, 대표 주문·분석·실물 검수·변경 승인·보증서 Fixture |
 | `supabase-schema.sql` | 테이블, RLS, Storage 정책, 제품 Seed |
 | `.env.example` | 환경변수 템플릿 |
-| `prompts/bag-analysis.system.txt` | OpenAI 분석 시스템 프롬프트 |
+| `prompts/bag-analysis.system.txt` | OpenAI 분석 developer prompt 참고본 |
+| `docs/AI_ANALYSIS_DOMAIN_KNOWLEDGE.md` | PDF에서 정규화한 소재·구성 부위·재사용 판단 지식과 감사 버전 |
 | `examples/openai-analysis.ts` | Responses API + 이미지 + Zod Structured Output 참고 예시. 실행 Route Handler는 공식 SDK의 Chat Completions Structured Outputs 사용 |
 | `examples/mock-status.ts` | v2 상태 전이와 제작 시작 검수·승인 guard 예시 |
 | `examples/recommendation.ts` | 결정론적 수율·추천·Mock ESG 계산 |
@@ -48,6 +49,7 @@
 - 고객 데이터와 private 원본 이미지는 소유자 기반 RLS·Storage 정책으로 격리하고 운영자만 업무상 조회합니다.
 - 제품 목록은 각 결과 제품의 완성형 전체 이미지를 표시합니다.
 - 현재 제품 상세는 정적 다각도 목업을 제공합니다. Product3D JSON은 DB와 canonical Mock에 보존하지만 실제 GLB/poster가 준비되기 전에는 `model_3d_ready`/`model3dReady=false`이며 API는 `has3d=false`, `model3d=null`로 응답합니다.
+- Meshy AI 연동의 크레딧·비용 제한을 고려해 신규 `3D 목업` 생성(`TARGET_RETEXTURE`)은 고객당 UTC 기준 하루 최대 3회로 제한하며 한국 시간 매일 오전 9시에 갱신합니다. 배포 전체 보호 한도도 별도로 적용하고, 완료·진행 중인 동일 작업은 캐시된 결과나 작업 참조로 복구해 중복 생성하지 않습니다.
 - 결제, 물류, ESG 산식, 보증서는 Mock입니다.
 - 결제 성공은 `ORDER_PLACED`이며, 주문 후 전문가 실물 검수와 필요한 고객 변경 승인 전에는 `IN_PRODUCTION`으로 전환할 수 없습니다.
 

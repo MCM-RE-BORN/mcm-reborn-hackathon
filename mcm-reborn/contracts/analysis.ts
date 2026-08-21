@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { ExteriorMaterialProfileSchema } from './exterior-material';
 
 /**
  * OpenAPI-aligned enums and schemas for analysis
@@ -94,6 +95,7 @@ export const BagVisionSchema = z.object({
     .max(8),
   confidence: z.number().min(0).max(1),
   summaryKo: z.string().max(300),
+  exteriorMaterialProfile: ExteriorMaterialProfileSchema.nullable(),
   authenticityPrecheck: z.object({
     status: AuthenticityPrecheckStatusSchema,
     estimatePercent: z.number().int().min(0).max(100),

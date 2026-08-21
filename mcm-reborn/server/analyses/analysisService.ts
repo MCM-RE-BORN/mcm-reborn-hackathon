@@ -11,6 +11,10 @@ import {
   type SourceCategory,
 } from '@/contracts/analysis';
 import {
+  ExteriorMaterialProfileSchema,
+  type ExteriorMaterialProfile,
+} from '@/contracts/exterior-material';
+import {
   ConflictError,
   ForbiddenError,
   ImageQualityInsufficientError,
@@ -30,10 +34,19 @@ import {
   createAdminSupabaseClient,
   createUserSupabaseClient,
 } from '@/lib/supabase/server';
+import { TEXTURE_PRIVACY_NOTICE_VERSION } from '@/lib/texture-preview';
 import {
   assertExternalAiReady,
   createVisionProvider,
 } from '@/server/openai/visionProviderFactory';
+import {
+  MCM_ANALYSIS_GROUNDING_COMPONENTS,
+  MCM_ANALYSIS_KNOWLEDGE_VERSION,
+} from '@/server/openai/analysisGrounding';
+import {
+  MCM_LEATHER_WIKI_ALWAYS_ON_SAFETY_CLAIM_IDS,
+  MCM_LEATHER_WIKI_DYNAMIC_CLAIM_IDS,
+} from '@/server/knowledge/mcmLeatherWiki';
 import { VisionImageQualityError } from '@/server/openai/types';
 import { isRecord } from '@/server/http/json';
 import {
@@ -133,6 +146,11 @@ export interface Analysis {
   warnings: Array<{ code: string; message: string }>;
   createdAt: string;
   completedAt: string;
+}
+
+export interface AnalysisTextureContext {
+  analysis: Analysis;
+  exteriorMaterialProfile: ExteriorMaterialProfile | null;
 }
 
 export interface AnalysisListItem {
@@ -283,7 +301,7 @@ export async function createAnalysis(input: CreateAnalysisInput): Promise<Analys
     }
 
     const products = await readActiveProductRules(admin);
-    const derived = deriveAnalysis(providerOutput, products);
+    const derived = deriveAnalysis(providerOutput, products, normalizedInput);
     analysisId = randomUUID();
     await attachIdempotencyResource(
       admin,
@@ -330,7 +348,20 @@ export async function createAnalysis(input: CreateAnalysisInput): Promise<Analys
       provider_request_id: providerOutput.providerRequestId,
       provider_result: {
         confidence: result.confidence,
+        exteriorMaterialProfile: result.exteriorMaterialProfile,
         imageQuality: { status: 'ACCEPTABLE', issues: [] },
+        knowledgeVersion: providerOutput.knowledgeVersion ?? null,
+        knowledgeSources:
+          providerOutput.modeUsed === 'LIVE'
+            ? {
+                ...MCM_ANALYSIS_GROUNDING_COMPONENTS,
+                alwaysOnRecordIds: [
+                  ...MCM_LEATHER_WIKI_ALWAYS_ON_SAFETY_CLAIM_IDS,
+                ],
+                combinedVersion: MCM_ANALYSIS_KNOWLEDGE_VERSION,
+              }
+            : null,
+        knowledgeTrace: providerOutput.knowledgeTrace ?? null,
       },
       damages: result.damages,
       warnings: providerOutput.warnings ?? [],
@@ -472,20 +503,32 @@ export async function createAnalysis(input: CreateAnalysisInput): Promise<Analys
 
 function assertExternalAiConsent(input: CreateAnalysisInput): void {
   const mode = (process.env.AI_MODE ?? 'DEMO_FIXTURE').trim().toUpperCase();
-  if (mode !== 'LIVE') {
+  const consentFieldsProvided =
+    input.externalAiProcessingConsentAccepted !== undefined
+    || input.externalAiPrivacyNoticeVersion !== undefined;
+
+  if (mode === 'LIVE') {
+    assertExternalAiReady();
+    const configuredVersion =
+      process.env.EXTERNAL_AI_PRIVACY_NOTICE_VERSION?.trim();
+    if (configuredVersion !== TEXTURE_PRIVACY_NOTICE_VERSION) {
+      throw new ServiceUnavailableError(
+        'External AI privacy notice is not configured for the active unified notice',
+      );
+    }
+  } else if (!consentFieldsProvided) {
+    // Non-LIVE API clients can still create fixture analyses without opting in.
+    // Those analyses cannot pass the texture service's linked-consent guard.
     return;
   }
 
-  assertExternalAiReady();
-  const expectedVersion =
-    process.env.EXTERNAL_AI_PRIVACY_NOTICE_VERSION?.trim();
   if (
     input.externalAiProcessingConsentAccepted !== true ||
-    !expectedVersion ||
-    input.externalAiPrivacyNoticeVersion?.trim() !== expectedVersion
+    input.externalAiPrivacyNoticeVersion?.trim() !==
+      TEXTURE_PRIVACY_NOTICE_VERSION
   ) {
     throw new ForbiddenError(
-      'External AI image processing consent is required for the active privacy notice',
+      'External AI analysis and texture processing consent is required for the active unified notice',
     );
   }
 }
@@ -495,8 +538,7 @@ async function recordExternalAiConsent(
   input: CreateAnalysisInput,
   requestHash: string,
 ): Promise<string | null> {
-  const mode = (process.env.AI_MODE ?? 'DEMO_FIXTURE').trim().toUpperCase();
-  if (mode !== 'LIVE') {
+  if (!hasUnifiedExternalAiConsent(input)) {
     return null;
   }
 
@@ -553,8 +595,7 @@ async function ensureExternalAiConsentLinked(
   analysisId: string,
   knownConsentId?: string | null,
 ): Promise<void> {
-  const mode = (process.env.AI_MODE ?? 'DEMO_FIXTURE').trim().toUpperCase();
-  if (mode !== 'LIVE') {
+  if (!hasUnifiedExternalAiConsent(input)) {
     return;
   }
 
@@ -593,6 +634,14 @@ async function ensureExternalAiConsentLinked(
   if (linkError || linked?.id !== consent.id) {
     throw databaseWriteError('external AI consent link');
   }
+}
+
+function hasUnifiedExternalAiConsent(input: CreateAnalysisInput): boolean {
+  return (
+    input.externalAiProcessingConsentAccepted === true &&
+    input.externalAiPrivacyNoticeVersion?.trim() ===
+      TEXTURE_PRIVACY_NOTICE_VERSION
+  );
 }
 
 function externalAiConsentReceiptHash(
@@ -678,10 +727,141 @@ export async function getAnalysisById(
   analysisId: string,
   viewer: AnalysisViewer,
 ): Promise<Analysis> {
+  const context = await getAnalysisTextureContext(analysisId, viewer);
+  return context.analysis;
+}
+
+/** Read an authorized analysis plus its private runtime-only material profile. */
+export async function getAnalysisTextureContext(
+  analysisId: string,
+  viewer: AnalysisViewer,
+): Promise<AnalysisTextureContext> {
   const row = await readAuthorizedAnalysisRow(analysisId, viewer);
   const admin = createAdminSupabaseClient();
   const recommendations = await readStoredRecommendations(admin, analysisId);
-  return serializeAnalysis(row, recommendations);
+  const providerResult = isRecord(row.provider_result)
+    ? row.provider_result
+    : {};
+  const profile = ExteriorMaterialProfileSchema.safeParse(
+    providerResult.exteriorMaterialProfile,
+  );
+  const knowledgeSources = isRecord(providerResult.knowledgeSources)
+    ? providerResult.knowledgeSources
+    : {};
+  const profileUsesCurrentKnowledge =
+    providerResult.knowledgeVersion === MCM_ANALYSIS_KNOWLEDGE_VERSION &&
+    hasCurrentKnowledgeSources(knowledgeSources) &&
+    hasCurrentKnowledgeTrace(providerResult.knowledgeTrace);
+  return {
+    analysis: serializeAnalysis(row, recommendations),
+    exteriorMaterialProfile:
+      profile.success && profileUsesCurrentKnowledge ? profile.data : null,
+  };
+}
+
+function hasCurrentKnowledgeSources(value: Record<string, unknown>): boolean {
+  return (
+    value.combinedVersion === MCM_ANALYSIS_KNOWLEDGE_VERSION &&
+    value.promptVersion === MCM_ANALYSIS_GROUNDING_COMPONENTS.promptVersion &&
+    value.reuseGuideVersion ===
+      MCM_ANALYSIS_GROUNDING_COMPONENTS.reuseGuideVersion &&
+    value.wikiCorpusVersion ===
+      MCM_ANALYSIS_GROUNDING_COMPONENTS.wikiCorpusVersion &&
+    value.wikiCorpusSha256 ===
+      MCM_ANALYSIS_GROUNDING_COMPONENTS.wikiCorpusSha256 &&
+    value.wikiRetrieverVersion ===
+      MCM_ANALYSIS_GROUNDING_COMPONENTS.wikiRetrieverVersion &&
+    sameStringArray(
+      value.alwaysOnRecordIds,
+      MCM_LEATHER_WIKI_ALWAYS_ON_SAFETY_CLAIM_IDS,
+    )
+  );
+}
+
+function hasCurrentKnowledgeTrace(value: unknown): boolean {
+  if (!isRecord(value)) return false;
+  if (
+    value.promptVersion !== MCM_ANALYSIS_GROUNDING_COMPONENTS.promptVersion ||
+    value.reuseGuideVersion !==
+      MCM_ANALYSIS_GROUNDING_COMPONENTS.reuseGuideVersion ||
+    value.wikiCorpusVersion !==
+      MCM_ANALYSIS_GROUNDING_COMPONENTS.wikiCorpusVersion ||
+    value.wikiCorpusSha256 !==
+      MCM_ANALYSIS_GROUNDING_COMPONENTS.wikiCorpusSha256 ||
+    value.wikiRetrieverVersion !==
+      MCM_ANALYSIS_GROUNDING_COMPONENTS.wikiRetrieverVersion ||
+    !sameStringArray(
+      value.alwaysOnRecordIds,
+      MCM_LEATHER_WIKI_ALWAYS_ON_SAFETY_CLAIM_IDS,
+    ) ||
+    !isUniqueRuntimeClaimIdArray(value.retrievedRecordIds) ||
+    !isUniqueStringArray(value.retrievedSourceIds)
+  ) {
+    return false;
+  }
+
+  if (value.applicationStatus === 'APPLIED_TO_LIVE_RESULT') {
+    return (
+      value.retrievedRecordIds.length > 0 &&
+      value.retrievedRecordIds.length <= 5 &&
+      value.retrievedSourceIds.length > 0 &&
+      isNonEmptyString(value.lookupRequestId) &&
+      isSha256(value.queryHash) &&
+      isSha256(value.contextSha256)
+    );
+  }
+  if (value.applicationStatus === 'LOOKUP_EMPTY_SAFETY_USED') {
+    return (
+      value.retrievedRecordIds.length === 0 &&
+      value.retrievedSourceIds.length === 0 &&
+      isNonEmptyString(value.lookupRequestId) &&
+      isSha256(value.queryHash) &&
+      isSha256(value.contextSha256)
+    );
+  }
+  if (value.applicationStatus === 'LOOKUP_FAILED_SAFETY_USED') {
+    return (
+      value.retrievedRecordIds.length === 0 &&
+      value.retrievedSourceIds.length === 0 &&
+      value.lookupRequestId === null &&
+      value.queryHash === null &&
+      value.contextSha256 === null
+    );
+  }
+  return false;
+}
+
+function sameStringArray(
+  value: unknown,
+  expected: readonly string[],
+): boolean {
+  return (
+    Array.isArray(value) &&
+    value.length === expected.length &&
+    value.every((item, index) => item === expected[index])
+  );
+}
+
+function isUniqueStringArray(value: unknown): value is string[] {
+  return (
+    Array.isArray(value) &&
+    value.every(isNonEmptyString) &&
+    new Set(value).size === value.length
+  );
+}
+
+function isUniqueRuntimeClaimIdArray(value: unknown): value is string[] {
+  if (!isUniqueStringArray(value)) return false;
+  const allowed = new Set<string>(MCM_LEATHER_WIKI_DYNAMIC_CLAIM_IDS);
+  return value.every((claimId) => allowed.has(claimId));
+}
+
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === 'string' && value.length > 0;
+}
+
+function isSha256(value: unknown): value is string {
+  return typeof value === 'string' && /^[a-f0-9]{64}$/.test(value);
 }
 
 async function readOrderedUploadedAssets(
@@ -832,6 +1012,7 @@ async function readActiveProductRules(
 function deriveAnalysis(
   providerOutput: Awaited<ReturnType<ReturnType<typeof createVisionProvider>['analyze']>>,
   products: ProductRuleRow[],
+  input: NormalizedProductInput,
 ) {
   const { result, fixtureEstimate, modeUsed } = providerOutput;
   const calculated = calculateReusableMaterial(
@@ -871,12 +1052,16 @@ function deriveAnalysis(
       };
     }
 
-    const recommendation = calculateRecommendationScore(
+    const recommendation = calculateRecommendationScore({
+      conditionGrade: result.conditionGrade,
+      desiredUse: input.desiredUse,
       estimatedReusableAreaCm2,
-      product.required_area_cm2,
-      result.conditionGrade,
-      product.code,
-    );
+      longStripAvailable: result.longStripAvailable,
+      materialType: result.materialType,
+      overallDamageSeverity: result.overallDamageSeverity,
+      productCode: product.code,
+      requiredAreaCm2: product.required_area_cm2,
+    });
     return {
       productId: product.id,
       productCode,
@@ -1145,6 +1330,10 @@ function analysisRequestHash(
           input.externalAiProcessingConsentAccepted ?? null,
         externalAiPrivacyNoticeVersion:
           input.externalAiPrivacyNoticeVersion?.trim() ?? null,
+        knowledgeVersion:
+          (process.env.AI_MODE ?? 'DEMO_FIXTURE').trim().toUpperCase() === 'LIVE'
+            ? MCM_ANALYSIS_KNOWLEDGE_VERSION
+            : null,
       }),
     )
     .digest('hex');

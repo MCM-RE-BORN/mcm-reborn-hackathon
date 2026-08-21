@@ -27,6 +27,7 @@ export type ProductDetails = {
   category: "BACKPACK";
   conditionNote: string;
   desiredUse: string;
+  externalAiProcessingConsentAccepted: boolean;
   purchaseYear: string;
   serialNumber: string;
   useDuration: string;
@@ -39,6 +40,7 @@ const INITIAL_PRODUCT_DETAILS: ProductDetails = {
   category: "BACKPACK",
   conditionNote: "",
   desiredUse: DESIRED_USE_OPTIONS[0],
+  externalAiProcessingConsentAccepted: false,
   purchaseYear: "",
   serialNumber: "",
   useDuration: USE_DURATION_OPTIONS[0],
