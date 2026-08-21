@@ -12,6 +12,7 @@ for the schema keywords used by this knowledge base.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 import subprocess
@@ -31,7 +32,41 @@ PRODUCT_PATH = KB_ROOT / "data" / "products.jsonl"
 PATTERN_IMAGE_PATH = KB_ROOT / "data" / "pattern_image_references.jsonl"
 MATERIAL_IMAGE_PATH = KB_ROOT / "data" / "material_image_references.jsonl"
 SCHEMA_PATH = KB_ROOT / "schema" / "knowledge-record.schema.json"
-RUNTIME_GROUNDING_BUILDER = REPO_ROOT / "scripts" / "build_mcm_runtime_grounding.py"
+README_PATH = KB_ROOT / "README.md"
+RUNTIME_WIKI_PATH = (
+    REPO_ROOT
+    / "mcm-reborn"
+    / "server"
+    / "knowledge"
+    / "mcmLeatherWiki.generated.json"
+)
+RUNTIME_WIKI_BUILDER = REPO_ROOT / "scripts" / "build_mcm_leather_wiki.py"
+
+DYNAMIC_RUNTIME_CLAIM_IDS = (
+    "CLM-008",
+    "CLM-009",
+    "CLM-011",
+    "CLM-012",
+    "CLM-038",
+    "CLM-039",
+    "CLM-044",
+    "CLM-059",
+    "CLM-068",
+    "CLM-069",
+    "CLM-085",
+)
+ALWAYS_ON_SAFETY_CLAIM_IDS = (
+    "CLM-029",
+    "CLM-040",
+    "CLM-061",
+    "CLM-062",
+    "CLM-084",
+    "CLM-089",
+    "CLM-090",
+)
+ORDERED_RUNTIME_CLAIM_IDS = (
+    DYNAMIC_RUNTIME_CLAIM_IDS + ALWAYS_ON_SAFETY_CLAIM_IDS
+)
 
 SOURCE_ID_RE = re.compile(r"^SRC-[0-9]{3}$")
 CLAIM_ID_RE = re.compile(r"^CLM-[0-9]{3}$")
@@ -41,6 +76,7 @@ IMAGE_ID_RE = re.compile(r"^(PIMG|MIMG|CIMG)-[0-9]{3}$")
 ISO_DATE_RE = re.compile(r"^[0-9]{4}-[0-9]{2}-[0-9]{2}$")
 LANGUAGE_RE = re.compile(r"^[a-z]{2}(-[A-Z]{2})?$")
 MARKET_RE = re.compile(r"^[A-Z]{2}$")
+WIKI_VERSION_RE = re.compile(r"^버전:\s*`([^`]+)`\s*$", re.MULTILINE)
 
 SOURCE_REQUIRED = {
     "record_type",
@@ -1338,6 +1374,196 @@ def validate_images(
     check_unique(all_content_hashes, "image content_sha256", errors)
 
 
+def validate_runtime_wiki_snapshot(
+    snapshot: Any,
+    sources: list[dict[str, Any]],
+    claims: list[dict[str, Any]],
+    products: list[dict[str, Any]],
+    errors: list[str],
+) -> None:
+    label = RUNTIME_WIKI_PATH.relative_to(REPO_ROOT)
+    if not isinstance(snapshot, dict):
+        errors.append(f"{label}: expected an object")
+        return
+
+    required = {
+        "record_type",
+        "knowledge_base_version",
+        "full_corpus_sha256",
+        "retrieval_corpus_sha256",
+        "source_files",
+        "ordered_claim_ids",
+        "dynamic_claim_ids",
+        "always_on_safety_claim_ids",
+        "counts",
+        "sources",
+        "claims",
+    }
+    if set(snapshot) != required:
+        errors.append(
+            f"{label}: fields must be exactly {sorted(required)}, got {sorted(snapshot)}"
+        )
+        return
+    if snapshot.get("record_type") != "mcm_leather_wiki_runtime_snapshot":
+        errors.append(f"{label}: invalid record_type")
+
+    try:
+        readme = README_PATH.read_text(encoding="utf-8")
+    except OSError as error:
+        errors.append(f"{README_PATH}: {error}")
+        return
+    version_match = WIKI_VERSION_RE.search(readme)
+    if not version_match:
+        errors.append(f"{README_PATH}: knowledge version is missing")
+    elif snapshot.get("knowledge_base_version") != version_match.group(1):
+        errors.append(f"{label}: knowledge_base_version does not match README")
+
+    source_paths = {
+        "sources.json": SOURCE_PATH,
+        "claims.jsonl": CLAIM_PATH,
+        "products.jsonl": PRODUCT_PATH,
+    }
+    expected_hashes: dict[str, str] = {}
+    for name, path in source_paths.items():
+        try:
+            expected_hashes[name] = hashlib.sha256(path.read_bytes()).hexdigest()
+        except OSError as error:
+            errors.append(f"{path}: {error}")
+            return
+    if snapshot.get("source_files") != expected_hashes:
+        errors.append(f"{label}: source file hashes are stale")
+
+    full_corpus_payload = json.dumps(
+        expected_hashes,
+        ensure_ascii=False,
+        separators=(",", ":"),
+        sort_keys=True,
+    ).encode("utf-8")
+    expected_full_corpus_sha256 = hashlib.sha256(full_corpus_payload).hexdigest()
+    if snapshot.get("full_corpus_sha256") != expected_full_corpus_sha256:
+        errors.append(f"{label}: full_corpus_sha256 is stale")
+
+    expected_counts = {
+        "authored_sources": len(sources),
+        "authored_claims": len(claims),
+        "authored_products": len(products),
+        "runtime_sources": len(snapshot.get("sources", [])),
+        "runtime_claims": len(ORDERED_RUNTIME_CLAIM_IDS),
+    }
+    if snapshot.get("counts") != expected_counts:
+        errors.append(f"{label}: counts do not match authored/runtime corpora")
+
+    ordered_ids = snapshot.get("ordered_claim_ids")
+    dynamic_ids = snapshot.get("dynamic_claim_ids")
+    safety_ids = snapshot.get("always_on_safety_claim_ids")
+    if ordered_ids != list(ORDERED_RUNTIME_CLAIM_IDS):
+        errors.append(f"{label}: ordered_claim_ids do not match reviewed order")
+    if dynamic_ids != list(DYNAMIC_RUNTIME_CLAIM_IDS):
+        errors.append(f"{label}: dynamic_claim_ids do not match reviewed set")
+    if safety_ids != list(ALWAYS_ON_SAFETY_CLAIM_IDS):
+        errors.append(
+            f"{label}: always_on_safety_claim_ids do not match reviewed set"
+        )
+
+    runtime_claims = snapshot.get("claims")
+    if not isinstance(runtime_claims, list):
+        errors.append(f"{label}: claims must be an array")
+        runtime_claims = []
+    runtime_claim_ids = [
+        claim.get("claim_id") for claim in runtime_claims if isinstance(claim, dict)
+    ]
+    if runtime_claim_ids != list(ORDERED_RUNTIME_CLAIM_IDS):
+        errors.append(f"{label}: runtime claims are missing, extra, or out of order")
+
+    authored_claim_by_id = {
+        claim.get("claim_id"): claim for claim in claims if isinstance(claim, dict)
+    }
+    runtime_source_ids: set[str] = set()
+    for claim in runtime_claims:
+        if not isinstance(claim, dict):
+            errors.append(f"{label}: runtime claim entries must be objects")
+            continue
+        claim_id = claim.get("claim_id")
+        authored = authored_claim_by_id.get(claim_id)
+        if not isinstance(authored, dict):
+            errors.append(f"{label}: runtime claim {claim_id!r} is not authored")
+            continue
+        expected_role = (
+            "dynamic"
+            if claim_id in DYNAMIC_RUNTIME_CLAIM_IDS
+            else "always_on_safety"
+        )
+        expected_ai_use = (
+            "grounding" if expected_role == "dynamic" else "negative_constraint"
+        )
+        if claim.get("runtime_role") != expected_role:
+            errors.append(f"{label}: {claim_id} has the wrong runtime_role")
+        if claim.get("ai_use") != expected_ai_use:
+            errors.append(f"{label}: {claim_id} has the wrong ai_use")
+        authored_text = authored.get("claim_ko")
+        if isinstance(authored_text, str):
+            expected_text_sha = hashlib.sha256(
+                authored_text.strip().encode("utf-8")
+            ).hexdigest()
+            if claim.get("authored_text_sha256") != expected_text_sha:
+                errors.append(
+                    f"{label}: {claim_id} authored_text_sha256 is stale"
+                )
+        prompt_safe_text = claim.get("prompt_safe_text")
+        if not isinstance(prompt_safe_text, str) or not prompt_safe_text.strip():
+            errors.append(f"{label}: {claim_id} prompt_safe_text is missing")
+        for evidence in claim.get("evidence", []):
+            if isinstance(evidence, dict) and isinstance(
+                evidence.get("source_id"), str
+            ):
+                runtime_source_ids.add(evidence["source_id"])
+
+    expected_safe_overrides = {
+        "CLM-089": (
+            "Resetos=regenerated leather 표기만으로 함량·결합재·동물종·무두질·"
+            "코팅·비건 여부를 확정하지 않는다."
+        ),
+        "CLM-090": (
+            "Vachetta 명칭만으로 동물종·grain·vegetable tannage를 확정하지 "
+            "않는다."
+        ),
+    }
+    runtime_claim_by_id = {
+        claim.get("claim_id"): claim
+        for claim in runtime_claims
+        if isinstance(claim, dict)
+    }
+    for claim_id, expected_text in expected_safe_overrides.items():
+        runtime_claim = runtime_claim_by_id.get(claim_id, {})
+        if runtime_claim.get("prompt_safe_text") != expected_text:
+            errors.append(f"{label}: {claim_id} prompt-safe override is stale")
+        if runtime_claim.get("prompt_safe_override") is not True:
+            errors.append(f"{label}: {claim_id} override provenance is missing")
+
+    runtime_sources = snapshot.get("sources")
+    if not isinstance(runtime_sources, list):
+        errors.append(f"{label}: sources must be an array")
+        runtime_sources = []
+    snapshot_source_ids = [
+        source.get("source_id")
+        for source in runtime_sources
+        if isinstance(source, dict)
+    ]
+    if snapshot_source_ids != sorted(runtime_source_ids):
+        errors.append(
+            f"{label}: runtime sources must be exactly the referenced provenance"
+        )
+
+    forbidden_snapshot_fields = {"products", "product_snapshots", "images"}
+    if forbidden_snapshot_fields.intersection(snapshot):
+        errors.append(f"{label}: product/image corpora must not be bundled at runtime")
+
+    if not isinstance(snapshot.get("retrieval_corpus_sha256"), str) or not re.fullmatch(
+        r"[a-f0-9]{64}", snapshot.get("retrieval_corpus_sha256", "")
+    ):
+        errors.append(f"{label}: retrieval_corpus_sha256 is invalid")
+
+
 def main() -> int:
     errors: list[str] = []
     schema = load_json(SCHEMA_PATH, errors)
@@ -1349,6 +1575,7 @@ def main() -> int:
     products = load_jsonl(PRODUCT_PATH, errors)
     pattern_images = load_jsonl(PATTERN_IMAGE_PATH, errors)
     material_images = load_jsonl(MATERIAL_IMAGE_PATH, errors)
+    runtime_wiki = load_json(RUNTIME_WIKI_PATH, errors)
 
     validate_records_against_schema(sources, schema, "source", errors)
     validate_records_against_schema(claims, schema, "claim", errors)
@@ -1376,15 +1603,22 @@ def main() -> int:
         source_dates,
         errors,
     )
+    validate_runtime_wiki_snapshot(
+        runtime_wiki,
+        sources,
+        claims,
+        products,
+        errors,
+    )
 
-    runtime_grounding_message = ""
+    runtime_wiki_message = ""
     if not errors:
-        grounding_check = subprocess.run(
+        wiki_check = subprocess.run(
             [
                 sys.executable,
                 "-X",
                 "utf8",
-                str(RUNTIME_GROUNDING_BUILDER),
+                str(RUNTIME_WIKI_BUILDER),
                 "--check",
             ],
             capture_output=True,
@@ -1393,11 +1627,11 @@ def main() -> int:
             errors="replace",
             check=False,
         )
-        runtime_grounding_message = grounding_check.stdout.strip()
-        if grounding_check.returncode != 0:
-            details = grounding_check.stderr.strip() or runtime_grounding_message
+        runtime_wiki_message = wiki_check.stdout.strip()
+        if wiki_check.returncode != 0:
+            details = wiki_check.stderr.strip() or runtime_wiki_message
             errors.append(
-                "runtime grounding is missing or stale"
+                "runtime wiki snapshot is missing or stale"
                 + (f": {details}" if details else "")
             )
 
@@ -1425,8 +1659,8 @@ def main() -> int:
         f"{image_type_counts['editorial_context']} editorial context images, "
         f"{conflict_count} conflict groups."
     )
-    if runtime_grounding_message:
-        print(runtime_grounding_message)
+    if runtime_wiki_message:
+        print(runtime_wiki_message)
     return 0
 
 

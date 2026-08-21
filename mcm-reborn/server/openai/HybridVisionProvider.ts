@@ -5,7 +5,7 @@ import type {
   VisionAnalyzeResult,
   VisionProvider,
 } from './types';
-import { VisionImageQualityError } from './types';
+import { VisionImageQualityError, VisionWikiGroundingError } from './types';
 
 /**
  * Compatibility mode for deployments that explicitly opt into provider
@@ -32,6 +32,10 @@ export class HybridVisionProvider implements VisionProvider {
 
       return {
         ...fallback,
+        knowledgeTrace:
+          error instanceof VisionWikiGroundingError
+            ? error.knowledgeTrace
+            : undefined,
         warnings: [
           {
             code: warningCode(error),

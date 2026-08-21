@@ -34,8 +34,9 @@
 - `RESEARCH_REPORT_KO.md`: 조사 결과, 타임라인, 한계와 AI 적용 규칙
 - `CRAWL_LOG.md`: 수집 범위와 접근 제약
 - 저장소 루트의 `scripts/validate_mcm_leather_knowledge.py`: ID, 날짜, URL, 참조 무결성 검증
-- 저장소 루트의 `scripts/build_mcm_runtime_grounding.py`: 선별 claim을 결정적 런타임 TypeScript로 컴파일하고 stale 여부 검증
-- `mcm-reborn/server/openai/generated/mcmPublicGrounding.ts`: LIVE 분석 prompt에 주입하는 생성물. 직접 수정하지 않음
+- 저장소 루트의 `scripts/build_mcm_leather_wiki.py`: 검토된 분석용 claim과 필요한 출처만 담은 서버 전용 위키 스냅샷 생성·동기화 검사
+- `RUNTIME_WIKI_KO.md`: LIVE 분석이 전체 자료를 프롬프트에 복사하지 않고 조회하는 방식과 안전 경계
+- `mcm-reborn/server/knowledge/mcmLeatherWiki.generated.json`: 생성된 분석용 스냅샷. 직접 수정하지 않음
 
 ## 시간 모델
 
@@ -107,21 +108,20 @@
 
 ### LIVE 런타임 provenance
 
-첫 LIVE 분석은 전체 연구 레코드나 외부 URL·이미지를 런타임에 읽지 않는다. build-time compiler가 `claims.jsonl`에서 승인된 16개 claim을 정확한 ID 순서로 선택하고, `ai_use`, `evidence_mode`, `confidence` 제약을 검사한 뒤 claim ID와 한국어 의역문만 TypeScript로 생성한다. 생성물은 전달받은 PDF 정규화 규칙 `MCM_REUSE_GUIDE_2026_08_21_V1`과 함께 6면 OpenAI 분석의 developer prompt에 사용된다.
-
-버전, 정규화된 claim ID/text와 검증 메타데이터의 canonical UTF-8 JSON SHA-256은 다음과 같다.
+첫 LIVE 분석은 전체 연구 레코드나 외부 URL·이미지를 런타임에 읽지 않는다. build-time compiler가 분석에 안전한 claim 18개와 그 claim이 참조하는 축약 출처만 서버 스냅샷으로 만든다. 이 중 7개 금지 경계는 검색 성공 여부와 무관하게 최종 developer prompt에 항상 포함하고, 11개 시각 용어 claim만 요청별 검색 후보가 된다. 제품 스냅샷, 공식 이미지, `context_only`, 역사·법률·care·sourcing 레코드는 분석용 스냅샷에서 제외한다.
 
 ```text
 knowledge version: MCM_LEATHER_BAGS_PUBLIC_RESEARCH_2026_08_21_V1
-selected claims: 16
-canonical SHA-256: 1027b306a500b3f9b348f5e9db3489d65ba2114b1eb6d7ed4bb6920af07be03f
+runtime claims: 18 (dynamic 11 + always-on safety 7)
+full corpus SHA-256: e0bda28918ccbc1e29d7e8246a569f04f290ace39468fa63fb52789e9b9996a0
+retrieval corpus SHA-256: 6e2b016ab83d5d4fd609f19501a977a227a4cabef81cf68d8a23e01b45d52838
 ```
 
-LIVE 분석은 결합 knowledge version, 공개 KB version, 선별 claim ID 목록과 이 fingerprint를 private `analyses.provider_result`에 남긴다. customer-facing 분석 응답에는 claim 본문이나 외관 소재 profile을 직렬화하지 않는다. claim이나 README 버전이 바뀌면 생성물을 다시 만들고 `--check`를 통과시켜야 한다.
+LIVE 분석은 결합 knowledge version, 검색기 버전, always-on claim ID, lookup 요청 ID, query/context hash와 실제 조회 claim·source ID를 private `analyses.provider_result`에 남긴다. customer-facing 분석 응답에는 검색어 원문, claim 본문이나 외관 소재 profile을 직렬화하지 않는다. 작성 원본이나 선별 정책이 바뀌면 생성물을 다시 만들고 `--check`를 통과시켜야 한다.
 
 ```text
-python -X utf8 scripts/build_mcm_runtime_grounding.py
-python -X utf8 scripts/build_mcm_runtime_grounding.py --check
+python -X utf8 scripts/build_mcm_leather_wiki.py
+python -X utf8 scripts/build_mcm_leather_wiki.py --check
 ```
 
 `--check`는 생성물이 없거나 canonical 입력과 byte-for-byte로 다르면 nonzero로 종료한다.
@@ -132,9 +132,24 @@ python -X utf8 scripts/build_mcm_runtime_grounding.py --check
 
 ```text
 python -X utf8 scripts/validate_mcm_leather_knowledge.py
+python -X utf8 scripts/build_mcm_leather_wiki.py --check
 ```
 
-검증기는 저장된 JSON Schema 계약을 모든 레코드에 실제 적용하고, ID·출처 URL·이미지 자산 중복, ISO 날짜, HTTPS 출처, claim·product·image의 출처 참조, 제품의 단일 본체와 부품 역할, 이미지 파일별 유형·공식 채널 URL·원본 페이지, 날짜 근거, 권리 상태, 충돌 그룹과 목표·미확인 값의 AI 사용 제약을 추가로 확인한다.
+검증기는 저장된 JSON Schema 계약을 모든 레코드에 실제 적용하고, ID·출처 URL·이미지 자산 중복, ISO 날짜, HTTPS 출처, claim·product·image의 출처 참조, 제품의 단일 본체와 부품 역할, 이미지 파일별 유형·공식 채널 URL·원본 페이지, 날짜 근거, 권리 상태, 충돌 그룹과 목표·미확인 값의 AI 사용 제약을 추가로 확인한다. 또한 생성된 분석용 스냅샷이 승인된 18개 ID·역할·순서, prompt-safe override, 필요한 출처 provenance, 원본 SHA-256과 버전에 맞는지 검사한다.
+
+## LIVE 분석의 내부 위키 사용
+
+전체 지식 베이스를 고정 developer prompt에 붙이지 않는다. LIVE 분석은 먼저 `detail: low`로 제출 사진에서 관찰 가능한 일반 용어만 만들고 서버 전용 `search_mcm_leather_wiki` 조회를 정확히 한 번 요청한다. 서버 검색기는 정확한 lexical hit가 있는 dynamic claim만 결정론적으로 정렬해 최대 5개·4,000자 이하의 출처·시기·적용 경계를 반환한다. 두 번째 `detail: auto` Structured Output 호출이 같은 6면 사진, PDF 재사용 가이드, always-on 금지 경계와 작은 검색 결과를 사용해 최종 분석과 외관 profile을 함께 만든다. lookup 실패·무결과에는 전체 코퍼스를 붙이지 않고 always-on 경계만 사용한다.
+
+- 작성 원본: 이 디렉터리의 `sources.json`, `claims.jsonl`, `products.jsonl`
+- 배포 산출물: `mcm-reborn/server/knowledge/mcmLeatherWiki.generated.json`
+- 검색 구현: `mcm-reborn/server/knowledge/mcmLeatherWiki.ts`
+- 감사 정보: 통합 지식 버전, full/retrieval corpus SHA, 검색기 버전, 검색 요청 ID, query hash, 순서가 보존된 조회 claim·출처 ID, 전달 컨텍스트 SHA-256
+- 외부 계약: 기존 분석 API·DB 스키마는 바꾸지 않고 `analyses.provider_result` JSON에만 내부 감사 정보를 남긴다.
+
+제품 예시는 tool schema와 서버 양쪽에서 `false`로 고정한다. 특정 SKU 범위의 긍정 claim과 비시각 `context_only` 레코드는 모델 검색 후보가 아니며, exact style 정보가 있던 금지 claim은 작성 원문의 hash를 보존한 일반화 문구만 prompt에 노출한다.
+
+이미지 263건은 이 위키의 사람용 패턴·소재 참고 레지스트리로 유지한다. `rights_status: unknown_reference_only`이므로 LIVE 분석 검색 결과에는 이미지 URL·바이너리를 넣지 않고, 고객 사진과 공식 이미지를 자동 비교하거나 정품·SKU 판별 데이터로 사용하지 않는다.
 
 ## 저작권·재현성
 

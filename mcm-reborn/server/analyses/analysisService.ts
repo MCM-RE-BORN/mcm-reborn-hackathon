@@ -12,7 +12,6 @@ import {
 } from '@/contracts/analysis';
 import {
   ExteriorMaterialProfileSchema,
-  MCM_PUBLIC_KNOWLEDGE_VERSION,
   type ExteriorMaterialProfile,
 } from '@/contracts/exterior-material';
 import {
@@ -41,11 +40,13 @@ import {
   createVisionProvider,
 } from '@/server/openai/visionProviderFactory';
 import {
+  MCM_ANALYSIS_GROUNDING_COMPONENTS,
   MCM_ANALYSIS_KNOWLEDGE_VERSION,
-  MCM_PUBLIC_GROUNDING_CLAIM_IDS,
-  MCM_PUBLIC_KNOWLEDGE_FINGERPRINT,
-} from '@/server/openai/analysisKnowledge';
-import { MCM_MATERIAL_REUSE_KNOWLEDGE_VERSION } from '@/server/openai/materialReuseKnowledge';
+} from '@/server/openai/analysisGrounding';
+import {
+  MCM_LEATHER_WIKI_ALWAYS_ON_SAFETY_CLAIM_IDS,
+  MCM_LEATHER_WIKI_DYNAMIC_CLAIM_IDS,
+} from '@/server/knowledge/mcmLeatherWiki';
 import { VisionImageQualityError } from '@/server/openai/types';
 import { isRecord } from '@/server/http/json';
 import {
@@ -353,13 +354,14 @@ export async function createAnalysis(input: CreateAnalysisInput): Promise<Analys
         knowledgeSources:
           providerOutput.modeUsed === 'LIVE'
             ? {
+                ...MCM_ANALYSIS_GROUNDING_COMPONENTS,
+                alwaysOnRecordIds: [
+                  ...MCM_LEATHER_WIKI_ALWAYS_ON_SAFETY_CLAIM_IDS,
+                ],
                 combinedVersion: MCM_ANALYSIS_KNOWLEDGE_VERSION,
-                materialReuseVersion: MCM_MATERIAL_REUSE_KNOWLEDGE_VERSION,
-                publicResearchClaimIds: MCM_PUBLIC_GROUNDING_CLAIM_IDS,
-                publicResearchFingerprint: MCM_PUBLIC_KNOWLEDGE_FINGERPRINT,
-                publicResearchVersion: MCM_PUBLIC_KNOWLEDGE_VERSION,
               }
             : null,
+        knowledgeTrace: providerOutput.knowledgeTrace ?? null,
       },
       damages: result.damages,
       warnings: providerOutput.warnings ?? [],
@@ -748,13 +750,118 @@ export async function getAnalysisTextureContext(
     : {};
   const profileUsesCurrentKnowledge =
     providerResult.knowledgeVersion === MCM_ANALYSIS_KNOWLEDGE_VERSION &&
-    knowledgeSources.publicResearchFingerprint ===
-      MCM_PUBLIC_KNOWLEDGE_FINGERPRINT;
+    hasCurrentKnowledgeSources(knowledgeSources) &&
+    hasCurrentKnowledgeTrace(providerResult.knowledgeTrace);
   return {
     analysis: serializeAnalysis(row, recommendations),
     exteriorMaterialProfile:
       profile.success && profileUsesCurrentKnowledge ? profile.data : null,
   };
+}
+
+function hasCurrentKnowledgeSources(value: Record<string, unknown>): boolean {
+  return (
+    value.combinedVersion === MCM_ANALYSIS_KNOWLEDGE_VERSION &&
+    value.promptVersion === MCM_ANALYSIS_GROUNDING_COMPONENTS.promptVersion &&
+    value.reuseGuideVersion ===
+      MCM_ANALYSIS_GROUNDING_COMPONENTS.reuseGuideVersion &&
+    value.wikiCorpusVersion ===
+      MCM_ANALYSIS_GROUNDING_COMPONENTS.wikiCorpusVersion &&
+    value.wikiCorpusSha256 ===
+      MCM_ANALYSIS_GROUNDING_COMPONENTS.wikiCorpusSha256 &&
+    value.wikiRetrieverVersion ===
+      MCM_ANALYSIS_GROUNDING_COMPONENTS.wikiRetrieverVersion &&
+    sameStringArray(
+      value.alwaysOnRecordIds,
+      MCM_LEATHER_WIKI_ALWAYS_ON_SAFETY_CLAIM_IDS,
+    )
+  );
+}
+
+function hasCurrentKnowledgeTrace(value: unknown): boolean {
+  if (!isRecord(value)) return false;
+  if (
+    value.promptVersion !== MCM_ANALYSIS_GROUNDING_COMPONENTS.promptVersion ||
+    value.reuseGuideVersion !==
+      MCM_ANALYSIS_GROUNDING_COMPONENTS.reuseGuideVersion ||
+    value.wikiCorpusVersion !==
+      MCM_ANALYSIS_GROUNDING_COMPONENTS.wikiCorpusVersion ||
+    value.wikiCorpusSha256 !==
+      MCM_ANALYSIS_GROUNDING_COMPONENTS.wikiCorpusSha256 ||
+    value.wikiRetrieverVersion !==
+      MCM_ANALYSIS_GROUNDING_COMPONENTS.wikiRetrieverVersion ||
+    !sameStringArray(
+      value.alwaysOnRecordIds,
+      MCM_LEATHER_WIKI_ALWAYS_ON_SAFETY_CLAIM_IDS,
+    ) ||
+    !isUniqueRuntimeClaimIdArray(value.retrievedRecordIds) ||
+    !isUniqueStringArray(value.retrievedSourceIds)
+  ) {
+    return false;
+  }
+
+  if (value.applicationStatus === 'APPLIED_TO_LIVE_RESULT') {
+    return (
+      value.retrievedRecordIds.length > 0 &&
+      value.retrievedRecordIds.length <= 5 &&
+      value.retrievedSourceIds.length > 0 &&
+      isNonEmptyString(value.lookupRequestId) &&
+      isSha256(value.queryHash) &&
+      isSha256(value.contextSha256)
+    );
+  }
+  if (value.applicationStatus === 'LOOKUP_EMPTY_SAFETY_USED') {
+    return (
+      value.retrievedRecordIds.length === 0 &&
+      value.retrievedSourceIds.length === 0 &&
+      isNonEmptyString(value.lookupRequestId) &&
+      isSha256(value.queryHash) &&
+      isSha256(value.contextSha256)
+    );
+  }
+  if (value.applicationStatus === 'LOOKUP_FAILED_SAFETY_USED') {
+    return (
+      value.retrievedRecordIds.length === 0 &&
+      value.retrievedSourceIds.length === 0 &&
+      value.lookupRequestId === null &&
+      value.queryHash === null &&
+      value.contextSha256 === null
+    );
+  }
+  return false;
+}
+
+function sameStringArray(
+  value: unknown,
+  expected: readonly string[],
+): boolean {
+  return (
+    Array.isArray(value) &&
+    value.length === expected.length &&
+    value.every((item, index) => item === expected[index])
+  );
+}
+
+function isUniqueStringArray(value: unknown): value is string[] {
+  return (
+    Array.isArray(value) &&
+    value.every(isNonEmptyString) &&
+    new Set(value).size === value.length
+  );
+}
+
+function isUniqueRuntimeClaimIdArray(value: unknown): value is string[] {
+  if (!isUniqueStringArray(value)) return false;
+  const allowed = new Set<string>(MCM_LEATHER_WIKI_DYNAMIC_CLAIM_IDS);
+  return value.every((claimId) => allowed.has(claimId));
+}
+
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === 'string' && value.length > 0;
+}
+
+function isSha256(value: unknown): value is string {
+  return typeof value === 'string' && /^[a-f0-9]{64}$/.test(value);
 }
 
 async function readOrderedUploadedAssets(

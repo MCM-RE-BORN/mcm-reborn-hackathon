@@ -7,10 +7,10 @@
 ```text
 정면·후면·상단·하단·좌측면·우측면 촬영/업로드
   -> 분석 접수 화면에서 R5 OpenAI 분석 + 이후 Meshy 외관 생성 통합 동의
-  -> LIVE는 각 이미지 앞의 명시적 VIEW 라벨과 함께 OpenAI에 6장을 한 번 전송
-       ├─ 사진 품질·소재·손상·상태 분석
-       └─ BODY/TRIM/STRAP/HARDWARE 외관 소재 profile 동시 생성
-          (PDF V1 + 공개 KB V1의 선별 claim fingerprint로 grounding)
+  -> LIVE는 각 이미지 앞의 명시적 VIEW 라벨과 함께 2단계 위키 보강 분석
+       ├─ 저해상도 6면으로 관찰 가능한 검색어만 생성
+       ├─ 서버의 검토된 18-claim 위키에서 최대 5개·4,000자 로컬 검색
+       └─ 원본 6면 + 검색 결과로 사진 분석과 BODY/TRIM/STRAP/HARDWARE profile 생성
      또는 재현 가능한 non-LIVE Fixture
   -> 규칙 기반 재사용량·추천
   -> 목업 화면은 여권 지갑 전면 이미지 placeholder 표시
@@ -29,16 +29,15 @@ MVP의 최종 대상은 `RE:BORN 여권 지갑` 외관 하나다. `BODY`가 필�
 
 `LIVE` 분석은 공식 OpenAI JavaScript SDK와 Zod Structured Outputs를 사용한다. 6장 순서와 user message 라벨은 `0 FRONT`, `1 REAR`, `2 TOP`, `3 BOTTOM`, `4 LEFT`, `5 RIGHT`로 고정하고 각 `IMAGE_INDEX`/`VIEW` 텍스트 바로 다음에 해당 이미지를 둬 시점과 배열 위치가 어긋나지 않게 한다. 모델은 관찰 가능한 카테고리, 소재, 상태, 손상, 이미지 품질과 연속 영역 신호만 반환하며 재사용률, 면적, 추천 점수, 가격과 탄소 수치는 애플리케이션 규칙이 계산한다.
 
-첫 LIVE 요청은 다음 두 지식 묶음을 같은 developer prompt에 넣는다.
+`MCM_REUSE_GUIDE_2026_08_21_V1`은 전달받은 소재·구성·재사용 참고 자료를 정규화한 짧은 prompt grounding이다. 공개 조사본 `MCM_LEATHER_BAGS_PUBLIC_RESEARCH_2026_08_21_V1` 전체는 프롬프트나 앱 번들에 복사하지 않는다. build-time compiler가 사람이 검토한 시각 분석용 claim 18개와 필요한 출처만 서버 전용 스냅샷으로 만들며, 제품 예시·history·legal·care·sourcing·`context_only` 레코드는 분석 검색에서 제외한다.
 
-- 전달받은 `AI 학습 파일.pdf`를 런타임 규칙으로 정규화한 `MCM_REUSE_GUIDE_2026_08_21_V1`
-- 공개 조사 KB `MCM_LEATHER_BAGS_PUBLIC_RESEARCH_2026_08_21_V1`에서 build-time으로 선별한 16개 atomic claim. canonical claim SHA-256은 `1027b306a500b3f9b348f5e9db3489d65ba2114b1eb6d7ed4bb6920af07be03f`다.
+LIVE 분석은 먼저 같은 VIEW 라벨의 저해상도 6면으로 관찰 가능한 일반 검색어를 만들고 서버 전용 `search_mcm_leather_wiki`를 정확히 한 번 호출한다. 결정론적 검색은 lexical hit가 있는 관련 claim만 최대 5개·4,000자 이하로 반환한다. Visetos 코팅 수지, microfiber suede, 캔버스 섬유 조성, 제작 공정, 패턴 실측값, Resetos, Vachetta에 대한 7개 금지 경계는 검색 순위와 무관하게 항상 최종 developer prompt에 포함한다. 제품·SKU 예시는 schema와 서버 양쪽에서 비활성이다. lookup은 `detail: low`, 최종 분석은 `detail: auto`를 사용해 두 단계 정확도를 유지하면서 첫 호출의 이미지 비용을 낮춘다. lookup이 실패하거나 결과가 없으면 전체 코퍼스로 폴백하지 않고 사진과 항상-on 안전 경계만으로 보수적으로 분석한다.
 
-결합 지식 버전은 `MCM_REUSE_GUIDE_2026_08_21_V1+MCM_LEATHER_BAGS_PUBLIC_RESEARCH_2026_08_21_V1@1027b306a500b3f9b348f5e9db3489d65ba2114b1eb6d7ed4bb6920af07be03f`이며 분석 request hash와 private `provider_result` provenance에 기록한다. 공개 KB의 URL·참고 이미지는 고객 요청 때 가져오지 않고, 생성된 claim ID·의역문만 사용한다. 두 묶음 모두 사진 증거를 대체하거나 제품 계열, 진위, 숨은 소재를 추정하는 근거가 아니다. 자세한 PDF 기준은 [`AI_ANALYSIS_DOMAIN_KNOWLEDGE.md`](./AI_ANALYSIS_DOMAIN_KNOWLEDGE.md), 공개 KB와 생성 절차는 [`knowledge-base/mcm-leather-bags/README.md`](./knowledge-base/mcm-leather-bags/README.md)에 기록한다.
+결합 지식 버전은 PDF 버전, 런타임 retrieval corpus SHA-256, 검색기 버전과 v3 prompt 버전으로 구성하며 분석 request hash와 private `provider_result`에 기록한다. trace에는 lookup 요청 ID, query hash, 실제 조회 claim·source ID, 항상-on claim ID와 최종 context SHA-256만 남기고 자유 검색어 원문은 저장하지 않는다. 공개 KB의 URL·참고 이미지는 고객 요청 때 가져오거나 외부 모델에 보내지 않는다. 자세한 PDF 기준은 [`AI_ANALYSIS_DOMAIN_KNOWLEDGE.md`](./AI_ANALYSIS_DOMAIN_KNOWLEDGE.md), 위키 기준은 [런타임 위키 계약](./knowledge-base/mcm-leather-bags/RUNTIME_WIKI_KO.md)에 기록한다.
 
 같은 Structured Output에서 `exteriorMaterialProfile`도 한 번에 생성한다. 정확히 `BODY`, `TRIM`, `STRAP`, `HARDWARE` 네 키를 사용하며 외관 근거 index는 FRONT `0`, REAR `1`, LEFT `4`, RIGHT `5`만 허용한다. 품질이 `ACCEPTABLE`인 LIVE 성공 결과는 `BODY=PRESENT`와 하나 이상의 직접 사진 근거를 가진 non-null profile이 필수다. profile은 외관 appearance 증거일 뿐 UV mask, mesh label, 재단 패턴 또는 픽셀 분할이 아니다.
 
-profile, 결합 knowledge version, 공개 KB version·claim ID 목록·fingerprint는 DB의 `analyses.provider_result`에 저장한다. 이 값은 목업 서버 경로만 읽는 private runtime context이며 고객용 `Analysis` 응답에는 직렬화하지 않는다. 분석의 요약·손상·예상치·추천 narrative는 기존 분석/추천 UI에서 별도로 보여 주고 목업 화면에는 반복하지 않는다.
+profile, 결합 knowledge version, retrieval corpus·검색기 정보와 실제 조회 trace는 DB의 `analyses.provider_result`에 저장한다. 목업용 profile은 이 provenance가 현재 런타임 상수와 일치할 때만 재사용한다. 이 값은 목업 서버 경로만 읽는 private runtime context이며 고객용 `Analysis` 응답에는 직렬화하지 않는다. 분석의 요약·손상·예상치·추천 narrative는 기존 분석/추천 UI에서 별도로 보여 주고 목업 화면에는 반복하지 않는다.
 
 추천은 제품의 필수 면적을 hard gate로 사용하고 면적 여유, 상태, 손상, 패턴 노출, 긴 스트립, 잔여 조각과 고객 희망 용도를 설명 가능한 점수로 합산한다. 이는 제작 BOM과 재단 패턴을 푸는 생산 최적화 ML이 아니라 시연용 휴리스틱이다.
 
@@ -46,7 +45,7 @@ profile, 결합 knowledge version, 공개 KB version·claim ID 목록·fingerpri
 
 브라우저는 촬영 `Blob`이나 base64 이미지를 다시 전송하지 않는다. 사용자가 목업 화면의 `외관 목업 생성` 버튼을 누르면 인증된 CUSTOMER가 내부 `/api/demo/texture-preview`에 `analysisId`, `jobKind`, 동의 버전과 멱등 메타데이터만 보내고, 서버가 분석 소유권과 분석 접수 시 연결된 R5 통합 동의를 먼저 확인한다. 분석 완료만으로 이 작업을 자동 시작하지 않는다.
 
-현재 지식 버전과 fingerprint로 검증된 LIVE `exteriorMaterialProfile`이 있으면 `EXTERIOR_PLAN`은 이를 애플리케이션 규칙으로 즉시 변환한다. 이 경로는 외관 사진 signed URL 생성, idempotency/quota 예약과 추가 OpenAI 요청을 모두 건너뛰므로 OpenAI 호출이나 `EXTERIOR_PLAN` quota를 추가로 소비하지 않는다. 응답의 `provider: OPENAI`는 저장 profile의 출처 표기이지 두 번째 provider 호출을 뜻하지 않는다.
+현재 결합 지식 버전·retrieval corpus SHA·검색기·trace로 검증된 LIVE `exteriorMaterialProfile`이 있으면 `EXTERIOR_PLAN`은 이를 애플리케이션 규칙으로 즉시 변환한다. 이 경로는 외관 사진 signed URL 생성, idempotency/quota 예약과 추가 OpenAI 요청을 모두 건너뛰므로 OpenAI 호출이나 `EXTERIOR_PLAN` quota를 추가로 소비하지 않는다. 응답의 `provider: OPENAI`는 저장 profile의 출처 표기이지 목업 단계의 추가 provider 호출을 뜻하지 않는다.
 
 `modeUsed=LIVE`인데 현재 profile이 없거나 과거 knowledge version인 기존 분석은 `409 EXTERIOR_MATERIAL_PROFILE_MISSING`으로 종료하고 새 6면 분석을 안내한다. 이 경우 목업 단계에서 OpenAI classifier로 자동 복구하거나 비용을 다시 발생시키지 않는다. `ExteriorMaterialClassifier`가 4면을 OpenAI로 다시 분류하는 호환 경로는 저장 profile이 없는 non-LIVE `DEMO_FIXTURE`/`SEEDED_ESTIMATE` 분석에만 사용한다. LIVE provider 장애 뒤 `modeUsed=DEMO_FIXTURE`로 저장된 데모 폴백도 이 non-LIVE 경계에 포함된다.
 
