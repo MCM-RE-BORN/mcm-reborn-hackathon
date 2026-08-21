@@ -1,3 +1,5 @@
+import type { ProductCode } from "@/contracts/product";
+
 export const RECOMMENDATION_CATEGORIES = [
   { id: "travel", label: "트래블" },
   { id: "wallet", label: "지갑" },
@@ -8,16 +10,12 @@ export const RECOMMENDATION_CATEGORIES = [
 export type RecommendationCategory =
   (typeof RECOMMENDATION_CATEGORIES)[number]["id"];
 
-// The seeded passport-wallet row is the canonical demo destination for every
-// visual candidate. The API id is preferred when it is available.
-export const DEMO_PASSPORT_PRODUCT_ID =
-  "10000000-0000-4000-8000-000000000001";
-
-type RecommendationProduct = {
+export type RecommendationProduct = {
   detailHref?: string;
   id: string;
   image: string;
   name: string;
+  productCode?: ProductCode;
 };
 
 // Figma visual candidates are grouped for browsing. Only a card with
@@ -32,11 +30,13 @@ export const RECOMMENDATION_PRODUCTS: Record<
       id: "passport-wallet",
       image: "/assets/mvp-beta/figma-travel-passport-wallet.png",
       name: "RE:BORN 여권 지갑",
+      productCode: "REBORN_PASSPORT_WALLET",
     },
     {
       id: "luggage-tag",
       image: "/assets/mvp-beta/figma-travel-luggage-tag.png",
       name: "RE:BORN 러기지 택",
+      productCode: "REBORN_NAME_TAG",
     },
     {
       id: "travel-case-medium",
@@ -74,6 +74,7 @@ export const RECOMMENDATION_PRODUCTS: Record<
       id: "card-holder",
       image: "/assets/mvp-beta/recommendation-card-holder.png",
       name: "RE:BORN 카드 홀더",
+      productCode: "REBORN_CARD_WALLET",
     },
     {
       id: "bifold-wallet",
@@ -123,6 +124,7 @@ export const RECOMMENDATION_PRODUCTS: Record<
       id: "keyring",
       image: "/assets/mvp-beta/recommendation-keyring-v2.webp",
       name: "RE:BORN 키링",
+      productCode: "REBORN_KEYRING",
     },
     {
       id: "tag-keyring",

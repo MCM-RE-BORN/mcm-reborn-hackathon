@@ -9,13 +9,13 @@ import { StatusPanel } from "@/components/ui/StatusPanel";
 import { DemoStatePanel } from "./DemoStatePanel";
 import {
   RECOMMENDATION_CATEGORIES,
+  RECOMMENDATION_PRODUCTS,
   type RecommendationCategory,
 } from "./recommendation-catalog";
 import styles from "./analysis-design.module.css";
 import type { DemoState } from "./types";
 import {
   customerFetch,
-  readImageUrl,
   type CustomerProduct,
 } from "../order-certificate/customer-client";
 
@@ -30,22 +30,8 @@ type ProductPage = {
   totalElements: number;
 };
 
-const PRODUCT_CATEGORY_TABS: Record<string, RecommendationCategory> = {
-  CARD_WALLET: "wallet",
-  KEYRING: "keyring",
-  NAME_TAG: "travel",
-  PASSPORT_WALLET: "travel",
-};
-
-const PRODUCT_IMAGE_FALLBACKS: Record<string, string> = {
-  REBORN_CARD_WALLET: "/assets/mvp-beta/recommendation-card-holder.png",
-  REBORN_KEYRING: "/assets/mvp-beta/recommendation-keyring-v2.webp",
-  REBORN_NAME_TAG: "/assets/mvp-beta/recommendation-luggage-name-tag-v2.webp",
-  REBORN_PASSPORT_WALLET:
-    "/assets/mvp-beta/recommendation-passport-wallet.png",
-};
-
 const RECOMMENDATION_REASON_LABELS: Record<string, string> = {
+  INSUFFICIENT_AREA: "재사용 가능 면적 부족",
   LONG_STRIP_AVAILABLE: "긴 재단면 확보",
   LOW_DAMAGE_REGION_AVAILABLE: "손상이 적은 영역 확보",
   PATTERN_VISIBILITY: "원제품 패턴 보존",
@@ -121,13 +107,18 @@ export function RecommendationScreen({
       ),
     [products],
   );
-  const visibleProducts = useMemo(
+  const productByCode = useMemo(
     () =>
-      eligibleProducts.filter(
-        (product) =>
-          PRODUCT_CATEGORY_TABS[product.category ?? ""] === category,
+      new Map(
+        (products ?? []).flatMap((product) =>
+          product.code ? [[product.code, product] as const] : [],
+        ),
       ),
-    [category, eligibleProducts],
+    [products],
+  );
+  const visibleProducts = useMemo(
+    () => RECOMMENDATION_PRODUCTS[category],
+    [category],
   );
 
   if (state !== "normal") {
@@ -178,12 +169,13 @@ export function RecommendationScreen({
     <AppShell contentWidth="full" header={header}>
       <div className={styles.recommendationViewport}>
         <p className={styles.recommendationGradeNotice}>
-          AI 분석 결과와 제품 카탈로그에서 제작 가능한 품목만 표시됩니다.
+          전체 디자인 후보를 둘러보고, AI 분석 근거가 있는 품목의 우선순위와
+          제작 가능 여부를 함께 확인하세요.
         </p>
-        {visibleProducts.length === 0 ? (
+        {products.length === 0 ? (
           <StatusPanel
-            description="현재 분석 결과와 일치하는 제품군이 없습니다. 다른 제품군을 선택해 주세요."
-            title="추천 제품이 없습니다"
+            description="현재 분석 결과로는 디자인 후보를 안내할 수 없습니다. 분석 결과를 다시 확인해 주세요."
+            title="추천 디자인을 표시할 수 없어요"
             tone="empty"
           />
         ) : (
@@ -191,14 +183,25 @@ export function RecommendationScreen({
             aria-label={`${RECOMMENDATION_CATEGORIES.find((item) => item.id === category)?.label} 추천 디자인 목록`}
             className={styles.recommendationTrack}
           >
-            {visibleProducts.map((product, index) => {
-              const recommendation = product.recommendation;
-              const rank = eligibleProducts.findIndex(
-                (candidate) => candidate.id === product.id,
-              ) + 1;
-              const mockupAvailable =
-                product.code === "REBORN_PASSPORT_WALLET";
-              const mockupHref = `/submissions/demo/designs/passport-wallet?analysisId=${encodeURIComponent(analysisId)}&productId=${encodeURIComponent(product.id)}`;
+            {visibleProducts.map((item, index) => {
+              const product = item.productCode
+                ? productByCode.get(item.productCode)
+                : undefined;
+              const recommendation = product?.recommendation;
+              const rank = product
+                ? eligibleProducts.findIndex(
+                    (candidate) => candidate.id === product.id,
+                  ) + 1
+                : 0;
+              const isEligible = recommendation?.eligible === true;
+              const mockupAvailable = Boolean(
+                item.detailHref &&
+                  product?.code === "REBORN_PASSPORT_WALLET" &&
+                  isEligible,
+              );
+              const mockupHref = product
+                ? `/submissions/demo/designs/passport-wallet?analysisId=${encodeURIComponent(analysisId)}&productId=${encodeURIComponent(product.id)}`
+                : undefined;
               const reasonLabels = (recommendation?.reasonCodes ?? [])
                 .map((code) => RECOMMENDATION_REASON_LABELS[code])
                 .filter((label): label is string => Boolean(label));
@@ -206,45 +209,55 @@ export function RecommendationScreen({
                 <>
                   <span className={styles.productImage}>
                     <Image
-                      alt={`${product.name} 예상 디자인`}
+                      alt={`${item.name} 예상 디자인`}
                       fill
                       loading={index < 4 ? "eager" : "lazy"}
                       sizes="(max-width: 402px) 42vw, 168px"
-                      src={readImageUrl(
-                        product.listImage,
-                        PRODUCT_IMAGE_FALLBACKS[product.code ?? ""] ??
-                          "/assets/mvp-beta/recommendation-passport-wallet.png",
-                      )}
+                      src={item.image}
                     />
-                    <span className={styles.recommendationBadge}>
-                      AI 추천 {rank}위
-                    </span>
+                    {rank > 0 ? (
+                      <span className={styles.recommendationBadge}>
+                        AI 추천 {rank}위
+                      </span>
+                    ) : null}
                     {mockupAvailable ? (
                       <span aria-hidden="true" className={styles.productHoverLabel}>
                         맞춤 3D 목업 보기
                       </span>
                     ) : null}
                   </span>
-                  <span className={styles.productName}>{product.name}</span>
-                  <span className={styles.recommendationMetrics}>
-                    <strong>적합도 {recommendation?.score ?? 0}점</strong>
-                    <span>
-                      {reasonLabels.length > 0
-                        ? reasonLabels.join(" · ")
-                        : "분석 결과와 제작 면적 기준 충족"}
+                  <span className={styles.productName}>{item.name}</span>
+                  {recommendation ? (
+                    <>
+                      <span className={styles.recommendationMetrics}>
+                        <strong>
+                          {isEligible
+                            ? `적합도 ${recommendation.score}점`
+                            : "제작 기준 검토 필요"}
+                        </strong>
+                        <span>
+                          {reasonLabels.length > 0
+                            ? reasonLabels.join(" · ")
+                            : "분석 결과와 제작 기준을 확인하고 있어요"}
+                        </span>
+                      </span>
+                      <span className={styles.recommendationConstraint}>
+                        필요 면적 {product?.requiredAreaCm2?.toLocaleString("ko-KR") ?? "-"}cm²
+                        · 예상 {product?.estimatedDuration ?? "확인 중"}
+                      </span>
+                    </>
+                  ) : (
+                    <span className={styles.recommendationConstraint}>
+                      디자인 탐색 후보 · 세부 제작 조건은 실물 검수 후 확정
                     </span>
-                  </span>
-                  <span className={styles.recommendationConstraint}>
-                    필요 면적 {product.requiredAreaCm2?.toLocaleString("ko-KR") ?? "-"}cm²
-                    · 예상 {product.estimatedDuration}
-                  </span>
+                  )}
                 </>
               );
               return (
-                <li key={product.id}>
-                  {mockupAvailable ? (
+                <li key={item.id}>
+                  {mockupAvailable && mockupHref ? (
                     <Link
-                      aria-label={`${product.name} 선택하고 맞춤 3D 목업 확인하기`}
+                      aria-label={`${item.name} 선택하고 맞춤 3D 목업 확인하기`}
                       className={`${styles.productCard} ${styles.productCardCandidate}`}
                       href={mockupHref}
                     >
@@ -261,7 +274,8 @@ export function RecommendationScreen({
           </ul>
         )}
         <p className={styles.recommendationNotice}>
-          추천 품목은 사진 기반 AI 예상 결과입니다. 주문 후 실물 검수에서 최종
+          AI 순위·적합도는 제품 카탈로그와 사진 분석을 결합한 예상치입니다. 그 외
+          디자인 탐색 후보는 시각 참고용이며, 주문 후 실물 검수에서 최종
           디자인·견적·제작 기간이 달라질 수 있어요.
         </p>
       </div>
