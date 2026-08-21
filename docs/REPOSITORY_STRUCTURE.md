@@ -7,7 +7,7 @@
 | 경로 | 책임 |
 |---|---|
 | `AGENTS.md`, `AI_RULES.md`, `CONTRIBUTING.md` | 저장소 전체 협업·에이전트 규칙 |
-| `docs/` | MVP 범위, 흐름, 계약 운영, 결정과 데모 기준 |
+| `docs/` | MVP 범위, 흐름, 계약 운영, 결정과 데모 기준. `docs/knowledge-base/`는 출처·시기·이미지 참조가 있는 공개 조사 위키 작성 원본 |
 | `.agents/skills/` | 저장소 전용 에이전트 작업 절차 |
 | `.github/` | Copilot 지침, 이슈·PR 템플릿 |
 | `openapi.yaml` | HTTP API의 기계 판독 기준 |
@@ -27,7 +27,7 @@
 | 현재 경로 | 책임과 구현 상태 |
 |---|---|
 | `mcm-reborn/app/` | App Router 페이지·레이아웃과 `app/api/v2/` Route Handler. `/`·`/intro`는 서비스 소개, `/home`은 홈이며 API 디렉터리가 OpenAPI 25개 operation을 구현함 |
-| `mcm-reborn/server/` | 인증·HTTP body 제한, 분석·OpenAI·제품·업로드·신청·결제·검수·변경 승인·lifecycle·보증서 서비스, 멱등성과 Supabase RLS/RPC adapter |
+| `mcm-reborn/server/` | 인증·HTTP body 제한, 분석·OpenAI·제품·업로드·신청·결제·검수·변경 승인·lifecycle·보증서 서비스, 멱등성과 Supabase RLS/RPC adapter. `server/knowledge/`는 앱에 정적으로 번들되는 서버 전용 위키 스냅샷과 검색기 |
 | `mcm-reborn/lib/` | 지연 생성 public/user/admin Supabase server client와 공용 연결 유틸리티 |
 | `mcm-reborn/contracts/` | v2 분석·신청·제품·오류 타입과 Zod 검증 계약 |
 | `mcm-reborn/components/` | 레이아웃, 공용 UI와 화면별 데모 컴포넌트 |

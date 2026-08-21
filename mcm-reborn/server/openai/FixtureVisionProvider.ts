@@ -113,6 +113,7 @@ export class FixtureVisionProvider implements VisionProvider {
       damages: fixture.damages,
       confidence: fixture.sourceProduct.confidence,
       summaryKo: fixture.condition.summary,
+      exteriorMaterialProfile: null,
       authenticityPrecheck: fixture.authenticityPrecheck,
     });
 

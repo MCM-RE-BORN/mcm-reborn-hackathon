@@ -15,5 +15,6 @@
 | [`DECISIONS.md`](DECISIONS.md) | 승인된 제품·기술 결정 기록 |
 | [`DEMO.md`](DEMO.md) | 시연 준비, 정상·예외 시나리오, 복구 절차 |
 | [`AI_ENGINE_ADOPTION_PLAN.md`](AI_ENGINE_ADOPTION_PLAN.md) | 현재 Fixture 구현과 향후 제조 AI 설계를 구분한 도입 계획 |
+| [`knowledge-base/mcm-leather-bags/README.md`](knowledge-base/mcm-leather-bags/README.md) | MCM 가방의 패턴·소재·가죽·설계·공정 공개조사와 출처·시기 기반 AI 지식 베이스 |
 
 문서와 구현이 충돌하면 임의로 정리하지 않는다. 충돌 위치, 사용자 영향, MVP 영향과 선택지를 보고하고 승인된 결정을 [`DECISIONS.md`](DECISIONS.md)에 남긴다.

@@ -1,5 +1,20 @@
-import { SourceCategory, ConditionGrade } from '@/contracts/analysis';
-import { RecommendationReasonCode } from '@/contracts/product';
+import {
+  type ConditionGrade,
+  type MaterialType,
+  type SourceCategory,
+} from '@/contracts/analysis';
+import type { RecommendationReasonCode } from '@/contracts/product';
+
+export interface RecommendationContext {
+  conditionGrade: ConditionGrade;
+  desiredUse: string;
+  estimatedReusableAreaCm2: number;
+  longStripAvailable: boolean;
+  materialType: MaterialType;
+  overallDamageSeverity: number;
+  productCode: string;
+  requiredAreaCm2: number;
+}
 
 /**
  * Base area estimates by source category (cm²)
@@ -58,15 +73,22 @@ export function calculateReusableMaterial(
  * Calculate recommendation score for a product
  */
 export function calculateRecommendationScore(
-  estimatedReusableAreaCm2: number,
-  requiredAreaCm2: number,
-  conditionGrade: ConditionGrade,
-  productCode: string
+  context: RecommendationContext,
 ): {
   eligible: boolean;
   score: number;
   reasonCodes: RecommendationReasonCode[];
 } {
+  const {
+    conditionGrade,
+    desiredUse,
+    estimatedReusableAreaCm2,
+    longStripAvailable,
+    materialType,
+    overallDamageSeverity,
+    productCode,
+    requiredAreaCm2,
+  } = context;
   const eligible = estimatedReusableAreaCm2 >= requiredAreaCm2;
   const reasonCodes: RecommendationReasonCode[] = [];
 
@@ -75,38 +97,78 @@ export function calculateRecommendationScore(
     return { eligible: false, score: 0, reasonCodes };
   }
 
-  // Area score: up to 40 points
+  // Reusable area is the hard gate and the strongest ranking signal.
   const areaRatio = estimatedReusableAreaCm2 / requiredAreaCm2;
-  const areaScore = Math.min(60, Math.round(areaRatio * 40));
+  const areaScore = Math.min(55, Math.round(areaRatio * 35));
+  reasonCodes.push('SUFFICIENT_AREA');
 
-  if (areaRatio >= 2.5) {
-    reasonCodes.push('SUFFICIENT_AREA');
-  }
-
-  // Condition score
+  // Condition and visible damage indicate whether a clean panel can be cut.
   const conditionScores: Record<ConditionGrade, number> = {
-    A: 30,
-    B: 25,
-    C: 18,
-    D: 8,
+    A: 24,
+    B: 20,
+    C: 12,
+    D: 4,
   };
   const conditionScore = conditionScores[conditionGrade];
+  const lowDamageRegionAvailable =
+    overallDamageSeverity <= 35 && conditionGrade !== 'D';
+  const lowDamageBonus = lowDamageRegionAvailable ? 6 : 0;
 
-  if (conditionGrade === 'A' || conditionGrade === 'B') {
-    reasonCodes.push('PATTERN_VISIBILITY');
+  if (lowDamageRegionAvailable) {
     reasonCodes.push('LOW_DAMAGE_REGION_AVAILABLE');
   }
 
-  // Keyring bonus
-  let remnantBonus = 0;
-  if (productCode === 'REBORN_KEYRING') {
-    remnantBonus = 10;
-    reasonCodes.push('USES_SMALL_REMNANTS');
+  // Pattern-bearing coated canvas and leather benefit designs with broad faces.
+  const patternVisible =
+    (materialType === 'COATED_CANVAS' || materialType === 'LEATHER') &&
+    overallDamageSeverity <= 50;
+  const patternBonus = patternVisible ? 7 : 0;
+  if (patternVisible) {
+    reasonCodes.push('PATTERN_VISIBILITY');
   }
 
-  const score = Math.min(100, areaScore + conditionScore + remnantBonus);
+  // Small products and a usable strip consume shapes that larger designs cannot.
+  let remnantBonus = 0;
+  if (productCode === 'REBORN_KEYRING' || productCode === 'REBORN_NAME_TAG') {
+    remnantBonus = 5;
+    reasonCodes.push('USES_SMALL_REMNANTS');
+  }
+  if (productCode === 'REBORN_NAME_TAG' && longStripAvailable) {
+    remnantBonus += 4;
+    reasonCodes.push('LONG_STRIP_AVAILABLE');
+  }
+
+  // The customer's stated goal is a preference boost, never an eligibility gate.
+  const preferenceBonus = desiredUseMatchesProduct(desiredUse, productCode) ? 8 : 0;
+
+  const score = Math.min(
+    100,
+    areaScore +
+      conditionScore +
+      lowDamageBonus +
+      patternBonus +
+      remnantBonus +
+      preferenceBonus,
+  );
 
   return { eligible, score, reasonCodes };
+}
+
+function desiredUseMatchesProduct(
+  desiredUse: string,
+  productCode: string,
+): boolean {
+  const normalized = desiredUse.replace(/\s+/g, '').toLowerCase();
+  const keywords: Record<string, readonly string[]> = {
+    REBORN_CARD_WALLET: ['카드지갑', 'cardwallet'],
+    REBORN_KEYRING: ['키링', 'keyring'],
+    REBORN_NAME_TAG: ['네임택', '러기지택', 'luggagetag', 'nametag'],
+    REBORN_PASSPORT_WALLET: ['여권지갑', 'passportwallet'],
+  };
+
+  return (keywords[productCode] ?? []).some((keyword) =>
+    normalized.includes(keyword)
+  );
 }
 
 /**

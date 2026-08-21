@@ -17,6 +17,25 @@ import {
   type CustomerAnalysis,
 } from "../order-certificate/customer-client";
 
+const MATERIAL_LABELS: Record<string, string> = {
+  COATED_CANVAS: "코티드 캔버스",
+  FABRIC: "패브릭",
+  LEATHER: "가죽",
+  MIXED: "혼합 소재",
+  NYLON: "나일론",
+  UNKNOWN: "확인 필요",
+};
+
+function analysisModeLabel(analysis: CustomerAnalysis) {
+  if (analysis.modeUsed === "LIVE" && analysis.provider.name === "OPENAI") {
+    return "OpenAI 실사진 분석";
+  }
+  if (analysis.modeUsed === "SEEDED_ESTIMATE") {
+    return "재현 가능한 예상 분석";
+  }
+  return "데모 기준 예상 분석";
+}
+
 type AnalysisResultScreenProps = {
   analysisId?: string;
   backHref?: string;
@@ -149,6 +168,8 @@ export function AnalysisResultScreen({
     );
   }
 
+  const conditionSummary = analysis.condition.summary.trim();
+
   return (
     <AppShell
       footer={
@@ -167,7 +188,13 @@ export function AnalysisResultScreen({
         />
         <SubmissionProductSummary />
 
-        <div className={styles.analysisDetails}>
+        <section
+          aria-labelledby="analysis-facts-title"
+          className={styles.analysisDetails}
+        >
+          <h2 className={styles.analysisSectionTitle} id="analysis-facts-title">
+            분석 정보
+          </h2>
           <KeyValueList
             items={[
               {
@@ -175,10 +202,19 @@ export function AnalysisResultScreen({
                 value: `주문 가능 · 예상 ${analysis.authenticityPrecheck?.estimatePercent ?? "-"}%`,
               },
               {
+                label: "분석 실행 방식",
+                value: analysisModeLabel(analysis),
+              },
+              {
                 label: "AI 예상 신뢰도",
                 value: `${analysis.estimateMeta?.confidencePercent ?? "-"}%`,
               },
-              { label: "AI 예상 상태", value: analysis.condition.summary },
+              {
+                label: "소재 추정",
+                value:
+                  MATERIAL_LABELS[analysis.sourceProduct.materialType] ??
+                  analysis.sourceProduct.materialType,
+              },
               {
                 label: "재사용 예상 면적",
                 value: `${analysis.estimatedReusableAreaCm2.toLocaleString("ko-KR")}cm²`,
@@ -189,7 +225,22 @@ export function AnalysisResultScreen({
               },
             ]}
           />
-        </div>
+        </section>
+
+        {conditionSummary ? (
+          <section
+            aria-labelledby="analysis-summary-title"
+            className={styles.analysisNarrative}
+          >
+            <h2
+              className={styles.analysisSectionTitle}
+              id="analysis-summary-title"
+            >
+              AI 분석 내용
+            </h2>
+            <p>{conditionSummary}</p>
+          </section>
+        ) : null}
 
         <aside className={styles.contractNotice}>
           <strong>사진 기반 사전 분석</strong>
@@ -198,6 +249,15 @@ export function AnalysisResultScreen({
             확정하지 않습니다. 주문 후 MCM 공식 장인이 실물을 확인합니다.
           </p>
         </aside>
+
+        {analysis.warnings.length > 0 ? (
+          <aside className={styles.contractNotice} role="status">
+            <strong>외부 AI 폴백 안내</strong>
+            {analysis.warnings.map((warning) => (
+              <p key={warning.code}>{warning.message}</p>
+            ))}
+          </aside>
+        ) : null}
       </div>
     </AppShell>
   );

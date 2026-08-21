@@ -218,9 +218,39 @@
 }
 
 .analysisDetails {
+  display: grid;
+  min-width: var(--space-0);
+  gap: var(--space-9);
   margin-top: var(--space-22);
   padding-top: var(--space-13);
   border-top: var(--border-thin) solid var(--color-divider);
+}
+
+.analysisSectionTitle {
+  font-size: var(--font-size-control);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
+  letter-spacing: var(--letter-spacing-tight);
+}
+
+.analysisNarrative {
+  display: grid;
+  min-width: var(--space-0);
+  gap: var(--space-7);
+  padding: var(--space-9);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+}
+
+.analysisNarrative p {
+  min-width: var(--space-0);
+  color: var(--color-ink-soft);
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-regular);
+  line-height: var(--line-height-reading);
+  overflow-wrap: anywhere;
+  white-space: pre-line;
+  word-break: keep-all;
 }
 
 .limitedCopy {
@@ -457,6 +487,58 @@
   display: grid;
 }
 
+.textureStudio {
+  display: grid;
+  background: var(--color-canvas);
+}
+
+.mockupViewport {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  overflow: hidden;
+  background: var(--color-surface);
+}
+
+.mockupViewerLayer,
+.mockupPlaceholder {
+  position: absolute;
+  inset: var(--space-0);
+}
+
+.mockupViewerLayer {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.mockupViewerLayer[data-visible="true"] {
+  visibility: visible;
+  pointer-events: auto;
+}
+
+.mockupPlaceholder {
+  background: var(--color-surface);
+}
+
+.mockupPlaceholder img {
+  object-fit: contain;
+}
+
+.mockupPlaceholderProgress {
+  position: absolute;
+  right: var(--space-5);
+  bottom: var(--space-5);
+  left: var(--space-5);
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  border-radius: var(--radius-control);
+  background: rgb(17 17 17 / 82%);
+  color: var(--color-canvas);
+  font-size: var(--font-size-caption);
+  line-height: var(--line-height-tight);
+}
+
 .modelViewerFrame {
   position: relative;
   width: 100%;
@@ -473,6 +555,22 @@
   z-index: 1;
   background: var(--color-surface);
   touch-action: pan-y;
+}
+
+.textureApplying {
+  position: absolute;
+  right: var(--space-5);
+  bottom: var(--space-5);
+  left: var(--space-5);
+  z-index: 2;
+  padding: var(--space-4) var(--space-5);
+  border-radius: var(--radius-control);
+  background: rgb(17 17 17 / 82%);
+  color: var(--color-canvas);
+  font-size: var(--font-size-caption);
+  line-height: var(--line-height-tight);
+  pointer-events: none;
+  text-align: center;
 }
 
 .modelViewerLoading {
@@ -505,6 +603,48 @@
 .modelViewerFallback p {
   font-size: var(--font-size-label);
   line-height: var(--line-height-tight);
+}
+
+.texturePipeline {
+  display: grid;
+  gap: var(--space-5);
+  padding: var(--space-7) var(--layout-gutter-wide) var(--space-11);
+  border-top: var(--border-thin) solid var(--color-divider);
+}
+
+.textureStatus,
+.textureError {
+  font-size: var(--font-size-caption);
+  line-height: var(--line-height-reading);
+  text-align: center;
+}
+
+.textureStatus {
+  color: var(--color-ink-soft);
+}
+
+.textureError {
+  color: var(--color-danger);
+}
+
+.textureActions {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.exteriorProgress {
+  height: var(--space-2);
+  overflow: hidden;
+  border-radius: var(--radius-pill);
+  background: rgb(255 255 255 / 32%);
+}
+
+.exteriorProgress > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--color-canvas);
+  transition: width 240ms ease;
 }
 
 .productStory {
