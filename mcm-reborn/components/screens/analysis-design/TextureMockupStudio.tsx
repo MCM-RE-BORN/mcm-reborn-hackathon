@@ -33,6 +33,11 @@ const MAX_MESHY_POLLS = 80;
 const MAX_TEXTURE_BYTES = 8 * 1024 * 1024;
 const PASSPORT_WALLET_FRONT_IMAGE =
   "/assets/mvp-beta/passport-wallet-front.png";
+const PASSPORT_WALLET_CUSTOM_MODEL_SRC =
+  "/assets/models/reborn-passport-wallet.glb";
+const PASSPORT_WALLET_BASE_COMPARISON_MODEL_SRC =
+  "/assets/models/reborn-passport-wallet-base-comparison.glb";
+const BASE_COMPARISON_MODEL_LOAD_TIMEOUT_MS = 60_000;
 const ALLOWED_TEXTURE_MIME_TYPES = new Set([
   "image/jpeg",
   "image/png",
@@ -74,6 +79,8 @@ export function TextureMockupStudio({ analysisId }: TextureMockupStudioProps) {
   const [capabilitiesUnavailable, setCapabilitiesUnavailable] = useState(false);
   const [externalError, setExternalError] = useState<string | null>(null);
   const [externalStatus, setExternalStatus] = useState<string | null>(null);
+  const [comparisonError, setComparisonError] = useState<string | null>(null);
+  const [comparisonSwitching, setComparisonSwitching] = useState(false);
   const [planState, setPlanState] = useState<PlanState>("idle");
   const [sourceTask, setSourceTask] =
     useState<MeshyUiState>(EMPTY_MESHY_STATE);
@@ -85,6 +92,7 @@ export function TextureMockupStudio({ analysisId }: TextureMockupStudioProps) {
   const [modelReady, setModelReady] = useState(false);
   const [modelFailed, setModelFailed] = useState(false);
   const [viewerReady, setViewerReady] = useState(false);
+  const showingBaseComparison = !textureEnabled && Boolean(textureBlob);
   const pipelineInFlightRef = useRef(false);
   const pollInFlightRef = useRef<Record<MeshyTaskKind, boolean>>({
     SOURCE_MODEL: false,
@@ -280,6 +288,8 @@ export function TextureMockupStudio({ analysisId }: TextureMockupStudioProps) {
       setViewerReady(false);
       setExternalError(null);
       setExternalStatus(null);
+      setComparisonError(null);
+      setComparisonSwitching(false);
       pipelineInFlightRef.current = false;
       pollInFlightRef.current.SOURCE_MODEL = false;
       pollInFlightRef.current.TARGET_RETEXTURE = false;
@@ -428,7 +438,12 @@ export function TextureMockupStudio({ analysisId }: TextureMockupStudioProps) {
   const handleTextureStateChange = useCallback(
     (state: TextureApplicationState) => {
       setApplicationState(state);
-      if (state === "applied") setViewerReady(true);
+      if (state === "applied") {
+        setViewerReady(true);
+      }
+      if (state === "applied" || state === "error") {
+        setComparisonSwitching(false);
+      }
     },
     [],
   );
@@ -436,13 +451,39 @@ export function TextureMockupStudio({ analysisId }: TextureMockupStudioProps) {
   const handleModelLoad = useCallback(() => {
     setModelReady(true);
     setModelFailed(false);
-  }, []);
+    if (showingBaseComparison) {
+      setViewerReady(true);
+      setComparisonSwitching(false);
+    }
+  }, [showingBaseComparison]);
 
   const handleModelError = useCallback(() => {
+    if (showingBaseComparison) {
+      setComparisonError(
+        "기본 3D 모델을 불러오지 못해 맞춤 외관으로 돌아왔습니다.",
+      );
+      setModelReady(false);
+      setModelFailed(false);
+      setViewerReady(false);
+      setApplicationState("loading");
+      setTextureEnabled(true);
+      return;
+    }
+
     setModelReady(false);
     setModelFailed(true);
     setViewerReady(false);
     setApplicationState("error");
+    setComparisonSwitching(false);
+  }, [showingBaseComparison]);
+
+  const handleComparisonToggle = useCallback(() => {
+    setComparisonError(null);
+    setComparisonSwitching(true);
+    setModelReady(false);
+    setModelFailed(false);
+    setViewerReady(false);
+    setTextureEnabled((enabled) => !enabled);
   }, []);
 
   const overallProgress = useMemo(() => {
@@ -462,6 +503,7 @@ export function TextureMockupStudio({ analysisId }: TextureMockupStudioProps) {
     !targetAvailable ||
     !modelReady ||
     modelFailed ||
+    comparisonSwitching ||
     pipelineRunning ||
     targetTask.status === "queued" ||
     targetTask.status === "running" ||
@@ -470,6 +512,8 @@ export function TextureMockupStudio({ analysisId }: TextureMockupStudioProps) {
   let generationButtonLabel = "외관 목업 생성";
   if (modelFailed) {
     generationButtonLabel = "3D 목업을 불러오지 못함";
+  } else if (comparisonSwitching) {
+    generationButtonLabel = "3D 모델 전환 중";
   } else if (!modelReady) {
     generationButtonLabel = "3D 목업 준비 중";
   } else if (pipelineRunning) {
@@ -502,7 +546,13 @@ export function TextureMockupStudio({ analysisId }: TextureMockupStudioProps) {
       ? "외관 텍스처를 3D 목업에 적용하지 못했습니다."
       : null);
   const showProgress =
-    !displayError && !generationComplete && overallProgress > 0;
+    !comparisonSwitching &&
+    !displayError &&
+    !generationComplete &&
+    overallProgress > 0;
+  const activeModelSrc = showingBaseComparison
+    ? PASSPORT_WALLET_BASE_COMPARISON_MODEL_SRC
+    : PASSPORT_WALLET_CUSTOM_MODEL_SRC;
 
   return (
     <div className={styles.textureStudio}>
@@ -513,7 +563,13 @@ export function TextureMockupStudio({ analysisId }: TextureMockupStudioProps) {
           data-visible={viewerReady}
         >
           <MockupViewer
-            key={analysisId}
+            key={`${analysisId}:${activeModelSrc}`}
+            modelLoadTimeoutMs={
+              showingBaseComparison
+                ? BASE_COMPARISON_MODEL_LOAD_TIMEOUT_MS
+                : undefined
+            }
+            modelSrc={activeModelSrc}
             onModelError={handleModelError}
             onModelLoad={handleModelLoad}
             onTextureStateChange={handleTextureStateChange}
@@ -564,7 +620,7 @@ export function TextureMockupStudio({ analysisId }: TextureMockupStudioProps) {
           {generationComplete ? (
             <Button
               fullWidth
-              onClick={() => setTextureEnabled((enabled) => !enabled)}
+              onClick={handleComparisonToggle}
               size="medium"
               variant="outline"
             >
@@ -577,9 +633,15 @@ export function TextureMockupStudio({ analysisId }: TextureMockupStudioProps) {
           <p className={styles.textureError} role="alert">
             {displayError}
           </p>
+        ) : comparisonError ? (
+          <p className={styles.textureError} role="alert">
+            {comparisonError}
+          </p>
         ) : (
           <p className={styles.textureStatus} role="status">
-            {displayStatus}
+            {comparisonSwitching
+              ? "3D 모델을 전환하고 있습니다."
+              : displayStatus}
           </p>
         )}
       </section>

@@ -41,6 +41,7 @@ export type TextureApplicationState =
   | "loading";
 
 type MockupViewerProps = {
+  modelLoadTimeoutMs?: number;
   modelSrc?: string;
   onModelError?: () => void;
   onModelLoad?: () => void;
@@ -49,6 +50,7 @@ type MockupViewerProps = {
 };
 
 export function MockupViewer({
+  modelLoadTimeoutMs = MODEL_LOAD_TIMEOUT_MS,
   modelSrc = MODEL_SRC,
   onModelError,
   onModelLoad,
@@ -115,7 +117,7 @@ export function MockupViewer({
     const loadTimeout = window.setTimeout(() => {
       setModelFailed(true);
       onModelError?.();
-    }, MODEL_LOAD_TIMEOUT_MS);
+    }, modelLoadTimeoutMs);
     viewer.addEventListener("error", clearLoadTimeout, { once: true });
     viewer.addEventListener("load", clearLoadTimeout, { once: true });
 
@@ -124,7 +126,13 @@ export function MockupViewer({
       viewer.removeEventListener("error", clearLoadTimeout);
       viewer.removeEventListener("load", clearLoadTimeout);
     };
-  }, [modelFailed, modelSrc, onModelError, viewerReady]);
+  }, [
+    modelFailed,
+    modelLoadTimeoutMs,
+    modelSrc,
+    onModelError,
+    viewerReady,
+  ]);
 
   useEffect(() => {
     const viewer = viewerRef.current;
@@ -151,6 +159,10 @@ export function MockupViewer({
       const textureInfo =
         material?.pbrMetallicRoughness.baseColorTexture ?? null;
       if (!textureInfo) {
+        if (!textureBlob) {
+          reportState("idle");
+          return;
+        }
         reportState("error");
         return;
       }
