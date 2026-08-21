@@ -14,7 +14,7 @@
      또는 재현 가능한 non-LIVE Fixture
   -> 규칙 기반 재사용량·추천
   -> 목업 화면은 여권 지갑 전면 이미지 placeholder 표시
-  -> 사용자가 외관 목업 생성 버튼을 누르면
+  -> 사용자가 3D 목업 생성 버튼을 누르면
        ├─ 현재 LIVE: private provider_result의 저장 profile을 소재 계획으로 결정론적 변환
        ├─ non-LIVE profile 부재: 외관 4면 OpenAI classifier 호환 폴백
        ├─ 선택 Meshy: 원제품 3D/PBR 생성(참고용, 비차단)
@@ -43,7 +43,7 @@ profile, 결합 knowledge version, retrieval corpus·검색기 정보와 실제 
 
 ## 3. 외관 4면과 소재 계획
 
-브라우저는 촬영 `Blob`이나 base64 이미지를 다시 전송하지 않는다. 사용자가 목업 화면의 `외관 목업 생성` 버튼을 누르면 인증된 CUSTOMER가 내부 `/api/demo/texture-preview`에 `analysisId`, `jobKind`, 동의 버전과 멱등 메타데이터만 보내고, 서버가 분석 소유권과 분석 접수 시 연결된 R5 통합 동의를 먼저 확인한다. 분석 완료만으로 이 작업을 자동 시작하지 않는다.
+브라우저는 촬영 `Blob`이나 base64 이미지를 다시 전송하지 않는다. 사용자가 목업 화면의 `3D 목업 생성` 버튼을 누르면 인증된 CUSTOMER가 내부 `/api/demo/texture-preview`에 `analysisId`, `jobKind`, 동의 버전과 멱등 메타데이터만 보내고, 서버가 분석 소유권과 분석 접수 시 연결된 R5 통합 동의를 먼저 확인한다. 분석 완료만으로 이 작업을 자동 시작하지 않는다.
 
 현재 결합 지식 버전·retrieval corpus SHA·검색기·trace로 검증된 LIVE `exteriorMaterialProfile`이 있으면 `EXTERIOR_PLAN`은 이를 애플리케이션 규칙으로 즉시 변환한다. 이 경로는 외관 사진 signed URL 생성, idempotency/quota 예약과 추가 OpenAI 요청을 모두 건너뛰므로 OpenAI 호출이나 `EXTERIOR_PLAN` quota를 추가로 소비하지 않는다. 응답의 `provider: OPENAI`는 저장 profile의 출처 표기이지 목업 단계의 추가 provider 호출을 뜻하지 않는다.
 
@@ -127,7 +127,7 @@ finalBaseColor = generatedTargetAtlas * effectiveMask
 
 ## 6. UI 상태와 복구
 
-사용자는 AI 제공자별 버튼 대신 `외관 목업 생성` 버튼 하나를 사용한다. 분석 결과 카드, 외관 4면 목록, 소재 분류와 5단계 절차 설명은 목업 화면에 표시하지 않는다. 분석 요약·손상·예상치·추천 narrative는 분석/추천 화면의 책임으로 분리한다. 버튼을 누르기 전, 생성 중, 원격 작업 또는 로컬 적용 실패 상태에는 모두 여권 지갑 전면 이미지 placeholder를 유지한다. 생성 중에는 placeholder 위의 진행률과 최소 상태 문구만 표시한다.
+사용자는 AI 제공자별 버튼 대신 `3D 목업 생성` 버튼 하나를 사용한다. 분석 결과 카드, 외관 4면 목록, 소재 분류와 5단계 절차 설명은 목업 화면에 표시하지 않는다. 분석 요약·손상·예상치·추천 narrative는 분석/추천 화면의 책임으로 분리한다. 버튼을 누르기 전, 생성 중, 원격 작업 또는 로컬 적용 실패 상태에는 모두 여권 지갑 전면 이미지 placeholder를 유지한다. 생성 중에는 placeholder 위의 진행률과 최소 상태 문구만 표시한다.
 
 OpenAI 계획이나 source 3D가 비활성·실패해도 target 작업은 계속된다. target 원격 작업이 `FAILED` 또는 `CANCELED`이면 같은 유료 작업을 새로 만들지 못하도록 terminal 상태와 token/key를 보존한다. 폴링 timeout, 파생 자산 저장 또는 로컬 합성 오류는 같은 token과 idempotency key로 재조회할 수 있다. 동일 task의 파생 경로는 결정적 hash를 사용해 이미 저장된 결과를 재사용한다. 목표 atlas 합성뿐 아니라 `model-viewer`의 `baseColorTexture` 적용까지 성공해 `applied` 상태가 된 뒤에만 3D 레이어를 공개한다. `기본 3D 모델과 비교`는 사용자 제공 Meshy GLB를 웹용으로 단순화·양자화하고 텍스처를 2K로 줄인 별도 비교 자산 `reborn-passport-wallet-base-comparison.glb`를 불러오며, `맞춤 외관 다시 적용`은 canonical GLB와 합성 atlas로 돌아간다. 원본은 3,039,371 triangles, 104,640,168 bytes, SHA-256 `e6c24eb068f79cfc5e97403fc80cc4fa922d46ba2002f5aadf87488e4d0b91b5`이며, 웹 파생 자산은 182,361 triangles, 7,596,184 bytes, SHA-256 `863c5297048f7a38d8f2f806d9b80dad81250cf8eb769ad1aa0d84f8c9a71d8b`다. 비교 전환은 추가 OpenAI·Meshy 작업을 만들지 않고, 비교 자산 로드 실패 시 맞춤 외관으로 자동 복귀한다.
 

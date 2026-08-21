@@ -222,7 +222,7 @@ export function TextureMockupStudio({ analysisId }: TextureMockupStudioProps) {
               terminal: false,
             });
             setExternalError(null);
-            setExternalStatus("외관 목업을 마무리하고 있습니다.");
+            setExternalStatus("3D 목업을 마무리하고 있습니다.");
             return;
           }
 
@@ -244,7 +244,7 @@ export function TextureMockupStudio({ analysisId }: TextureMockupStudioProps) {
           }
         }
         throw new Error(
-          "외관 목업 생성이 계속 진행 중입니다. 잠시 후 다시 확인해 주세요.",
+          "3D 목업 생성이 계속 진행 중입니다. 잠시 후 다시 확인해 주세요.",
         );
       } catch (error) {
         if (pollGenerationRef.current[jobKind] !== generation) return;
@@ -303,7 +303,7 @@ export function TextureMockupStudio({ analysisId }: TextureMockupStudioProps) {
       if (sourceToken) void pollMeshyTask("SOURCE_MODEL", sourceToken);
       if (targetToken) {
         setPipelineRunning(true);
-        setExternalStatus("기존 외관 목업 작업을 확인하고 있습니다.");
+        setExternalStatus("기존 3D 목업 작업을 확인하고 있습니다.");
         void pollMeshyTask("TARGET_RETEXTURE", targetToken).finally(() => {
           if (active) setPipelineRunning(false);
         });
@@ -333,12 +333,12 @@ export function TextureMockupStudio({ analysisId }: TextureMockupStudioProps) {
         meshyTaskStorageKey(analysisId, "TARGET_RETEXTURE"),
       );
       if (existingTargetToken) {
-        setExternalStatus("기존 외관 목업 작업을 확인하고 있습니다.");
+        setExternalStatus("기존 3D 목업 작업을 확인하고 있습니다.");
         await pollMeshyTask("TARGET_RETEXTURE", existingTargetToken);
         return;
       }
 
-      setExternalStatus("외관 목업 생성을 준비하고 있습니다.");
+      setExternalStatus("3D 목업 생성을 준비하고 있습니다.");
       if (capabilities.features.exteriorPlan) {
         setPlanState("loading");
         try {
@@ -393,7 +393,7 @@ export function TextureMockupStudio({ analysisId }: TextureMockupStudioProps) {
         }
       }
 
-      setExternalStatus("외관 목업을 생성하고 있습니다.");
+      setExternalStatus("3D 목업을 생성하고 있습니다.");
       const targetResponse = await requestJob("TARGET_RETEXTURE");
       if (
         targetResponse.kind !== "task" ||
@@ -509,7 +509,7 @@ export function TextureMockupStudio({ analysisId }: TextureMockupStudioProps) {
     targetTask.status === "running" ||
     targetTask.terminal ||
     generationComplete;
-  let generationButtonLabel = "외관 목업 생성";
+  let generationButtonLabel = "3D 목업 생성";
   if (modelFailed) {
     generationButtonLabel = "3D 목업을 불러오지 못함";
   } else if (comparisonSwitching) {
@@ -517,16 +517,16 @@ export function TextureMockupStudio({ analysisId }: TextureMockupStudioProps) {
   } else if (!modelReady) {
     generationButtonLabel = "3D 목업 준비 중";
   } else if (pipelineRunning) {
-    generationButtonLabel = `외관 목업 생성 중 ${overallProgress}%`;
+    generationButtonLabel = `3D 목업 생성 중 ${overallProgress}%`;
   } else if (generationComplete) {
-    generationButtonLabel = "외관 목업 생성 완료";
+    generationButtonLabel = "3D 목업 생성 완료";
   } else if (targetTask.terminal) {
-    generationButtonLabel = "외관 목업 생성 실패";
+    generationButtonLabel = "3D 목업 생성 실패";
   } else if (
     targetTask.status === "failed" ||
     (applicationState === "error" && textureBlob)
   ) {
-    generationButtonLabel = "외관 목업 다시 확인";
+    generationButtonLabel = "3D 목업 다시 확인";
   }
 
   const displayStatus = readDisplayStatus({
@@ -588,9 +588,9 @@ export function TextureMockupStudio({ analysisId }: TextureMockupStudioProps) {
             />
             {showProgress ? (
               <div className={styles.mockupPlaceholderProgress}>
-                <span>외관 목업 생성 중 {overallProgress}%</span>
+                <span>3D 목업 생성 중 {overallProgress}%</span>
                 <div
-                  aria-label={`외관 목업 생성 진행률 ${overallProgress}%`}
+                  aria-label={`3D 목업 생성 진행률 ${overallProgress}%`}
                   aria-valuemax={100}
                   aria-valuemin={0}
                   aria-valuenow={overallProgress}
@@ -605,7 +605,7 @@ export function TextureMockupStudio({ analysisId }: TextureMockupStudioProps) {
         ) : null}
       </div>
 
-      <section aria-label="외관 목업 생성" className={styles.texturePipeline}>
+      <section aria-label="3D 목업 생성" className={styles.texturePipeline}>
         <div className={styles.textureActions}>
           <Button
             disabled={generationDisabled}
@@ -688,12 +688,12 @@ function delay(milliseconds: number) {
 }
 
 function meshyTaskStatusLabel(task: MeshyTextureTaskResponse) {
-  if (task.status === "queued") return "외관 목업 생성 대기 중입니다.";
+  if (task.status === "queued") return "3D 목업 생성 대기 중입니다.";
   if (task.status === "running") {
-    return `외관 목업을 생성하고 있습니다. ${task.progress}%`;
+    return `3D 목업을 생성하고 있습니다. ${task.progress}%`;
   }
   if (task.status === "succeeded") return "외관 텍스처 생성이 완료됐습니다.";
-  return task.errorMessage ?? "외관 목업을 생성하지 못했습니다.";
+  return task.errorMessage ?? "3D 목업을 생성하지 못했습니다.";
 }
 
 function isConsentGuardError(error: unknown) {
@@ -731,10 +731,10 @@ function readExternalError(error: unknown) {
   const message = error instanceof Error ? error.message : "";
   const normalized = message.toLowerCase();
   if (isConsentGuardError(error)) {
-    return "분석 시 외관 목업 생성 동의를 확인하지 못했습니다.";
+    return "분석 시 3D 목업 생성 동의를 확인하지 못했습니다.";
   }
   if (isMeshyTaskTokenError(error)) {
-    return "기존 외관 목업 작업의 복구 시간이 만료되었거나 작업을 인증할 수 없습니다.";
+    return "기존 3D 목업 작업의 복구 시간이 만료되었거나 작업을 인증할 수 없습니다.";
   }
   if (isExteriorProfileGuardError(error)) {
     return "현재 지식 기준의 외관 소재 정보가 없어 새 AI 분석이 필요합니다.";
@@ -743,12 +743,12 @@ function readExternalError(error: unknown) {
     return "Meshy API credits가 부족합니다.";
   }
   if (normalized.includes("quota") || normalized.includes("rate limit")) {
-    return "오늘 사용할 수 있는 외관 목업 생성 횟수를 초과했습니다.";
+    return "오늘 사용할 수 있는 3D 목업 생성 횟수를 초과했습니다.";
   }
   if (normalized.includes("not enabled")) {
-    return "외관 목업 생성 기능이 활성화되지 않았습니다.";
+    return "3D 목업 생성 기능이 활성화되지 않았습니다.";
   }
-  return message || "외관 목업을 생성하지 못했습니다.";
+  return message || "3D 목업을 생성하지 못했습니다.";
 }
 
 function readDisplayStatus({
@@ -766,18 +766,18 @@ function readDisplayStatus({
   generationComplete: boolean;
   pipelineRunning: boolean;
 }) {
-  if (generationComplete) return "외관 목업 생성이 완료되었습니다.";
+  if (generationComplete) return "3D 목업 생성이 완료되었습니다.";
   if (applicationState === "loading") {
     return "외관 텍스처를 3D 목업에 적용하고 있습니다.";
   }
   if (externalStatus) return externalStatus;
-  if (capabilitiesUnavailable) return "외관 목업을 준비할 수 없습니다.";
-  if (!capabilities) return "외관 목업 생성 기능을 확인하고 있습니다.";
+  if (capabilitiesUnavailable) return "3D 목업을 준비할 수 없습니다.";
+  if (!capabilities) return "3D 목업 생성 기능을 확인하고 있습니다.";
   if (!capabilities.features.targetRetexture) {
-    return "외관 목업을 준비할 수 없습니다.";
+    return "3D 목업을 준비할 수 없습니다.";
   }
-  if (pipelineRunning) return "외관 목업을 생성하고 있습니다.";
-  return "외관 목업을 생성해 완성 모습을 확인해 보세요.";
+  if (pipelineRunning) return "3D 목업을 생성하고 있습니다.";
+  return "3D 목업을 생성해 완성 모습을 확인해 보세요.";
 }
 
 function meshyTaskStorageKey(analysisId: string, jobKind: MeshyTaskKind) {

@@ -43,6 +43,7 @@
 | DEC-037 | 2026-08-21 | 승인 | 통합 안내를 `MCM_EXTERNAL_AI_ANALYSIS_TEXTURE_2026_08_21_R5`로 올리고, 최초 LIVE 분석의 명시적 6개 `IMAGE_INDEX`/`VIEW` 라벨 요청에서 사진 분석과 `BODY`·`TRIM`·`STRAP`·`HARDWARE` 외관 profile을 함께 만든다. `BODY=PRESENT`를 LIVE 성공의 필수 조건으로 하고 profile과 PDF V1·공개 KB V1·선별 claim SHA provenance를 private `provider_result`에 저장한다. 목업 버튼의 current LIVE `EXTERIOR_PLAN`은 저장 profile을 결정론적으로 변환해 추가 OpenAI 호출·quota를 쓰지 않는다. current profile이 없는 `modeUsed=LIVE` 기존 분석은 409로 새 분석을 요구하고, 4면 `ExteriorMaterialClassifier`는 profile 없는 non-LIVE 데모·seeded 호환 경로만 사용한다. 이후 Meshy는 외관 4장을 사용한다. | 첫 분석과 목업 분류의 중복 전송·비용을 제거하고 공개 지식의 재현 가능한 근거를 남긴다. PDF grounding은 `MCM_REUSE_GUIDE_2026_08_21_V1`, 공개 KB는 `MCM_LEATHER_BAGS_PUBLIC_RESEARCH_2026_08_21_V1`, 선별 claim canonical SHA-256은 `1027b306a500b3f9b348f5e9db3489d65ba2114b1eb6d7ed4bb6920af07be03f`다. R5는 DEC-036의 R4 고지 범위와 DEC-035의 목업 시 OpenAI 재분류 해석을 대체한다. 분석 narrative와 목업 UI는 분리하고 버튼·진행률·완료 전 placeholder·`applied` 뒤 3D/비교, deterministic target mask, 스티치 PNG와 기존 normal·metallic-roughness 보존 규칙은 유지한다. |
 | DEC-038 | 2026-08-21 | 승인 | 외관 생성 완료 뒤 `기본 3D 모델과 비교`는 사용자 제공 Meshy GLB를 기반으로 182,361 triangles·2K 텍스처로 경량화한 웹 파생 자산 `reborn-passport-wallet-base-comparison.glb`를 표시하고, `맞춤 외관 다시 적용`은 기존 canonical GLB와 합성 atlas로 복귀한다. canonical GLB는 목표 UV·마스크·스티치/PBR 보존의 기준이므로 교체하지 않는다. 비교 모델 전환은 추가 OpenAI·Meshy 요청을 만들지 않으며 비교 모델 로드 실패 시 맞춤 외관으로 자동 복귀한다. | 원본 3,039,371 triangles·104,640,168-byte 파일은 모바일 브라우저용으로 과도하므로 전송 크기와 GPU 부하를 줄인 파생 자산을 사용한다. 원본 SHA-256은 `e6c24eb068f79cfc5e97403fc80cc4fa922d46ba2002f5aadf87488e4d0b91b5`, 파생 자산 SHA-256은 `863c5297048f7a38d8f2f806d9b80dad81250cf8eb769ad1aa0d84f8c9a71d8b`다. 사용자가 지정한 디자인을 유지하면서 생성 목업의 검증된 UV와 결정론적 합성 계약을 보존한다. |
 | DEC-039 | 2026-08-21 | 승인 | 공개 조사본은 사람용 전체 KB와 분석용 서버 위키를 분리한다. 분석용 snapshot은 검토된 시각 claim 18개와 필요한 provenance만 포함하고 제품 예시·비시각 topic·`context_only`를 제외한다. LIVE 분석은 VIEW 라벨을 유지한 저해상도 lookup 호출로 일반 검색어만 만들고, lexical hit 기반 최대 5개·4,000자 로컬 결과를 원본 해상도 v3 Structured Output 호출에 보강한다. 7개 금지 경계는 항상 포함하며 lookup 실패·무결과는 전체 코퍼스 대신 보수적 safety 경계로 폴백한다. | DEC-037의 고정 16-claim 전체 주입을 요청별 retrieval로 대체해 관련 없는 prompt 토큰과 제품 anchoring을 줄인다. 제품 예시는 schema와 서버에서 비활성화하고 query 원문 대신 lookup request ID, query/context hash, ordered claim·source ID, full retrieval corpus SHA와 검색기 버전을 private `provider_result`와 분석 멱등 hash에 기록한다. 첫 호출은 `detail: low`, 최종 호출은 `detail: auto`로 비용을 제한한다. 현재 provenance를 통과한 v3 profile의 목업 단계 재사용, R5 동의, deterministic exterior/stitch mask와 기존 PBR 보존은 유지한다. API·DB·패키지 계약은 바꾸지 않는다. |
+| DEC-040 | 2026-08-21 | 승인 | 고객 화면과 현재 안내 문서의 생성 결과 명칭은 `3D 목업`으로 통일하고, `외관`은 사진 구도·소재 분류·텍스처 마스크 등 처리 범위를 설명할 때만 사용한다. Meshy AI 연동의 크레딧·비용 보호를 위해 신규 `TARGET_RETEXTURE`는 고객당 UTC 기준 하루 최대 3회로 제한한다. | 버튼·상태·오류·접근성 이름의 혼용을 없애면서 내부 외관 처리 계약은 유지한다. 한국 시간 기준 한도는 매일 오전 9시에 갱신되며 배포 전체 보호 한도와 멱등 캐시도 별도로 적용한다. |
 
 ## 대체 관계
 
@@ -59,11 +60,12 @@
 - `DEC-035`의 외관 4면, 세 job, 목표 UV와 canonical GLB 원칙은 유지한다. 동의 시점, 버튼 실행, 간소화 UI, 완료 전 placeholder와 `stitch-preserve-mask` 우선 PNG 합성은 `DEC-036`이 구체화했다. 다만 목업 버튼에서 OpenAI로 4면을 다시 분류하는 해석은 **2026-08-21 기준 `DEC-037`의 current LIVE 저장 profile 재사용으로 대체**되며 classifier는 non-LIVE 호환 경로에만 남는다.
 - `DEC-036`의 버튼 시작, 분석 narrative와 목업 UI 분리, 진행률·placeholder·`applied` 뒤 3D 공개, 스티치/PBR 보존 원칙은 유지한다. R4 통합 안내와 외관 profile 생성·재사용 범위는 **2026-08-21 기준 `DEC-037`의 R5 계약으로 대체**되었다.
 - `DEC-037`의 지식 기반 분석·저장 profile 재사용·Meshy 생성 계약은 유지한다. 생성 완료 뒤 기본/맞춤 비교에 사용하는 모델 자산과 실패 복귀 동작은 **2026-08-21 기준 `DEC-038`이 구체화**한다.
+- `DEC-036`~`DEC-039`의 외관 처리 범위와 생성 계약은 유지하되, 고객에게 보이는 생성 결과 명칭과 일일 생성 상한은 **2026-08-21 기준 `DEC-040`을 적용**한다.
 - `DEC-017`의 Figma 전체 시각 기준은 유지한다. 홈·하단 내비게이션·신청 내역의 구체적인 노드와 탐색 구조는 **2026-08-18 기준 `DEC-019`가 대체·구체화**한다.
 - `DEC-004`의 사용자에게 보이는 분석 모드는 `DEMO_FIXTURE`, `SEEDED_ESTIMATE`, `LIVE`로 유지한다. `hybrid`는 별도 공개 enum이 아니라 `DEC-024`의 `LIVE` 내부 장애 폴백 동작으로 구체화한다.
 - `DEC-018`의 “lifecycle command만 실행 경로”라는 당시 구현 상태는 historical이다. v2 서버 범위와 외부 연결 경계는 `DEC-024`가 대체한다.
 - `DEC-024`의 “고객·운영 UI는 Fixture를 유지하고 후속 연결” 부분은 **2026-08-19 기준 `DEC-025`로 대체**되었다. v1 제거·v2 계약·LIVE 동의 원칙은 유지한다.
-- 기존 행은 결정 당시 기록으로 보존한다. 현재 구현과 체크리스트에는 supersede 관계를 반영한 `DEC-010`~`DEC-039`를 적용한다.
+- 기존 행은 결정 당시 기록으로 보존한다. 현재 구현과 체크리스트에는 supersede 관계를 반영한 `DEC-010`~`DEC-040`을 적용한다.
 
 ## 새 결정 형식
 

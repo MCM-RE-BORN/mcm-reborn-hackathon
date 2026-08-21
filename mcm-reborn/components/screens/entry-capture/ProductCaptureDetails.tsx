@@ -105,7 +105,7 @@ export function ProductCaptureDetails() {
 
       <fieldset className={styles.consentGroup}>
         <legend className={styles.visuallyHidden}>
-          AI 분석 및 외관 목업 외부 처리 동의
+          AI 분석 및 3D 목업 외부 처리 동의
         </legend>
         <div className={styles.externalAiConsentSummary}>
           <label>
