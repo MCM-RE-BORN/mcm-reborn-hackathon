@@ -40,7 +40,7 @@
 
 현재 고객·운영 브라우저 여정에는 Supabase 환경변수와 적용된 schema·migration·Auth 역할 연결이 필요하다. 분석을 `DEMO_FIXTURE`로 실행하면 OpenAI 키는 필요하지 않다. `.env.example`을 `mcm-reborn/.env.local`로 복사하고 Supabase URL·publishable key·service role key를 설정한다. 서버 전용인 `SUPABASE_SERVICE_ROLE_KEY`와 `OPENAI_API_KEY`에는 절대 `NEXT_PUBLIC_` 접두사를 붙이지 않는다.
 
-선택형 OpenAI/Meshy 3D 목업의 키, 공개 GLB, 분석 접수 시 R5 통합 동의, 보존 기간, quota와 비용 준비는 [`AI_TEXTURE_MOCKUP_PIPELINE.md`](./AI_TEXTURE_MOCKUP_PIPELINE.md)를 따른다. 단일 `3D 목업 생성` 버튼은 기본값 `ENABLE_TEXTURE_AI=false`에서 비활성이다. 분석 생성만으로 Meshy 작업을 자동 시작하지 않는다. current LIVE의 `EXTERIOR_PLAN`은 분석 때 저장한 profile을 읽으므로 버튼 클릭 시 별도 OpenAI 호출이나 plan quota가 없다.
+선택형 OpenAI/Meshy 3D 목업의 키, 공개 GLB, 분석 접수 시 R5 통합 동의, 보존 기간, quota와 비용 준비는 [`AI_TEXTURE_MOCKUP_PIPELINE.md`](./AI_TEXTURE_MOCKUP_PIPELINE.md)를 따른다. 단일 `3D 목업 생성` 버튼은 기본값 `ENABLE_TEXTURE_AI=false`에서 비활성이다. 분석 생성만으로 Meshy 작업을 자동 시작하지 않는다. current LIVE의 `EXTERIOR_PLAN`은 분석 때 저장한 profile을 읽으므로 버튼 클릭 시 별도 OpenAI 호출이나 plan quota가 없다. `TARGET_RETEXTURE` 앱 일일 한도는 기본 비활성이며 필요할 때만 두 `MESHY_TARGET_RETEXTURE_*` 환경변수로 UTC 일일 안전 한도를 켠다.
 
 ```powershell
 Copy-Item .\.env.example .\mcm-reborn\.env.local
@@ -59,10 +59,11 @@ python validate_package.py
 npm --prefix mcm-reborn ci
 npm --prefix mcm-reborn run lint
 npm --prefix mcm-reborn run typecheck
+npm --prefix mcm-reborn run test:texture-policy
 npm --prefix mcm-reborn run build
 ```
 
-현재 `package.json`에 테스트 스크립트가 없다면 `npm test` 통과를 표시하지 말고 아래 시나리오를 수동 검증한다.
+자동 검증 뒤에도 아래 시나리오를 실제 브라우저에서 수동 검증한다.
 
 ## 골든 시연 순서
 
@@ -72,7 +73,7 @@ npm --prefix mcm-reborn run build
 4. 카테고리 가방, 2019년, 5년 이상, 희망 제품 RE:BORN 여권지갑을 확인한다. `AI 분석을 위한 사진 활용 동의`의 내용보기를 열어 분석 시 6장 OpenAI 전송과 외관 4부위 profile 생성, 목업 버튼 클릭 시 저장 profile 재사용과 4장 Meshy 전송·보존·비용성 호출을 함께 설명하는 R5 통합 안내를 확인한다. 동의한 뒤 `AI 분석 접수하기`를 누른다.
 5. LIVE라면 첫 OpenAI `detail: low` 호출은 원래 인덱스를 유지한 `0 FRONT`, `1 REAR`, `4 LEFT`, `5 RIGHT` 외관 4면만 사용해 제품 예시가 제거된 공개 KB V1 분석용 위키를 최대 5개·4,000자로 검색한다. 두 번째 `detail: auto` 호출은 상단·하단을 포함한 6면과 PDF `MCM_REUSE_GUIDE_2026_08_21_V1`, 7개 always-on 금지 경계, 검색 결과로 v3 분석·외관 profile을 함께 만든다는 점을 설명한다. 최초 접수에서 `SUBMITTED → AI_ANALYZING`을 1~2초 보여 준 뒤 접수 `SUB-RB-20260817-0001`의 결과를 연다. 이후 접수 현황에 재진입하면 AI 결과로 바로 이동하는지 확인한다.
 6. 외관·손상·오염, 예상 재활용 가능률 72%, 정품 사전 적합도 예상 91%를 보여 준다. 91%가 정품 확정이 아님을 설명한다.
-7. 추천 화면의 `트래블·지갑·파우치·키링` 탭을 전환한다. 트래블의 `여권 지갑` 카드만 선택해 RE:BORN 여권지갑 목업으로 이동하고 전면 placeholder가 표시되는지 확인한다. 외부 provider를 준비한 시연에서만 `3D 목업 생성`을 한 번 누른다. current LIVE에서는 private `provider_result`의 `BODY` 필수 외관 profile을 재사용하므로 이 시점에 OpenAI 재분류나 plan quota가 없고, 외관 4장 Meshy 작업만 시작한다. 목업 화면에는 분석 narrative·외관 4면·소재 분류·5단계 절차 대신 진행률과 최소 상태만 표시한다. 생성 텍스처가 결정론적 target mask와 스티치 보존 마스크를 거쳐 PNG로 합성되고 실제 3D material에 `applied`된 뒤에만 회전 가능한 3D가 나타나는지 확인한다. `기본 3D 모델과 비교`를 누르면 사용자 제공 모델의 웹 최적화 비교 GLB가 표시되고, `맞춤 외관 다시 적용`을 누르면 canonical GLB의 합성 외관으로 돌아오는지 확인한다.
+7. 추천 화면의 `트래블·지갑·파우치·키링` 탭을 전환한다. 트래블의 `여권 지갑` 카드만 선택해 RE:BORN 여권지갑 목업으로 이동하고 전면 placeholder가 표시되는지 확인한다. 외부 provider를 준비한 시연에서만 `3D 목업 생성`을 한 번 누른다. current LIVE에서는 private `provider_result`의 `BODY` 필수 외관 profile을 재사용하므로 이 시점에 OpenAI 재분류나 plan quota가 없고, 외관 4장 Meshy 작업만 시작한다. 선택형 source 3D를 켠 경우에도 필수 target task가 먼저 접수되고 token이 저장된 뒤 source task가 요청되는지 확인한다. 목업 화면에는 분석 narrative·외관 4면·소재 분류·5단계 절차 대신 진행률과 최소 상태만 표시한다. 생성 텍스처가 결정론적 target mask와 스티치 보존 마스크를 거쳐 PNG로 합성되고 실제 3D material에 `applied`된 뒤에만 회전 가능한 3D가 나타나는지 확인한다. `기본 3D 모델과 비교`를 누르면 사용자 제공 모델의 웹 최적화 비교 GLB가 표시되고, `맞춤 외관 다시 적용`을 누르면 canonical GLB의 합성 외관으로 돌아오는지 확인한다.
 8. 수거 정보를 입력하고 최초 예상 제작비 180,000원, 수거 무료, 실물 검수 후 변경 가능 안내를 확인한다.
 9. Mock 결제를 완료하고 주문 `RB-20260817-0001`, `ORDER_PLACED`를 보여 준다.
 10. 하단 `신청 내역`을 선택해 `/orders` 목록을 열고 `RE:BORN 여권지갑`을 선택해 `/orders/demo` 상세로 이동한다. 진행 상태와 배송 정보의 인접 점이 선으로 연결되어 있는지 확인한다.
@@ -95,7 +96,7 @@ npm --prefix mcm-reborn run build
 - 카메라 권한 거부: 권한 안내 뒤 `기기에서 사진 선택`으로 복구한다.
 - 사진 부족·형식·용량: JPG/JPEG·PNG, 필수 6면 6장, 장당 10MB 기준과 남은 슬롯을 안내한다.
 - 사진 품질 미달: LIVE는 같은 6장 OpenAI Structured Output에서 실제 이미지 품질을 검사하고, 데모 모드는 준비된 품질 미달 Fixture를 사용할 수 있다. 어느 모드든 `422 IMAGE_QUALITY_INSUFFICIENT` 계약과 이미지별 재촬영 안내를 유지하며 품질 실패를 성공 분석으로 바꾸지 않는다.
-- OpenAI/Meshy 제공자 오류: LIVE 분석 OpenAI 장애는 `modeUsed=DEMO_FIXTURE`인 호환 결과로 복구되고 결과 화면에 작게 `API오류로 인한 DEMO`를 표시한다. 직접 실행한 DEMO에는 이 문구가 없다. 이 non-LIVE 결과에 저장 profile이 없으면 목업 버튼에서만 OpenAI 4면 classifier 폴백이 가능하다. 반대로 `modeUsed=LIVE`인 기존 분석에 현재 profile이 없으면 409와 새 분석 안내를 표시하고 classifier로 재과금하지 않는다. Meshy 오류에는 전면 placeholder를 유지하고 유료 요청을 연속 클릭하지 않으며 동일 job token으로 상태를 재확인한다. source 3D 실패는 target 작업 실패로 표현하지 않는다.
+- OpenAI/Meshy 제공자 오류: LIVE 분석 OpenAI 장애는 `modeUsed=DEMO_FIXTURE`인 호환 결과로 복구되고 결과 화면에 작게 `API오류로 인한 DEMO`를 표시한다. 직접 실행한 DEMO에는 이 문구가 없다. 이 non-LIVE 결과에 저장 profile이 없으면 목업 버튼에서만 OpenAI 4면 classifier 폴백이 가능하다. 반대로 `modeUsed=LIVE`인 기존 분석에 현재 profile이 없으면 409와 새 분석 안내를 표시하고 classifier로 재과금하지 않는다. Meshy가 명시적으로 거절한 `429`는 앱 예약 해제 뒤 재시도할 수 있지만 `402` 크레딧 부족과 인증·설정 오류는 `retryable: false`다. 네트워크·`408`·`5xx`·잘못된 성공 응답처럼 task 접수 여부가 불명확한 오류는 중복 과금 방지를 위해 terminal lock을 유지한다. token이 있으면 동일 job token과 별도 recovery receipt로 상태를 복구하며 source 3D 실패는 target 작업 실패로 표현하지 않는다.
 - AI 비대상: `AI_INELIGIBLE`을 공식 가품 판정이 아니라 사진·정보 기반 사전 접수 불가로 표현한다.
 - 변경 조건 거절: `CHANGE_APPROVAL_REQUIRED → CANCELED`와 Mock 결제 취소·환불 안내를 보여 준다.
 - 제작 불가: `/orders/demo?stage=canceled&reason=production-unavailable`에서 `PRODUCTION_UNAVAILABLE → CANCELED`와 상담·Mock 환불 경로를 보여 준다.
@@ -111,7 +112,8 @@ npm --prefix mcm-reborn run build
 | LIVE 분석 OpenAI 지연·오류 | `modeUsed=DEMO_FIXTURE` 호환 결과와 작은 `API오류로 인한 DEMO` 표기를 사용. 사진 품질 실패는 성공 Fixture로 바꾸지 않음 |
 | 기존 LIVE 분석의 current profile 부재 | 409와 새 6면 분석 안내. 목업 단계 OpenAI classifier를 호출하지 않음 |
 | non-LIVE profile 부재 | R5 연결 동의·기능 gate가 있을 때만 4면 classifier 호환 폴백. 동일 유료 job을 새로 만들지 않음 |
-| Meshy 지연·오류 | 목업 전면 placeholder를 유지하고 동일 task token으로 조회. terminal provider create 실패는 재요청하지 않음 |
+| Meshy 명시적 요청 거절 | 앱 예약을 해제한다. provider `429`는 잠시 후 재시도할 수 있고, `402` 크레딧 부족·인증·설정 오류는 `retryable: false`로 반복 요청을 막음 |
+| Meshy 접수 여부 불명 오류 | 네트워크·`408`·`5xx`·잘못된 성공 응답은 중복 과금 방지를 위해 terminal lock 유지. token이 있으면 동일 token과 recovery receipt로 조회 |
 | 분석 화면 진행 지연 | 접수 ID를 유지한 준비된 `AI_COMPLETED` 상태로 이동 |
 | 타임라인 진행 지연 | 빠른 데모 프로필 또는 준비된 상태 전이 사용 |
 | 파생 텍스처 Storage 실패 | 전면 placeholder를 유지하고 같은 task token·멱등 키로 파생 자산을 다시 확인. 새 유료 job은 만들지 않음 |

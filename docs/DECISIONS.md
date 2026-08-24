@@ -47,6 +47,7 @@
 | DEC-041 | 2026-08-24 | 승인 | DEC-039의 2단계 LIVE 분석을 유지하되 145초 absolute deadline과 프로세스 단위 FIFO를 적용한다. lookup은 35초·1회, 최종 Structured Output은 8,192 completion token과 최대 2회로 제한한다. 일시적 429만 `Retry-After` 최소 대기+jitter 뒤 한 번 재시도하고 quota·billing·spend·usage 한도는 재시도하지 않는다. terminal LIVE 실패는 canonical Fixture로 복구하되 결과 화면에 작게 `API오류로 인한 DEMO`를 표시한다. | lookup 제한 뒤 최종 6장 요청을 추가로 보내는 burst와 첫 429 즉시 폴백을 줄인다. server/client request ID, 제한 종류, retry와 요청·token·project-token 헤더만 private `provider_result.providerFailure`와 안전 로그에 남기며 오류 본문·전체 헤더·signed URL은 배제한다. 직접 `DEMO_FIXTURE`에는 폴백 표기를 하지 않는다. 프로세스 FIFO는 serverless 인스턴스 간 분산 한도를 대체하지 않는다. DEC-024의 장애 Fixture 원칙은 유지하면서 제한 처리·진단·고객 고지를 구체화한다. |
 | DEC-042 | 2026-08-24 | 승인 | LIVE rate-limit 진단은 고객 조회가 가능한 `analyses.provider_result`에 저장하지 않고 allowlist 서버 로그에만 남긴다. 최종 분석에 최소 65초를 예약하고 lookup은 남은 시간이 있을 때만 실행한다. `Retry-After`가 없으면 소진된 request/token/project-token bucket reset을 사용하며, LIVE 오류 Fixture는 요청의 데모 오류 시나리오를 무시하고 canonical 성공 Fixture를 선택한다. | owner SELECT RLS는 JSON 열 내부를 숨기지 않으므로 공유 프로젝트 한도와 요청 식별자의 직접 REST 노출을 막는다. 60초 provider 대기에 jitter가 붙어도 전체 deadline 안이면 재시도하며, 긴 큐 대기와 테스트용 저품질 scenario가 terminal LIVE 오류의 DEMO 복구 계약을 깨지 않게 한다. DEC-041의 rate-limit 정책을 보완하고 진단 저장 위치만 대체한다. |
 | DEC-043 | 2026-08-24 | 승인 | 2단계 LIVE 분석에서 저해상도 위키 lookup은 원래 인덱스를 유지한 `0 FRONT`, `1 REAR`, `4 LEFT`, `5 RIGHT` 외관 4면만 사용하고, 최종 Structured Output은 `0`~`5`의 6면을 모두 유지한다. | lookup의 상단·하단 중복 입력을 제거해 이미지 입력량을 줄이면서 최종 사진 품질·상하단 손상 판단 근거를 보존한다. prompt/knowledge 버전을 올려 새 결과의 provenance와 멱등 hash에 이 정책을 반영하며, DEC-039의 첫 호출 이미지 범위만 대체한다. |
+| DEC-044 | 2026-08-24 | 승인 | 신규 `TARGET_RETEXTURE`의 앱 일일 한도는 기본 비활성으로 바꾸고 `MESHY_TARGET_RETEXTURE_DAILY_LIMIT_PER_USER`와 `MESHY_TARGET_RETEXTURE_GLOBAL_DAILY_LIMIT`의 빈값·`0`은 비활성, `1`~`100`은 각각 고객·배포 전체 UTC 일일 안전 한도로 적용한다. `SOURCE_MODEL` 1/2와 non-LIVE `EXTERIOR_PLAN` 3/5 한도는 유지하고, 실제 크레딧·요청 제한은 Meshy `402`·`429`를 권위 있는 상태로 삼는다. | DEC-040의 `TARGET_RETEXTURE` 고정 3회 한도를 대체해 잔여 크레딧과 무관한 앱 자체 차단을 제거한다. 명시적 HTTP 거절은 예약을 해제해 provider `429`만 재시도 가능하게 하고 크레딧·인증·설정 오류는 `retryable: false`로 둔다. 네트워크·`408`·`5xx`·잘못된 성공 응답은 접수 여부가 불명확하므로 중복 과금 방지 terminal lock을 유지한다. quota와 분리된 recovery receipt로 접수 task token을 복구하며, 필수 target을 생성·저장한 뒤 선택형 source를 요청한다. |
 
 ## 대체 관계
 
@@ -63,15 +64,16 @@
 - `DEC-035`의 외관 4면, 세 job, 목표 UV와 canonical GLB 원칙은 유지한다. 동의 시점, 버튼 실행, 간소화 UI, 완료 전 placeholder와 `stitch-preserve-mask` 우선 PNG 합성은 `DEC-036`이 구체화했다. 다만 목업 버튼에서 OpenAI로 4면을 다시 분류하는 해석은 **2026-08-21 기준 `DEC-037`의 current LIVE 저장 profile 재사용으로 대체**되며 classifier는 non-LIVE 호환 경로에만 남는다.
 - `DEC-036`의 버튼 시작, 분석 narrative와 목업 UI 분리, 진행률·placeholder·`applied` 뒤 3D 공개, 스티치/PBR 보존 원칙은 유지한다. R4 통합 안내와 외관 profile 생성·재사용 범위는 **2026-08-21 기준 `DEC-037`의 R5 계약으로 대체**되었다.
 - `DEC-037`의 지식 기반 분석·저장 profile 재사용·Meshy 생성 계약은 유지한다. 생성 완료 뒤 기본/맞춤 비교에 사용하는 모델 자산과 실패 복귀 동작은 **2026-08-21 기준 `DEC-038`이 구체화**한다.
-- `DEC-036`~`DEC-039`의 외관 처리 범위와 생성 계약은 유지하되, 고객에게 보이는 생성 결과 명칭과 일일 생성 상한은 **2026-08-21 기준 `DEC-040`을 적용**한다.
+- `DEC-036`~`DEC-039`의 외관 처리 범위와 생성 계약은 유지하되, 고객에게 보이는 생성 결과 명칭은 **2026-08-21 기준 `DEC-040`을 적용**한다. `DEC-040`의 `TARGET_RETEXTURE` 고정 3회 상한은 **2026-08-24 기준 `DEC-044`의 기본 비활성·선택형 안전 한도 정책으로 대체**한다.
 - `DEC-024`의 LIVE 장애 Fixture 폴백과 `DEC-039`의 2단계 위키 분석은 유지하되, rate-limit 처리·안전 진단·직접 DEMO와의 고객 표기 구분은 **2026-08-24 기준 `DEC-041`이 구체화**한다.
 - `DEC-041`의 bounded retry·고객 표기는 유지하되 진단 저장 위치, 최종 시간 예약, reset 대기와 canonical 오류 폴백은 **2026-08-24 기준 `DEC-042`가 대체·보완**한다.
 - `DEC-039`의 위키 lookup·최종 분석 2단계 구조는 유지하되 첫 호출의 이미지 범위는 **2026-08-24 기준 `DEC-043`의 외관 4면 lookup·최종 6면 분석 규칙으로 대체**한다.
+- `DEC-033`·`DEC-035`의 외부 유료 작업 보호 원칙은 유지하되 `TARGET_RETEXTURE` 앱 일일 한도, provider 거절·불명 오류 처리, recovery receipt와 target 우선 생성 순서는 **2026-08-24 기준 `DEC-044`를 적용**한다.
 - `DEC-017`의 Figma 전체 시각 기준은 유지한다. 홈·하단 내비게이션·신청 내역의 구체적인 노드와 탐색 구조는 **2026-08-18 기준 `DEC-019`가 대체·구체화**한다.
 - `DEC-004`의 사용자에게 보이는 분석 모드는 `DEMO_FIXTURE`, `SEEDED_ESTIMATE`, `LIVE`로 유지한다. `hybrid`는 별도 공개 enum이 아니라 `DEC-024`의 `LIVE` 내부 장애 폴백 동작으로 구체화한다.
 - `DEC-018`의 “lifecycle command만 실행 경로”라는 당시 구현 상태는 historical이다. v2 서버 범위와 외부 연결 경계는 `DEC-024`가 대체한다.
 - `DEC-024`의 “고객·운영 UI는 Fixture를 유지하고 후속 연결” 부분은 **2026-08-19 기준 `DEC-025`로 대체**되었다. v1 제거·v2 계약·LIVE 동의 원칙은 유지한다.
-- 기존 행은 결정 당시 기록으로 보존한다. 현재 구현과 체크리스트에는 supersede 관계를 반영한 `DEC-010`~`DEC-043`을 적용한다.
+- 기존 행은 결정 당시 기록으로 보존한다. 현재 구현과 체크리스트에는 supersede 관계를 반영한 `DEC-010`~`DEC-044`를 적용한다.
 
 ## 새 결정 형식
 

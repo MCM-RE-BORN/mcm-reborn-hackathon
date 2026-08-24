@@ -49,7 +49,7 @@
 - 고객 데이터와 private 원본 이미지는 소유자 기반 RLS·Storage 정책으로 격리하고 운영자만 업무상 조회합니다.
 - 제품 목록은 각 결과 제품의 완성형 전체 이미지를 표시합니다.
 - 현재 제품 상세는 정적 다각도 목업을 제공합니다. Product3D JSON은 DB와 canonical Mock에 보존하지만 실제 GLB/poster가 준비되기 전에는 `model_3d_ready`/`model3dReady=false`이며 API는 `has3d=false`, `model3d=null`로 응답합니다.
-- Meshy AI 연동의 크레딧·비용 제한을 고려해 신규 `3D 목업` 생성(`TARGET_RETEXTURE`)은 고객당 UTC 기준 하루 최대 3회로 제한하며 한국 시간 매일 오전 9시에 갱신합니다. 배포 전체 보호 한도도 별도로 적용하고, 완료·진행 중인 동일 작업은 캐시된 결과나 작업 참조로 복구해 중복 생성하지 않습니다.
+- 신규 `3D 목업` 생성(`TARGET_RETEXTURE`)의 앱 일일 한도는 기본적으로 비활성입니다. 필요하면 `MESHY_TARGET_RETEXTURE_DAILY_LIMIT_PER_USER`와 `MESHY_TARGET_RETEXTURE_GLOBAL_DAILY_LIMIT`에 각각 `1`~`100`을 설정해 UTC 일일 안전 한도를 켤 수 있으며 빈값 또는 `0`은 비활성입니다. Meshy의 실제 크레딧·요청 제한은 provider의 `402`·`429` 응답을 기준으로 처리하고, 완료·진행 중인 동일 작업과 복구 영수증을 재사용해 중복 생성·과금을 막습니다.
 - 결제, 물류, ESG 산식, 보증서는 Mock입니다.
 - 결제 성공은 `ORDER_PLACED`이며, 주문 후 전문가 실물 검수와 필요한 고객 변경 승인 전에는 `IN_PRODUCTION`으로 전환할 수 없습니다.
 
@@ -151,10 +151,11 @@ npm --prefix mcm-reborn run test:analysis-fallback
 npm --prefix mcm-reborn run test:openai-images
 npm --prefix mcm-reborn run test:openai-policy
 npm --prefix mcm-reborn run test:provider-fallback
+npm --prefix mcm-reborn run test:texture-policy
 npm --prefix mcm-reborn run build
 ```
 
-Python 검증에는 PyYAML이 필요합니다. `validate_package.py`는 API 참조·operationId, 업로드 제한, 예상치 메타데이터, 제품 4종, 단일 대표 주문, 실물 검수·변경 승인, SQL enum과 제작 시작 guard의 정합성을 확인합니다. native Node 테스트는 LIVE OpenAI 요청 정책, 위키 lookup 4면·최종 분석 6면 이미지 계약, canonical 제공자 폴백과 API 오류 DEMO 표기 조건을 검증합니다.
+Python 검증에는 PyYAML이 필요합니다. `validate_package.py`는 API 참조·operationId, 업로드 제한, 예상치 메타데이터, 제품 4종, 단일 대표 주문, 실물 검수·변경 승인, SQL enum과 제작 시작 guard의 정합성을 확인합니다. native Node 테스트는 LIVE OpenAI 요청 정책, 위키 lookup 4면·최종 분석 6면 이미지 계약, canonical 제공자 폴백·API 오류 DEMO 표기와 Meshy 한도·오류·복구 정책을 검증합니다.
 
 ## 중요 고지
 

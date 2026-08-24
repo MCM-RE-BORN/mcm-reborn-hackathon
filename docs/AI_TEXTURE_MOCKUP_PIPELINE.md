@@ -73,6 +73,8 @@ semanticMask.reason = MESHY_DOES_NOT_RETURN_SEMANTIC_MASK
 
 ## 4. Meshy 작업 두 종류
 
+한 번의 버튼 동작에서 두 작업을 모두 사용할 때는 필수 `TARGET_RETEXTURE`를 먼저 생성하고 task token을 저장한 뒤 선택형 `SOURCE_MODEL`을 요청한다. 30-credit 참고 작업이 먼저 provider 동시 실행 슬롯을 차지해 필수 목표 작업을 막지 않게 하며, source 생성 실패는 이미 접수된 target의 폴링·적용을 중단하지 않는다.
+
 ### 4.1 `SOURCE_MODEL`
 
 선택 기능이다. Meshy Multi-Image to 3D에 FRONT, RIGHT, REAR, LEFT 네 signed URL을 전달하고 Meshy 7, texture, PBR, 2K, GLB 출력을 요청한다. 결과의 용도는 `REFERENCE_ONLY`다.
@@ -131,7 +133,7 @@ finalBaseColor = generatedTargetAtlas * effectiveMask
 
 사용자는 AI 제공자별 버튼 대신 `3D 목업 생성` 버튼 하나를 사용한다. 분석 결과 카드, 외관 4면 목록, 소재 분류와 5단계 절차 설명은 목업 화면에 표시하지 않는다. 분석 요약·손상·예상치·추천 narrative는 분석/추천 화면의 책임으로 분리한다. 버튼을 누르기 전, 생성 중, 원격 작업 또는 로컬 적용 실패 상태에는 모두 여권 지갑 전면 이미지 placeholder를 유지한다. 생성 중에는 placeholder 위의 진행률과 최소 상태 문구만 표시한다.
 
-OpenAI 계획이나 source 3D가 비활성·실패해도 target 작업은 계속된다. target 원격 작업이 `FAILED` 또는 `CANCELED`이면 같은 유료 작업을 새로 만들지 못하도록 terminal 상태와 token/key를 보존한다. 폴링 timeout, 파생 자산 저장 또는 로컬 합성 오류는 같은 token과 idempotency key로 재조회할 수 있다. 동일 task의 파생 경로는 결정적 hash를 사용해 이미 저장된 결과를 재사용한다. 목표 atlas 합성뿐 아니라 `model-viewer`의 `baseColorTexture` 적용까지 성공해 `applied` 상태가 된 뒤에만 3D 레이어를 공개한다. `기본 3D 모델과 비교`는 사용자 제공 Meshy GLB를 웹용으로 단순화·양자화하고 텍스처를 2K로 줄인 별도 비교 자산 `reborn-passport-wallet-base-comparison.glb`를 불러오며, `맞춤 외관 다시 적용`은 canonical GLB와 합성 atlas로 돌아간다. 원본은 3,039,371 triangles, 104,640,168 bytes, SHA-256 `e6c24eb068f79cfc5e97403fc80cc4fa922d46ba2002f5aadf87488e4d0b91b5`이며, 웹 파생 자산은 182,361 triangles, 7,596,184 bytes, SHA-256 `863c5297048f7a38d8f2f806d9b80dad81250cf8eb769ad1aa0d84f8c9a71d8b`다. 비교 전환은 추가 OpenAI·Meshy 작업을 만들지 않고, 비교 자산 로드 실패 시 맞춤 외관으로 자동 복귀한다.
+OpenAI 계획이나 source 3D가 비활성·실패해도 target 작업은 계속된다. Meshy가 명시적으로 거절한 HTTP 응답은 provider가 작업을 접수하지 않은 것으로 처리해 앱 예약을 해제한다. provider `429`는 잠시 후 다시 생성할 수 있지만, `402` 크레딧 부족과 인증·로컬 설정 오류는 `retryable: false`로 표시해 설정을 고치기 전 반복 요청을 막는다. 반면 네트워크 단절, `408`, `5xx`, 성공처럼 보이지만 task ID를 검증할 수 없는 응답은 provider 접수 여부가 불명확하므로 중복 과금 방지를 위해 멱등 예약을 terminal lock으로 유지한다. target 원격 작업이 `FAILED` 또는 `CANCELED`이면 같은 유료 작업을 새로 만들지 못하도록 terminal 상태와 token/key를 보존한다. 폴링 timeout, 파생 자산 저장 또는 로컬 합성 오류는 같은 token과 idempotency key로 재조회할 수 있다. 동일 task의 파생 경로는 결정적 hash를 사용해 이미 저장된 결과를 재사용한다. 목표 atlas 합성뿐 아니라 `model-viewer`의 `baseColorTexture` 적용까지 성공해 `applied` 상태가 된 뒤에만 3D 레이어를 공개한다. `기본 3D 모델과 비교`는 사용자 제공 Meshy GLB를 웹용으로 단순화·양자화하고 텍스처를 2K로 줄인 별도 비교 자산 `reborn-passport-wallet-base-comparison.glb`를 불러오며, `맞춤 외관 다시 적용`은 canonical GLB와 합성 atlas로 돌아간다. 원본은 3,039,371 triangles, 104,640,168 bytes, SHA-256 `e6c24eb068f79cfc5e97403fc80cc4fa922d46ba2002f5aadf87488e4d0b91b5`이며, 웹 파생 자산은 182,361 triangles, 7,596,184 bytes, SHA-256 `863c5297048f7a38d8f2f806d9b80dad81250cf8eb769ad1aa0d84f8c9a71d8b`다. 비교 전환은 추가 OpenAI·Meshy 작업을 만들지 않고, 비교 자산 로드 실패 시 맞춤 외관으로 자동 복귀한다.
 
 ## 7. 인증, 동의, 멱등성과 비용 상한
 
@@ -146,9 +148,11 @@ OpenAI 계획이나 source 3D가 비활성·실패해도 target 작업은 계속
 | 현재 LIVE 저장 profile → `EXTERIOR_PLAN` | 없음(결정론적 변환) | 없음 | 없음 | 없음 |
 | non-LIVE profile 부재 → `EXTERIOR_PLAN` | OpenAI | 1 | 3 | 5 |
 | `SOURCE_MODEL` | Meshy | 1 | 1 | 2 |
-| `TARGET_RETEXTURE` | Meshy | 1 | 3 | 5 |
+| `TARGET_RETEXTURE` | Meshy | 1 | 기본 없음, 선택형 1~100 | 기본 없음, 선택형 1~100 |
 
-서버 storage key는 non-LIVE classifier와 Meshy 작업에서 고객, 분석, jobKind와 provider를 기준으로 분석당 유료 작업을 한 번만 허용한다. request hash는 고객, 분석, jobKind, provider, 동의 버전과 네 source asset ID digest로 구성하며 브라우저가 발급한 idempotency key에는 의존하지 않는다. 따라서 같은 완료 요청은 새 탭에서도 plan 또는 signed task token을 재생하고, 진행 중 요청은 두 번째 provider 호출을 차단한다. 현재 LIVE 저장 profile 변환은 provider 예약 자체가 필요 없다. 브라우저의 분석+jobKind별 key와 Meshy token `sessionStorage`, 동기 ref는 같은 탭에서 중복 클릭과 새로고침 복원을 빠르게 처리한다.
+`TARGET_RETEXTURE`의 앱 일일 한도는 기본 비활성이다. `MESHY_TARGET_RETEXTURE_DAILY_LIMIT_PER_USER` 또는 `MESHY_TARGET_RETEXTURE_GLOBAL_DAILY_LIMIT`에 `1`~`100`을 넣을 때만 각각 고객·배포 전체 UTC 일일 안전 한도를 적용하며 빈값과 `0`은 비활성으로 해석한다. `SOURCE_MODEL`의 1/2와 non-LIVE `EXTERIOR_PLAN`의 3/5 고정 한도는 유지한다. 실제 크레딧과 provider 요청·동시 작업 제한은 Meshy의 `402`·`429` 응답을 권위 있는 상태로 취급한다.
+
+서버 storage key는 non-LIVE classifier와 Meshy 작업에서 고객, 분석, jobKind와 provider를 기준으로 분석당 유료 작업을 한 번만 허용한다. request hash는 고객, 분석, jobKind, provider, 동의 버전과 네 source asset ID digest로 구성하며 브라우저가 발급한 idempotency key에는 의존하지 않는다. 따라서 같은 완료 요청은 새 탭에서도 plan 또는 signed task token을 재생하고, 진행 중 요청은 두 번째 provider 호출을 차단한다. 현재 LIVE 저장 profile 변환은 provider 예약 자체가 필요 없다. quota 행과 분리된 recovery receipt를 항상 먼저 예약하고, provider가 task를 접수했지만 기본 멱등 응답 저장이 실패하면 이 영수증에 signed task token을 보관해 다음 요청에서 같은 작업을 복구한다. 브라우저의 분석+jobKind별 key와 Meshy token `sessionStorage`, 동기 ref는 같은 탭에서 중복 클릭과 새로고침 복원을 빠르게 처리한다.
 
 Meshy token은 고객, 분석, jobKind, provider task ID와 72시간 만료를 전용 `TEXTURE_TASK_SIGNING_SECRET` HMAC으로 서명한다. token은 암호문이 아니므로 URL query가 아니라 인증된 PUT body에만 보낸다. polling은 진행 중 Promise까지 합치는 짧은 in-process cache를 사용한다. 이는 서버리스 인스턴스 간 분산 rate limit이나 durable queue를 대체하지 않는다.
 
@@ -172,6 +176,10 @@ MESHY_API_KEY=
 TEXTURE_TASK_SIGNING_SECRET=
 MESHY_MOCKUP_MODEL_URL=https://demo.example.com/assets/models/reborn-passport-wallet.glb
 
+# 선택형 TARGET_RETEXTURE 앱 UTC 일일 안전 한도. 빈값 또는 0은 비활성, 유효 범위 1~100
+MESHY_TARGET_RETEXTURE_DAILY_LIMIT_PER_USER=
+MESHY_TARGET_RETEXTURE_GLOBAL_DAILY_LIMIT=
+
 # 선택형 30-credit 참고 source GLB/PBR
 ENABLE_MESHY_SOURCE_MODEL=false
 MESHY_SOURCE_MODEL=meshy-7
@@ -181,6 +189,7 @@ MESHY_SOURCE_MODEL=meshy-7
 - LIVE 분석은 `AI_MODE=LIVE`, `ENABLE_EXTERNAL_AI=true`, OpenAI key/model과 통합 R5 서버 안내 버전이 모두 일치해야 한다. 클라이언트는 같은 고정 버전을 분석 동의 영수증에 사용한다.
 - 현재 capability 계산상 `EXTERIOR_PLAN`에는 `OPENAI_API_KEY`가 필요하고 같은 key/model은 최초 LIVE 분석에도 사용한다. 다만 current LIVE 저장 profile 경로는 이를 다시 호출하거나 quota를 소비하지 않으며, 목업 단계에서 새 OpenAI 요청을 만드는 것은 non-LIVE classifier 호환 폴백뿐이다.
 - `TARGET_RETEXTURE`는 Meshy key, 32자 이상의 고엔트로피 signing secret, Meshy가 접근할 공개 HTTPS GLB URL이 필요하다.
+- `TARGET_RETEXTURE` 앱 일일 한도는 기본 비활성이며 두 `MESHY_TARGET_RETEXTURE_*` 값에 `1`~`100`을 설정한 범위만 UTC 날짜별로 적용한다. 빈값과 `0`은 비활성이다.
 - `MESHY_MOCKUP_MODEL_URL`이 없으면 HTTPS `NEXT_PUBLIC_APP_URL` 아래의 기본 GLB URL을 조합한다. localhost, 사설 IP, `.glb`가 아닌 URL은 허용하지 않는다.
 - source 3D는 `ENABLE_MESHY_SOURCE_MODEL=true`일 때만 capability에 노출한다.
 - 비밀값에는 `NEXT_PUBLIC_` 접두사를 붙이지 않는다.
@@ -208,6 +217,9 @@ MESHY_SOURCE_MODEL=meshy-7
 - [OpenAI Data Controls](https://developers.openai.com/api/docs/guides/your-data)
 - [Meshy Multi-Image to 3D](https://docs.meshy.ai/en/api/multi-image-to-3d)
 - [Meshy Retexture](https://docs.meshy.ai/en/api/retexture)
+- [Meshy Rate Limits](https://docs.meshy.ai/en/api/rate-limits)
+- [Meshy API Errors](https://docs.meshy.ai/en/api/errors)
+- [Meshy Account Balance](https://docs.meshy.ai/en/api/balance)
 - [Meshy API Pricing](https://docs.meshy.ai/en/api/pricing)
 - [Meshy Asset Retention](https://docs.meshy.ai/en/api/asset-retention)
 - [`<model-viewer>` Materials & Scene](https://modelviewer.dev/examples/scenegraph/)
