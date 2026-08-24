@@ -3,6 +3,7 @@ import type {
   BagVisionResult,
   ImageQualityIssueCode,
 } from '@/contracts/analysis';
+import type { VisionProviderFailureMetadata } from './openAiRequestPolicy';
 
 export interface VisionAnalyzeInput {
   imageUrls: string[];
@@ -60,6 +61,7 @@ export interface VisionAnalyzeResult {
   knowledgeVersion?: string;
   knowledgeTrace?: VisionKnowledgeTrace;
   fixtureEstimate?: FixtureEstimateOverrides;
+  providerFailure?: VisionProviderFailureMetadata;
   warnings?: Array<{ code: string; message: string }>;
 }
 

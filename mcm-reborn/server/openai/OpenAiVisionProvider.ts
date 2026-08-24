@@ -16,6 +16,13 @@ import {
   MCM_ANALYSIS_KNOWLEDGE_VERSION,
 } from './analysisGrounding';
 import { MCM_ANALYSIS_KNOWLEDGE } from './analysisKnowledge';
+import {
+  readProviderFailureMetadata,
+  runOpenAiStage,
+  runSerializedOpenAiAnalysis,
+  type OpenAiRequestStage,
+  type VisionProviderFailureMetadata,
+} from './openAiRequestPolicy';
 import type {
   VisionAnalyzeInput,
   VisionAnalyzeResult,
@@ -34,6 +41,9 @@ const ORDERED_IMAGE_VIEWS = [
 ] as const;
 const WIKI_TOOL_NAME = 'search_mcm_leather_wiki';
 const WIKI_LOOKUP_MAX_COMPLETION_TOKENS = 600;
+const FINAL_ANALYSIS_MAX_COMPLETION_TOKENS = 8_192;
+const LIVE_ANALYSIS_DEADLINE_MS = 145_000;
+const WIKI_LOOKUP_DEADLINE_MS = 35_000;
 
 const WIKI_LOOKUP_DEVELOPER_PROMPT = `Plan one bounded lookup against a versioned internal MCM leather-bag material wiki.
 Inspect exactly six low-detail images of the same customer-owned bag. Each image has an explicit IMAGE_INDEX and VIEW label.
@@ -90,6 +100,11 @@ type CompletedWikiLookup = {
   trace: VisionKnowledgeTrace;
 };
 
+type OpenAiCallOptions = {
+  clientRequestId: string;
+  timeoutMs: number;
+};
+
 /** OpenAI Structured Outputs provider for the LIVE v3 analysis mode. */
 export class OpenAiVisionProvider implements VisionProvider {
   private readonly client: OpenAI;
@@ -114,7 +129,38 @@ export class OpenAiVisionProvider implements VisionProvider {
       throw new Error('LIVE analysis requires exactly six image URLs');
     }
 
-    const wikiLookup = await this.lookupWiki(input).catch(() => null);
+    const deadlineAtMs = Date.now() + LIVE_ANALYSIS_DEADLINE_MS;
+    return runSerializedOpenAiAnalysis(deadlineAtMs, () =>
+      this.analyzeWithinDeadline(input, deadlineAtMs),
+    );
+  }
+
+  private async analyzeWithinDeadline(
+    input: VisionAnalyzeInput,
+    deadlineAtMs: number,
+  ): Promise<VisionAnalyzeResult> {
+    let wikiLookup: CompletedWikiLookup | null = null;
+    try {
+      wikiLookup = await runOpenAiStage({
+        stage: 'WIKI_LOOKUP',
+        maxAttempts: 1,
+        deadlineAtMs: Math.min(
+          deadlineAtMs,
+          Date.now() + WIKI_LOOKUP_DEADLINE_MS,
+        ),
+        call: (requestOptions) => this.lookupWiki(input, requestOptions),
+      });
+    } catch (error) {
+      const failure = readProviderFailureMetadata(error);
+      if (!failure || shouldStopAfterWikiFailure(failure)) {
+        throw error;
+      }
+      console.warn(
+        '[OpenAiVisionProvider] wiki lookup failed; using safety grounding',
+        failure,
+      );
+    }
+
     const finalMessages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
       { role: 'developer', content: LIVE_ANALYSIS_DEVELOPER_PROMPT },
       createImageMessage(input.imageUrls, 'auto'),
@@ -136,21 +182,38 @@ export class OpenAiVisionProvider implements VisionProvider {
 
     const trace = wikiLookup?.trace ?? baselineOnlyTrace();
     try {
-      const completion = await this.client.chat.completions.parse({
-        model: this.model,
-        messages: finalMessages,
-        ...(wikiLookup
-          ? {
-              tools: [createWikiTool()],
-              tool_choice: 'none' as const,
-              parallel_tool_calls: false,
-            }
-          : {}),
-        response_format: zodResponseFormat(
-          BagVisionSchema,
-          'mcm_reborn_bag_analysis_v3',
-        ),
+      const completion = await runOpenAiStage({
+        stage: 'FINAL_ANALYSIS',
+        maxAttempts: 2,
+        deadlineAtMs,
+        onRetry: (failure) => {
+          console.warn(
+            '[OpenAiVisionProvider] retrying final analysis after rate limit',
+            failure,
+          );
+        },
+        call: ({ clientRequestId, timeoutMs }) =>
+          this.client.chat.completions.parse(
+            {
+              model: this.model,
+              messages: finalMessages,
+              ...(wikiLookup
+                ? {
+                    tools: [createWikiTool()],
+                    tool_choice: 'none' as const,
+                    parallel_tool_calls: false,
+                  }
+                : {}),
+              max_completion_tokens: FINAL_ANALYSIS_MAX_COMPLETION_TOKENS,
+              response_format: zodResponseFormat(
+                BagVisionSchema,
+                'mcm_reborn_bag_analysis_v3',
+              ),
+            },
+            requestOptions({ clientRequestId, timeoutMs }),
+          ),
       });
+      logStageUsage('FINAL_ANALYSIS', completion);
 
       const parsed = completion.choices[0]?.message.parsed;
       if (!parsed) {
@@ -189,22 +252,27 @@ export class OpenAiVisionProvider implements VisionProvider {
 
   private async lookupWiki(
     input: VisionAnalyzeInput,
+    callOptions: OpenAiCallOptions,
   ): Promise<CompletedWikiLookup> {
     const wikiTool = createWikiTool();
-    const completion = await this.client.chat.completions.parse({
-      model: this.model,
-      messages: [
-        { role: 'developer', content: WIKI_LOOKUP_DEVELOPER_PROMPT },
-        createImageMessage(input.imageUrls, 'low'),
-      ],
-      tools: [wikiTool],
-      tool_choice: {
-        type: 'function',
-        function: { name: WIKI_TOOL_NAME },
+    const completion = await this.client.chat.completions.parse(
+      {
+        model: this.model,
+        messages: [
+          { role: 'developer', content: WIKI_LOOKUP_DEVELOPER_PROMPT },
+          createImageMessage(input.imageUrls, 'low'),
+        ],
+        tools: [wikiTool],
+        tool_choice: {
+          type: 'function',
+          function: { name: WIKI_TOOL_NAME },
+        },
+        parallel_tool_calls: false,
+        max_completion_tokens: WIKI_LOOKUP_MAX_COMPLETION_TOKENS,
       },
-      parallel_tool_calls: false,
-      max_completion_tokens: WIKI_LOOKUP_MAX_COMPLETION_TOKENS,
-    });
+      requestOptions(callOptions),
+    );
+    logStageUsage('WIKI_LOOKUP', completion);
     const message = completion.choices[0]?.message;
     const toolCall = message?.tool_calls?.[0];
     if (
@@ -301,4 +369,49 @@ function baselineOnlyTrace(): VisionKnowledgeTrace {
     retrievedRecordIds: [],
     retrievedSourceIds: [],
   };
+}
+
+function requestOptions({ clientRequestId, timeoutMs }: OpenAiCallOptions) {
+  return {
+    headers: { 'X-Client-Request-Id': clientRequestId },
+    maxRetries: 0,
+    timeout: timeoutMs,
+  };
+}
+
+function shouldStopAfterWikiFailure(
+  failure: VisionProviderFailureMetadata,
+): boolean {
+  if (
+    failure.kind === 'QUOTA_EXHAUSTED' ||
+    failure.kind === 'RATE_LIMIT' ||
+    failure.kind === 'TIMEOUT' ||
+    failure.kind === 'QUEUE_TIMEOUT'
+  ) {
+    return true;
+  }
+  return (
+    failure.status !== null &&
+    failure.status >= 400 &&
+    failure.status < 500
+  );
+}
+
+function logStageUsage(
+  stage: OpenAiRequestStage,
+  completion: OpenAI.Chat.Completions.ChatCompletion,
+): void {
+  const usage = completion.usage;
+  console.info('[OpenAiVisionProvider] OpenAI stage completed', {
+    stage,
+    responseId: completion.id,
+    usage: usage
+      ? {
+          promptTokens: usage.prompt_tokens,
+          completionTokens: usage.completion_tokens,
+          reasoningTokens: usage.completion_tokens_details?.reasoning_tokens,
+          totalTokens: usage.total_tokens,
+        }
+      : null,
+  });
 }
