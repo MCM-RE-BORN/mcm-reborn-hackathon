@@ -2037,6 +2037,10 @@ def validate_meshy_texture_policy_contract(
             'cleanup failure propagation': (
                 'if (!released) throw textureReservationCleanupError();'
             ),
+            'ambiguous create is non-retryable': (
+                'Meshy task submission outcome is unknown; retry is locked '
+                'to prevent duplicate billing'
+            ),
         },
     )
     recovery_start = service.find(
@@ -2106,6 +2110,17 @@ def validate_meshy_texture_policy_contract(
                 'shared Meshy error call': 'return throwMeshyHttpError(response);',
             },
         )
+    require_fragments(
+        retexture_provider,
+        'MeshyRetextureProvider.ts local request validation',
+        {
+            'pre-provider four-view validation': (
+                'throw new ValidationError(\n'
+                '        "Exactly four HTTPS exterior images are required '
+                'for Meshy retexture"'
+            ),
+        },
+    )
 
     require_fragments(
         env_example,
@@ -2150,6 +2165,8 @@ def validate_meshy_texture_policy_contract(
                 'isRetryableTextureCreateFailure(error.details)'
             ),
             'terminal inverse of retryable': 'terminal: !retryableRejection',
+            'polling 429 handled in place': 'error.status === 429',
+            'polling retry continues': 'continue;',
         },
     )
     target_request = texture_studio.find(

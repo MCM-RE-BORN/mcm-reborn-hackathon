@@ -64,3 +64,23 @@ test('submits required target retexture before optional source model', () => {
       source.indexOf('requestJob("SOURCE_MODEL")'),
   );
 });
+
+test('keeps ambiguous create failures terminal and retries polling 429 in place', () => {
+  const studio = readFileSync(
+    new URL('./TextureMockupStudio.tsx', import.meta.url),
+    'utf8',
+  );
+  const service = readFileSync(
+    new URL('../../../server/texture/texturePreviewService.ts', import.meta.url),
+    'utf8',
+  );
+
+  assert.match(
+    service,
+    /Meshy task submission outcome is unknown; retry is locked to prevent duplicate billing[\s\S]*retryable: false/,
+  );
+  assert.match(
+    studio,
+    /error\.status === 429[\s\S]*isRetryableTextureCreateFailure\(error\.details\)[\s\S]*continue;/,
+  );
+});

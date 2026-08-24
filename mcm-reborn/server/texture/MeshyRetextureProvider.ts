@@ -1,5 +1,9 @@
 import { z } from "zod";
-import { ServiceUnavailableError, UpstreamError } from "@/contracts/errors";
+import {
+  ServiceUnavailableError,
+  UpstreamError,
+  ValidationError,
+} from "@/contracts/errors";
 import type { MeshyTextureTaskResponse } from "@/lib/texture-preview";
 import type { RetextureProvider } from "./types";
 import { throwMeshyHttpError } from "./MeshyHttpError";
@@ -73,9 +77,8 @@ export class MeshyRetextureProvider implements RetextureProvider {
       );
     }
     if (imageUrls.length !== 4 || imageUrls.some((url) => !isHttpsUrl(url))) {
-      throw new ServiceUnavailableError(
+      throw new ValidationError(
         "Exactly four HTTPS exterior images are required for Meshy retexture",
-        { retryable: false },
       );
     }
     const response = await this.request("/retexture", {

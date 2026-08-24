@@ -190,7 +190,21 @@ export function TextureMockupStudio({ analysisId }: TextureMockupStudioProps) {
               },
             );
           } catch (error) {
-            if (error instanceof CustomerApiError && error.status === 429) {
+            if (
+              error instanceof CustomerApiError &&
+              error.status === 429 &&
+              isRetryableTextureCreateFailure(error.details)
+            ) {
+              updateTask(jobKind, {
+                error: null,
+                status: "queued",
+                terminal: false,
+              });
+              if (jobKind === "TARGET_RETEXTURE") {
+                setExternalStatus(
+                  "Meshy 요청이 몰려 있어 잠시 후 다시 확인합니다.",
+                );
+              }
               continue;
             }
             throw error;

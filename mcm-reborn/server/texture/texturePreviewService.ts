@@ -269,6 +269,10 @@ export async function createTexturePreview(
         reservation.requestHash,
         viewer.id,
       );
+      throw new UpstreamError(
+        "Meshy task submission outcome is unknown; retry is locked to prevent duplicate billing",
+        { retryable: false },
+      );
     }
     throw error;
   }
@@ -569,17 +573,20 @@ async function storeTextureOperationSuccess(
   }
 
   if (quotaReservation) {
-    const { data, error } = await admin
-      .from("idempotency_keys")
-      .update({ response_body: response, response_status: responseStatus })
-      .eq("key", quotaReservation.recoveryKey)
-      .eq("user_id", customerId)
-      .eq("operation", TEXTURE_RESPONSE_RECOVERY_OPERATION)
-      .eq("request_hash", requestHash)
-      .is("response_status", null)
-      .select("key")
-      .maybeSingle();
-    if (!error && data?.key === quotaReservation.recoveryKey) return;
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      const { data, error } = await admin
+        .from("idempotency_keys")
+        .update({ response_body: response, response_status: responseStatus })
+        .eq("key", quotaReservation.recoveryKey)
+        .eq("user_id", customerId)
+        .eq("operation", TEXTURE_RESPONSE_RECOVERY_OPERATION)
+        .eq("request_hash", requestHash)
+        .is("response_status", null)
+        .select("key")
+        .maybeSingle();
+      if (!error && data?.key === quotaReservation.recoveryKey) return;
+      if (attempt < 2) await waitForDatabaseRetry(100 * (attempt + 1));
+    }
   }
 
   throw new ServiceUnavailableError("Texture response could not be cached");
