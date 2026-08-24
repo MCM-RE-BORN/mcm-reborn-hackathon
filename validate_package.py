@@ -1828,6 +1828,7 @@ def validate_runtime_analysis_contract(
     service: str,
     analysis_contract: str,
     provider: str,
+    image_messages: str,
     hybrid_provider: str,
     request_policy: str,
 ) -> None:
@@ -1892,13 +1893,39 @@ def validate_runtime_analysis_contract(
             'six-view order': 'front, rear, top, bottom, left side, and right side',
             'six-image requirement': 'input.imageUrls.length !== 6',
             'six-image index range': 'imageIndex from 0 through 5',
-            'six-image user message': '각 VIEW 라벨 바로 다음 이미지만 해당 시점의 증거로 사용하고, 여섯 장을 동일 제품으로 분석하세요.',
+            'four-view lookup prompt': '0 (FRONT), 1 (REAR), 4 (LEFT), and 5 (RIGHT)',
+            'final six-view message builder': 'createFinalAnalysisImageMessage(input.imageUrls)',
+            'lookup four-view message builder': 'createWikiLookupImageMessage(input.imageUrls)',
             'serialized LIVE analysis': 'runSerializedOpenAiAnalysis(deadlineAtMs',
             'reserved final deadline': 'FINAL_ANALYSIS_RESERVED_MS = 65_000',
             'optional lookup deadline': 'calculateOptionalStageDeadline(',
             'lookup policy stage': "stage: 'WIKI_LOOKUP'",
             'final policy stage': "stage: 'FINAL_ANALYSIS'",
             'final output cap': 'max_completion_tokens: FINAL_ANALYSIS_MAX_COMPLETION_TOKENS',
+        },
+    )
+    require_fragments(
+        image_messages,
+        'visionImageMessages.ts',
+        {
+            'canonical six-view order': (
+                "'FRONT',\n  'REAR',\n  'TOP',\n  'BOTTOM',\n  'LEFT',\n  'RIGHT',"
+            ),
+            'final six-view indexes': (
+                'const FINAL_ANALYSIS_IMAGE_INDEXES = [0, 1, 2, 3, 4, 5] as const;'
+            ),
+            'lookup exterior indexes': (
+                'const WIKI_LOOKUP_IMAGE_INDEXES = [0, 1, 4, 5] as const;'
+            ),
+            'lookup low detail': (
+                "createImageMessage(imageUrls, WIKI_LOOKUP_IMAGE_INDEXES, 'low')"
+            ),
+            'final automatic detail': (
+                "createImageMessage(imageUrls, FINAL_ANALYSIS_IMAGE_INDEXES, 'auto')"
+            ),
+            'original index label': (
+                'text: `IMAGE_INDEX: ${index}; VIEW: ${view}`'
+            ),
         },
     )
     require_fragments(
@@ -2168,6 +2195,9 @@ def main() -> None:
     runtime_vision_provider = (
         ROOT / 'mcm-reborn' / 'server' / 'openai' / 'OpenAiVisionProvider.ts'
     ).read_text(encoding='utf-8')
+    runtime_vision_image_messages = (
+        ROOT / 'mcm-reborn' / 'server' / 'openai' / 'visionImageMessages.ts'
+    ).read_text(encoding='utf-8')
     runtime_hybrid_provider = (
         ROOT / 'mcm-reborn' / 'server' / 'openai' / 'HybridVisionProvider.ts'
     ).read_text(encoding='utf-8')
@@ -2264,6 +2294,7 @@ def main() -> None:
         runtime_analysis_service,
         runtime_analysis_contract,
         runtime_vision_provider,
+        runtime_vision_image_messages,
         runtime_hybrid_provider,
         runtime_request_policy,
     )

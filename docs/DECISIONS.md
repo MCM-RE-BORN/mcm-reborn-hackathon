@@ -46,6 +46,7 @@
 | DEC-040 | 2026-08-21 | 승인 | 고객 화면과 현재 안내 문서의 생성 결과 명칭은 `3D 목업`으로 통일하고, `외관`은 사진 구도·소재 분류·텍스처 마스크 등 처리 범위를 설명할 때만 사용한다. Meshy AI 연동의 크레딧·비용 보호를 위해 신규 `TARGET_RETEXTURE`는 고객당 UTC 기준 하루 최대 3회로 제한한다. | 버튼·상태·오류·접근성 이름의 혼용을 없애면서 내부 외관 처리 계약은 유지한다. 한국 시간 기준 한도는 매일 오전 9시에 갱신되며 배포 전체 보호 한도와 멱등 캐시도 별도로 적용한다. |
 | DEC-041 | 2026-08-24 | 승인 | DEC-039의 2단계 LIVE 분석을 유지하되 145초 absolute deadline과 프로세스 단위 FIFO를 적용한다. lookup은 35초·1회, 최종 Structured Output은 8,192 completion token과 최대 2회로 제한한다. 일시적 429만 `Retry-After` 최소 대기+jitter 뒤 한 번 재시도하고 quota·billing·spend·usage 한도는 재시도하지 않는다. terminal LIVE 실패는 canonical Fixture로 복구하되 결과 화면에 작게 `API오류로 인한 DEMO`를 표시한다. | lookup 제한 뒤 최종 6장 요청을 추가로 보내는 burst와 첫 429 즉시 폴백을 줄인다. server/client request ID, 제한 종류, retry와 요청·token·project-token 헤더만 private `provider_result.providerFailure`와 안전 로그에 남기며 오류 본문·전체 헤더·signed URL은 배제한다. 직접 `DEMO_FIXTURE`에는 폴백 표기를 하지 않는다. 프로세스 FIFO는 serverless 인스턴스 간 분산 한도를 대체하지 않는다. DEC-024의 장애 Fixture 원칙은 유지하면서 제한 처리·진단·고객 고지를 구체화한다. |
 | DEC-042 | 2026-08-24 | 승인 | LIVE rate-limit 진단은 고객 조회가 가능한 `analyses.provider_result`에 저장하지 않고 allowlist 서버 로그에만 남긴다. 최종 분석에 최소 65초를 예약하고 lookup은 남은 시간이 있을 때만 실행한다. `Retry-After`가 없으면 소진된 request/token/project-token bucket reset을 사용하며, LIVE 오류 Fixture는 요청의 데모 오류 시나리오를 무시하고 canonical 성공 Fixture를 선택한다. | owner SELECT RLS는 JSON 열 내부를 숨기지 않으므로 공유 프로젝트 한도와 요청 식별자의 직접 REST 노출을 막는다. 60초 provider 대기에 jitter가 붙어도 전체 deadline 안이면 재시도하며, 긴 큐 대기와 테스트용 저품질 scenario가 terminal LIVE 오류의 DEMO 복구 계약을 깨지 않게 한다. DEC-041의 rate-limit 정책을 보완하고 진단 저장 위치만 대체한다. |
+| DEC-043 | 2026-08-24 | 승인 | 2단계 LIVE 분석에서 저해상도 위키 lookup은 원래 인덱스를 유지한 `0 FRONT`, `1 REAR`, `4 LEFT`, `5 RIGHT` 외관 4면만 사용하고, 최종 Structured Output은 `0`~`5`의 6면을 모두 유지한다. | lookup의 상단·하단 중복 입력을 제거해 이미지 입력량을 줄이면서 최종 사진 품질·상하단 손상 판단 근거를 보존한다. prompt/knowledge 버전을 올려 새 결과의 provenance와 멱등 hash에 이 정책을 반영하며, DEC-039의 첫 호출 이미지 범위만 대체한다. |
 
 ## 대체 관계
 
@@ -65,11 +66,12 @@
 - `DEC-036`~`DEC-039`의 외관 처리 범위와 생성 계약은 유지하되, 고객에게 보이는 생성 결과 명칭과 일일 생성 상한은 **2026-08-21 기준 `DEC-040`을 적용**한다.
 - `DEC-024`의 LIVE 장애 Fixture 폴백과 `DEC-039`의 2단계 위키 분석은 유지하되, rate-limit 처리·안전 진단·직접 DEMO와의 고객 표기 구분은 **2026-08-24 기준 `DEC-041`이 구체화**한다.
 - `DEC-041`의 bounded retry·고객 표기는 유지하되 진단 저장 위치, 최종 시간 예약, reset 대기와 canonical 오류 폴백은 **2026-08-24 기준 `DEC-042`가 대체·보완**한다.
+- `DEC-039`의 위키 lookup·최종 분석 2단계 구조는 유지하되 첫 호출의 이미지 범위는 **2026-08-24 기준 `DEC-043`의 외관 4면 lookup·최종 6면 분석 규칙으로 대체**한다.
 - `DEC-017`의 Figma 전체 시각 기준은 유지한다. 홈·하단 내비게이션·신청 내역의 구체적인 노드와 탐색 구조는 **2026-08-18 기준 `DEC-019`가 대체·구체화**한다.
 - `DEC-004`의 사용자에게 보이는 분석 모드는 `DEMO_FIXTURE`, `SEEDED_ESTIMATE`, `LIVE`로 유지한다. `hybrid`는 별도 공개 enum이 아니라 `DEC-024`의 `LIVE` 내부 장애 폴백 동작으로 구체화한다.
 - `DEC-018`의 “lifecycle command만 실행 경로”라는 당시 구현 상태는 historical이다. v2 서버 범위와 외부 연결 경계는 `DEC-024`가 대체한다.
 - `DEC-024`의 “고객·운영 UI는 Fixture를 유지하고 후속 연결” 부분은 **2026-08-19 기준 `DEC-025`로 대체**되었다. v1 제거·v2 계약·LIVE 동의 원칙은 유지한다.
-- 기존 행은 결정 당시 기록으로 보존한다. 현재 구현과 체크리스트에는 supersede 관계를 반영한 `DEC-010`~`DEC-042`를 적용한다.
+- 기존 행은 결정 당시 기록으로 보존한다. 현재 구현과 체크리스트에는 supersede 관계를 반영한 `DEC-010`~`DEC-043`을 적용한다.
 
 ## 새 결정 형식
 

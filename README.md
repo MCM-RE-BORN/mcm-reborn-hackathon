@@ -148,12 +148,13 @@ python -X utf8 validate_package.py
 npm --prefix mcm-reborn run lint
 npm --prefix mcm-reborn run typecheck
 npm --prefix mcm-reborn run test:analysis-fallback
+npm --prefix mcm-reborn run test:openai-images
 npm --prefix mcm-reborn run test:openai-policy
 npm --prefix mcm-reborn run test:provider-fallback
 npm --prefix mcm-reborn run build
 ```
 
-Python 검증에는 PyYAML이 필요합니다. `validate_package.py`는 API 참조·operationId, 업로드 제한, 예상치 메타데이터, 제품 4종, 단일 대표 주문, 실물 검수·변경 승인, SQL enum과 제작 시작 guard의 정합성을 확인합니다. native Node 테스트는 LIVE OpenAI 요청 정책, canonical 제공자 폴백과 API 오류 DEMO 표기 조건을 검증합니다.
+Python 검증에는 PyYAML이 필요합니다. `validate_package.py`는 API 참조·operationId, 업로드 제한, 예상치 메타데이터, 제품 4종, 단일 대표 주문, 실물 검수·변경 승인, SQL enum과 제작 시작 guard의 정합성을 확인합니다. native Node 테스트는 LIVE OpenAI 요청 정책, 위키 lookup 4면·최종 분석 6면 이미지 계약, canonical 제공자 폴백과 API 오류 DEMO 표기 조건을 검증합니다.
 
 ## 중요 고지
 

@@ -8,7 +8,7 @@
 정면·후면·상단·하단·좌측면·우측면 촬영/업로드
   -> 분석 접수 화면에서 R5 OpenAI 분석 + 이후 Meshy 외관 생성 통합 동의
   -> LIVE는 각 이미지 앞의 명시적 VIEW 라벨과 함께 2단계 위키 보강 분석
-       ├─ 저해상도 6면으로 관찰 가능한 검색어만 생성
+       ├─ 저해상도 외관 4면(전면·후면·좌측면·우측면)으로 관찰 가능한 검색어만 생성
        ├─ 서버의 검토된 18-claim 위키에서 최대 5개·4,000자 로컬 검색
        └─ 원본 6면 + 검색 결과로 사진 분석과 BODY/TRIM/STRAP/HARDWARE profile 생성
      또는 재현 가능한 non-LIVE Fixture
@@ -31,7 +31,7 @@ MVP의 최종 대상은 `RE:BORN 여권 지갑` 외관 하나다. `BODY`가 필�
 
 `MCM_REUSE_GUIDE_2026_08_21_V1`은 전달받은 소재·구성·재사용 참고 자료를 정규화한 짧은 prompt grounding이다. 공개 조사본 `MCM_LEATHER_BAGS_PUBLIC_RESEARCH_2026_08_21_V1` 전체는 프롬프트나 앱 번들에 복사하지 않는다. build-time compiler가 사람이 검토한 시각 분석용 claim 18개와 필요한 출처만 서버 전용 스냅샷으로 만들며, 제품 예시·history·legal·care·sourcing·`context_only` 레코드는 분석 검색에서 제외한다.
 
-LIVE 분석은 먼저 같은 VIEW 라벨의 저해상도 6면으로 관찰 가능한 일반 검색어를 만들고 서버 전용 `search_mcm_leather_wiki`를 정확히 한 번 호출한다. 결정론적 검색은 lexical hit가 있는 관련 claim만 최대 5개·4,000자 이하로 반환한다. Visetos 코팅 수지, microfiber suede, 캔버스 섬유 조성, 제작 공정, 패턴 실측값, Resetos, Vachetta에 대한 7개 금지 경계는 검색 순위와 무관하게 항상 최종 developer prompt에 포함한다. 제품·SKU 예시는 schema와 서버 양쪽에서 비활성이다. lookup은 `detail: low`, 최종 분석은 `detail: auto`를 사용해 두 단계 정확도를 유지하면서 첫 호출의 이미지 비용을 낮춘다. lookup 결과가 없거나 로컬 schema·검색·provider 5xx 오류이면 전체 코퍼스로 폴백하지 않고 사진과 always-on 안전 경계만으로 최종 분석을 계속한다. rate limit·quota·timeout·인증성 4xx는 같은 제한을 키우는 최종 6장 호출을 보내지 않고 canonical Fixture로 복구한다.
+LIVE 분석은 먼저 원래 6면 인덱스 중 `0 FRONT`, `1 REAR`, `4 LEFT`, `5 RIGHT`만 선택해 저해상도 외관 4면으로 관찰 가능한 일반 검색어를 만들고 서버 전용 `search_mcm_leather_wiki`를 정확히 한 번 호출한다. 상단·하단은 이 조회에서 제외하지만 상태·손상·사진 품질을 판정하는 최종 분석에는 6장 모두 유지한다. 결정론적 검색은 lexical hit가 있는 관련 claim만 최대 5개·4,000자 이하로 반환한다. Visetos 코팅 수지, microfiber suede, 캔버스 섬유 조성, 제작 공정, 패턴 실측값, Resetos, Vachetta에 대한 7개 금지 경계는 검색 순위와 무관하게 항상 최종 developer prompt에 포함한다. 제품·SKU 예시는 schema와 서버 양쪽에서 비활성이다. lookup은 `detail: low`, 최종 분석은 `detail: auto`를 사용해 두 단계 정확도를 유지하면서 첫 호출의 이미지 비용을 낮춘다. lookup 결과가 없거나 로컬 schema·검색·provider 5xx 오류이면 전체 코퍼스로 폴백하지 않고 사진과 always-on 안전 경계만으로 최종 분석을 계속한다. rate limit·quota·timeout·인증성 4xx는 같은 제한을 키우는 최종 6장 호출을 보내지 않고 canonical Fixture로 복구한다.
 
 두 단계는 145초 absolute deadline 안에서 한 서버 프로세스의 분석 단위 FIFO로 실행한다. 최종 분석에 최소 65초를 먼저 예약하고, 남은 시간이 있을 때만 lookup을 35초·1회로 수행한다. 최종 Structured Output은 `max_completion_tokens=8192`로 제한하며 일시적 429만 `Retry-After` 또는 소진된 request/token/project-token bucket reset 중 긴 최소 대기와 jitter를 적용해 한 번 재시도한다. quota·billing·spend·usage 한도는 재시도하지 않고 SDK 내부 재시도도 `0`으로 유지한다. 최종 실패는 canonical Fixture로 복구하며 결과 화면에는 `API오류로 인한 DEMO`를 작게 표시한다. allowlist 진단은 고객 조회 행이 아닌 서버 로그에만 남긴다. 이 FIFO와 cooldown은 같은 프로세스의 burst만 줄이므로 serverless 인스턴스 간 한도에는 분산 limiter가 별도로 필요하다.
 

@@ -67,6 +67,6 @@ PDF 지식은 새 공개 API 필드를 임의로 만들지 않고 현재 구조�
 
 ## 6. 공개 조사 위키
 
-공개 웹 조사본 `MCM_LEATHER_BAGS_PUBLIC_RESEARCH_2026_08_21_V1`은 [`knowledge-base/mcm-leather-bags/README.md`](./knowledge-base/mcm-leather-bags/README.md)가 기준이다. 사람용 전체 조사본과 LIVE 분석용 위키를 분리한다. 분석용 스냅샷은 승인된 claim 18개(요청별 검색 11개, always-on 금지 경계 7개)와 필요한 축약 출처만 포함한다. LIVE 분석은 `detail: low` 사진에서 관찰 가능한 일반 검색어를 한 번 생성하고 서버의 exact lexical 검색 결과 최대 5개·4,000자만 최종 `detail: auto` 분석에 사용한다. 결과에는 사실 범위, 직접·파생 근거, confidence, 유효시기와 사용 경계를 유지한다.
+공개 웹 조사본 `MCM_LEATHER_BAGS_PUBLIC_RESEARCH_2026_08_21_V1`은 [`knowledge-base/mcm-leather-bags/README.md`](./knowledge-base/mcm-leather-bags/README.md)가 기준이다. 사람용 전체 조사본과 LIVE 분석용 위키를 분리한다. 분석용 스냅샷은 승인된 claim 18개(요청별 검색 11개, always-on 금지 경계 7개)와 필요한 축약 출처만 포함한다. LIVE 분석은 `detail: low` 외관 4면(FRONT·REAR·LEFT·RIGHT)에서 관찰 가능한 일반 검색어를 한 번 생성하고 서버의 exact lexical 검색 결과 최대 5개·4,000자만 최종 6면 `detail: auto` 분석에 사용한다. 결과에는 사실 범위, 직접·파생 근거, confidence, 유효시기와 사용 경계를 유지한다.
 
 공식 이미지 링크 263건은 권리 상태가 참조 전용이므로 외부 모델에 전달하거나 고객 사진과 자동 비교하지 않는다. 상세 런타임 계약은 [`RUNTIME_WIKI_KO.md`](./knowledge-base/mcm-leather-bags/RUNTIME_WIKI_KO.md)를 따른다.
