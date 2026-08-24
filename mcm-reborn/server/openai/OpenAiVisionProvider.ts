@@ -31,15 +31,10 @@ import type {
   VisionProvider,
 } from './types';
 import { VisionWikiGroundingError } from './types';
-
-const ORDERED_IMAGE_VIEWS = [
-  'FRONT',
-  'REAR',
-  'TOP',
-  'BOTTOM',
-  'LEFT',
-  'RIGHT',
-] as const;
+import {
+  createFinalAnalysisImageMessage,
+  createWikiLookupImageMessage,
+} from './visionImageMessages';
 const WIKI_TOOL_NAME = 'search_mcm_leather_wiki';
 const WIKI_LOOKUP_MAX_COMPLETION_TOKENS = 600;
 const FINAL_ANALYSIS_MAX_COMPLETION_TOKENS = 8_192;
@@ -48,7 +43,7 @@ const LIVE_ANALYSIS_DEADLINE_MS = 145_000;
 const WIKI_LOOKUP_DEADLINE_MS = 35_000;
 
 const WIKI_LOOKUP_DEVELOPER_PROMPT = `Plan one bounded lookup against a versioned internal MCM leather-bag material wiki.
-Inspect exactly six low-detail images of the same customer-owned bag. Each image has an explicit IMAGE_INDEX and VIEW label.
+Inspect exactly four low-detail exterior images of the same customer-owned bag: image indexes 0 (FRONT), 1 (REAR), 4 (LEFT), and 5 (RIGHT). TOP and BOTTOM are intentionally omitted from this lookup. Each image has an explicit IMAGE_INDEX and VIEW label.
 
 Call search_mcm_leather_wiki exactly once.
 - Return 1 to 8 short Korean or English terms describing only visible material family, surface treatment, pattern, construction, or uncertainty cues.
@@ -177,7 +172,7 @@ export class OpenAiVisionProvider implements VisionProvider {
 
     const finalMessages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
       { role: 'developer', content: LIVE_ANALYSIS_DEVELOPER_PROMPT },
-      createImageMessage(input.imageUrls, 'auto'),
+      createFinalAnalysisImageMessage(input.imageUrls),
     ];
     if (wikiLookup) {
       finalMessages.push(
@@ -274,7 +269,7 @@ export class OpenAiVisionProvider implements VisionProvider {
         model: this.model,
         messages: [
           { role: 'developer', content: WIKI_LOOKUP_DEVELOPER_PROMPT },
-          createImageMessage(input.imageUrls, 'low'),
+          createWikiLookupImageMessage(input.imageUrls),
         ],
         tools: [wikiTool],
         tool_choice: {
@@ -345,31 +340,6 @@ function createWikiTool() {
       'Search the internal, versioned MCM material wiki for evidence-bounded terminology relevant to visible cues. Product examples are unavailable.',
     parameters: McmLeatherWikiLookupSchema,
   });
-}
-
-function createImageMessage(
-  imageUrls: readonly string[],
-  detail: 'auto' | 'low',
-): OpenAI.Chat.Completions.ChatCompletionUserMessageParam {
-  return {
-    role: 'user',
-    content: [
-      {
-        type: 'text',
-        text: '각 VIEW 라벨 바로 다음 이미지만 해당 시점의 증거로 사용하고, 여섯 장을 동일 제품으로 분석하세요.',
-      },
-      ...imageUrls.flatMap((url, index) => [
-        {
-          type: 'text' as const,
-          text: `IMAGE_INDEX: ${index}; VIEW: ${ORDERED_IMAGE_VIEWS[index]}`,
-        },
-        {
-          type: 'image_url' as const,
-          image_url: { url, detail },
-        },
-      ]),
-    ],
-  };
 }
 
 function baselineOnlyTrace(): VisionKnowledgeTrace {
