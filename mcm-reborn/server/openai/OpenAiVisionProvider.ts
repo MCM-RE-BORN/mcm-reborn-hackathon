@@ -103,7 +103,7 @@ export class OpenAiVisionProvider implements VisionProvider {
 
     this.client = new OpenAI({
       apiKey,
-      maxRetries: 0,
+      maxRetries: 1,
       timeout: 60_000,
     });
     this.model = process.env.OPENAI_VISION_MODEL ?? 'gpt-5.6';
