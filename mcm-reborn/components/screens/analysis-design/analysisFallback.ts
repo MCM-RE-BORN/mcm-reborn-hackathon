@@ -19,6 +19,9 @@ export function isApiFallbackAnalysis(
 export function visibleAnalysisWarnings(
   analysis: AnalysisFallbackCandidate,
 ): AnalysisWarning[] {
+  if (!isApiFallbackAnalysis(analysis)) {
+    return [...analysis.warnings];
+  }
   return analysis.warnings.filter(
     (warning) => !isProviderFallbackWarning(warning),
   );

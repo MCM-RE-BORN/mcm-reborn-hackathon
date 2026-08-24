@@ -2,7 +2,9 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import OpenAI from 'openai';
 import {
+  calculateOptionalStageDeadline,
   OpenAiProviderExecutionError,
+  readProviderFailureMetadata,
   resetOpenAiRequestPolicyForTests,
   runOpenAiStage,
   runSerializedOpenAiAnalysis,
@@ -247,6 +249,78 @@ test('does not retry when Retry-After cannot fit the deadline', async () => {
   assert.equal(sleeps, 0);
 });
 
+test('retries after an exact 60-second provider wait when the deadline fits', async () => {
+  let calls = 0;
+  let nowMs = 0;
+  const sleeps = [];
+  const result = await runOpenAiStage({
+    stage: 'FINAL_ANALYSIS',
+    maxAttempts: 2,
+    deadlineAtMs: 70_000,
+    now: () => nowMs,
+    random: () => 0,
+    sleep: async (delayMs) => {
+      sleeps.push(delayMs);
+      nowMs += delayMs;
+    },
+    call: async () => {
+      calls += 1;
+      if (calls === 1) {
+        throw rateLimitError({ headers: { 'retry-after': '60' } });
+      }
+      return 'ok';
+    },
+  });
+
+  assert.equal(result, 'ok');
+  assert.equal(calls, 2);
+  assert.deepEqual(sleeps, [60_100]);
+});
+
+test('uses an exhausted project-token reset when Retry-After is absent', async () => {
+  let calls = 0;
+  let nowMs = 1_000;
+  const sleeps = [];
+  const result = await runOpenAiStage({
+    stage: 'FINAL_ANALYSIS',
+    maxAttempts: 2,
+    deadlineAtMs: 20_000,
+    now: () => nowMs,
+    random: () => 0,
+    sleep: async (delayMs) => {
+      sleeps.push(delayMs);
+      nowMs += delayMs;
+    },
+    call: async () => {
+      calls += 1;
+      if (calls === 1) {
+        throw rateLimitError({
+          headers: {
+            'x-ratelimit-remaining-project-tokens': '0',
+            'x-ratelimit-reset-project-tokens': '2.5s',
+          },
+        });
+      }
+      return 'ok';
+    },
+  });
+
+  assert.equal(result, 'ok');
+  assert.equal(calls, 2);
+  assert.deepEqual(sleeps, [2_600]);
+});
+
+test('reserves required-stage time after a long queue wait', () => {
+  assert.equal(
+    calculateOptionalStageDeadline(145_000, 70_000, 35_000, 65_000),
+    80_000,
+  );
+  assert.equal(
+    calculateOptionalStageDeadline(145_000, 90_000, 35_000, 65_000),
+    null,
+  );
+});
+
 test('uses the injected clock for HTTP-date Retry-After', async () => {
   const nowMs = Date.parse('2026-08-24T00:00:00.000Z');
   await assert.rejects(
@@ -295,10 +369,10 @@ test('second 429 returns only allowlisted diagnostic metadata', async () => {
             'x-ratelimit-remaining-requests': '0',
             'x-ratelimit-reset-requests': '1s',
             'x-ratelimit-limit-tokens': '30000',
-            'x-ratelimit-remaining-tokens': '0',
+            'x-ratelimit-remaining-tokens': '5',
             'x-ratelimit-reset-tokens': '1m',
             'x-ratelimit-limit-project-tokens': '25000',
-            'x-ratelimit-remaining-project-tokens': '0',
+            'x-ratelimit-remaining-project-tokens': '5',
             'x-ratelimit-reset-project-tokens': '2m',
           },
         });
@@ -322,10 +396,10 @@ test('second 429 returns only allowlisted diagnostic metadata', async () => {
           remainingRequests: '0',
           resetRequests: '1s',
           limitTokens: '30000',
-          remainingTokens: '0',
+          remainingTokens: '5',
           resetTokens: '1m',
           limitProjectTokens: '25000',
-          remainingProjectTokens: '0',
+          remainingProjectTokens: '5',
           resetProjectTokens: '2m',
         },
       });
@@ -346,4 +420,28 @@ test('second 429 returns only allowlisted diagnostic metadata', async () => {
     },
   );
   assert.equal(calls, 2);
+});
+
+test('reads allowlisted metadata through nested error causes', async () => {
+  let policyError;
+  try {
+    await runOpenAiStage({
+      stage: 'WIKI_LOOKUP',
+      maxAttempts: 1,
+      deadlineAtMs: Date.now() + 20_000,
+      call: async () => {
+        throw rateLimitError({ code: 'insufficient_quota' });
+      },
+    });
+  } catch (error) {
+    policyError = error;
+  }
+
+  const nested = new Error('outer', {
+    cause: new Error('middle', { cause: policyError }),
+  });
+  assert.equal(
+    readProviderFailureMetadata(nested)?.kind,
+    'QUOTA_EXHAUSTED',
+  );
 });

@@ -17,6 +17,7 @@ import {
 } from './analysisGrounding';
 import { MCM_ANALYSIS_KNOWLEDGE } from './analysisKnowledge';
 import {
+  calculateOptionalStageDeadline,
   readProviderFailureMetadata,
   runOpenAiStage,
   runSerializedOpenAiAnalysis,
@@ -42,6 +43,7 @@ const ORDERED_IMAGE_VIEWS = [
 const WIKI_TOOL_NAME = 'search_mcm_leather_wiki';
 const WIKI_LOOKUP_MAX_COMPLETION_TOKENS = 600;
 const FINAL_ANALYSIS_MAX_COMPLETION_TOKENS = 8_192;
+const FINAL_ANALYSIS_RESERVED_MS = 65_000;
 const LIVE_ANALYSIS_DEADLINE_MS = 145_000;
 const WIKI_LOOKUP_DEADLINE_MS = 35_000;
 
@@ -140,24 +142,36 @@ export class OpenAiVisionProvider implements VisionProvider {
     deadlineAtMs: number,
   ): Promise<VisionAnalyzeResult> {
     let wikiLookup: CompletedWikiLookup | null = null;
-    try {
-      wikiLookup = await runOpenAiStage({
-        stage: 'WIKI_LOOKUP',
-        maxAttempts: 1,
-        deadlineAtMs: Math.min(
-          deadlineAtMs,
-          Date.now() + WIKI_LOOKUP_DEADLINE_MS,
-        ),
-        call: (requestOptions) => this.lookupWiki(input, requestOptions),
-      });
-    } catch (error) {
-      const failure = readProviderFailureMetadata(error);
-      if (!failure || shouldStopAfterWikiFailure(failure)) {
-        throw error;
+    const wikiDeadlineAtMs = calculateOptionalStageDeadline(
+      deadlineAtMs,
+      Date.now(),
+      WIKI_LOOKUP_DEADLINE_MS,
+      FINAL_ANALYSIS_RESERVED_MS,
+    );
+    if (wikiDeadlineAtMs !== null) {
+      try {
+        wikiLookup = await runOpenAiStage({
+          stage: 'WIKI_LOOKUP',
+          maxAttempts: 1,
+          deadlineAtMs: wikiDeadlineAtMs,
+          call: (requestOptions) => this.lookupWiki(input, requestOptions),
+        });
+      } catch (error) {
+        const failure = readProviderFailureMetadata(error);
+        // A lookup rate/quota/auth failure stops intentionally: immediately
+        // sending the larger six-image final request would amplify the same
+        // provider limit. Local schema and 5xx failures remain safety-only.
+        if (!failure || shouldStopAfterWikiFailure(failure)) {
+          throw error;
+        }
+        console.warn(
+          '[OpenAiVisionProvider] wiki lookup failed; using safety grounding',
+          failure,
+        );
       }
-      console.warn(
-        '[OpenAiVisionProvider] wiki lookup failed; using safety grounding',
-        failure,
+    } else {
+      console.info(
+        '[OpenAiVisionProvider] wiki lookup skipped to preserve final deadline',
       );
     }
 
@@ -231,7 +245,7 @@ export class OpenAiVisionProvider implements VisionProvider {
       return {
         result: parsed,
         model: this.model,
-        providerRequestId: completion.id,
+        providerRequestId: completionRequestId(completion),
         modeUsed: 'LIVE',
         knowledgeVersion: MCM_ANALYSIS_KNOWLEDGE_VERSION,
         knowledgeTrace: trace,
@@ -299,7 +313,7 @@ export class OpenAiVisionProvider implements VisionProvider {
       alwaysOnRecordIds: [...MCM_LEATHER_WIKI_ALWAYS_ON_SAFETY_CLAIM_IDS],
       applicationStatus,
       contextSha256: mcmLeatherWikiContextSha256(context),
-      lookupRequestId: completion.id,
+      lookupRequestId: completionRequestId(completion),
       queryHash: result.queryHash,
       retrievedRecordIds: [...result.recordIds],
       retrievedSourceIds: [...result.sourceIds],
@@ -404,6 +418,7 @@ function logStageUsage(
   const usage = completion.usage;
   console.info('[OpenAiVisionProvider] OpenAI stage completed', {
     stage,
+    requestId: completionRequestId(completion),
     responseId: completion.id,
     usage: usage
       ? {
@@ -414,4 +429,17 @@ function logStageUsage(
         }
       : null,
   });
+}
+
+function completionRequestId(
+  completion: OpenAI.Chat.Completions.ChatCompletion,
+): string {
+  const requestId = (
+    completion as OpenAI.Chat.Completions.ChatCompletion & {
+      _request_id?: unknown;
+    }
+  )._request_id;
+  return typeof requestId === 'string' && requestId.length > 0
+    ? requestId
+    : completion.id;
 }

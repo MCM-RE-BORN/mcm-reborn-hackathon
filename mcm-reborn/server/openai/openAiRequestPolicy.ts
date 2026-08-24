@@ -183,7 +183,7 @@ export async function runOpenAiStage<T>(
       );
 
       const retryFitsDeadline =
-        delayMs <= MAX_SERVER_RETRY_DELAY_MS &&
+        retryBaseDelay(metadata) <= MAX_SERVER_RETRY_DELAY_MS &&
         now() + delayMs + MIN_ATTEMPT_WINDOW_MS <= options.deadlineAtMs;
       if (attempts >= options.maxAttempts || !retryFitsDeadline) {
         throw new OpenAiProviderExecutionError(metadata, error);
@@ -214,6 +214,22 @@ export function readProviderFailureMetadata(
 export function resetOpenAiRequestPolicyForTests(): void {
   const policyGlobal = globalThis as PolicyGlobal;
   delete policyGlobal.__mcmOpenAiPolicyState;
+}
+
+/** Reserve time for a required stage and skip an optional stage when needed. */
+export function calculateOptionalStageDeadline(
+  overallDeadlineAtMs: number,
+  nowMs: number,
+  optionalStageMaxMs: number,
+  requiredStageReserveMs: number,
+): number | null {
+  const deadlineAtMs = Math.min(
+    nowMs + optionalStageMaxMs,
+    overallDeadlineAtMs - requiredStageReserveMs,
+  );
+  return deadlineAtMs - nowMs >= MIN_ATTEMPT_WINDOW_MS
+    ? deadlineAtMs
+    : null;
 }
 
 function failureMetadata(
@@ -386,7 +402,65 @@ function retryDelay(
     MIN_RETRY_JITTER_MS +
       boundedRandom * (MAX_RETRY_JITTER_MS - MIN_RETRY_JITTER_MS),
   );
-  return (metadata.retryAfterMs ?? DEFAULT_RETRY_DELAY_MS) + jitterMs;
+  return retryBaseDelay(metadata) + jitterMs;
+}
+
+function retryBaseDelay(
+  metadata: VisionProviderFailureMetadata,
+): number {
+  const resetDelayMs = exhaustedBucketResetDelay(metadata);
+  if (metadata.retryAfterMs === null && resetDelayMs === null) {
+    return DEFAULT_RETRY_DELAY_MS;
+  }
+  return Math.max(metadata.retryAfterMs ?? 0, resetDelayMs ?? 0);
+}
+
+function exhaustedBucketResetDelay(
+  metadata: VisionProviderFailureMetadata,
+): number | null {
+  const buckets: Array<[string | null, string | null]> = [
+    [
+      metadata.rateLimit.remainingRequests,
+      metadata.rateLimit.resetRequests,
+    ],
+    [metadata.rateLimit.remainingTokens, metadata.rateLimit.resetTokens],
+    [
+      metadata.rateLimit.remainingProjectTokens,
+      metadata.rateLimit.resetProjectTokens,
+    ],
+  ];
+  const delays = buckets.flatMap(([remaining, reset]) => {
+    const remainingValue = Number.parseFloat(remaining ?? '');
+    if (!Number.isFinite(remainingValue) || remainingValue > 0 || !reset) {
+      return [];
+    }
+    const parsed = parseRateLimitResetMs(reset);
+    return parsed === null ? [] : [parsed];
+  });
+  return delays.length > 0 ? Math.max(...delays) : null;
+}
+
+function parseRateLimitResetMs(value: string): number | null {
+  const normalized = value.trim().toLowerCase();
+  if (!normalized) return null;
+  const unitMs: Record<string, number> = {
+    ms: 1,
+    s: 1_000,
+    m: 60_000,
+    h: 3_600_000,
+  };
+  const pattern = /([0-9]+(?:\.[0-9]+)?)(ms|s|m|h)/g;
+  let cursor = 0;
+  let totalMs = 0;
+  let match: RegExpExecArray | null;
+  while ((match = pattern.exec(normalized)) !== null) {
+    if (match.index !== cursor) return null;
+    totalMs += Number.parseFloat(match[1]) * unitMs[match[2]];
+    cursor = pattern.lastIndex;
+  }
+  return cursor === normalized.length && cursor > 0
+    ? Math.max(0, Math.round(totalMs))
+    : null;
 }
 
 async function respectSharedCooldown(

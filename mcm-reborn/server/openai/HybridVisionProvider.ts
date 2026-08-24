@@ -2,8 +2,11 @@ import { FixtureVisionProvider } from './FixtureVisionProvider';
 import { OpenAiVisionProvider } from './OpenAiVisionProvider';
 import {
   readProviderFailureMetadata,
-  type VisionProviderFailureMetadata,
 } from './openAiRequestPolicy';
+import {
+  canonicalFixtureFallbackInput,
+  providerFallbackWarning,
+} from './providerFallbackPolicy';
 import type {
   VisionAnalyzeInput,
   VisionAnalyzeResult,
@@ -33,7 +36,9 @@ export class HybridVisionProvider implements VisionProvider {
         '[HybridVisionProvider] OpenAI failed; using canonical fixture',
         providerFailure ?? safeProviderError(error),
       );
-      const fallback = await this.fixtureProvider.analyze(input);
+      const fallback = await this.fixtureProvider.analyze(
+        canonicalFixtureFallbackInput(input),
+      );
 
       return {
         ...fallback,
@@ -42,49 +47,10 @@ export class HybridVisionProvider implements VisionProvider {
             ? error.knowledgeTrace
             : undefined,
         providerFailure: providerFailure ?? undefined,
-        warnings: [
-          {
-            code: warningCode(providerFailure),
-            message: warningMessage(providerFailure),
-          },
-        ],
+        warnings: [providerFallbackWarning(providerFailure)],
       };
     }
   }
-}
-
-function warningCode(
-  failure: VisionProviderFailureMetadata | null,
-): string {
-  if (
-    failure?.kind === 'TIMEOUT' ||
-    failure?.kind === 'QUEUE_TIMEOUT'
-  ) {
-    return 'AI_PROVIDER_TIMEOUT';
-  }
-  if (failure?.kind === 'RATE_LIMIT') {
-    return 'AI_PROVIDER_RATE_LIMIT';
-  }
-  if (failure?.kind === 'QUOTA_EXHAUSTED') {
-    return 'AI_PROVIDER_QUOTA_EXHAUSTED';
-  }
-  return 'AI_PROVIDER_ERROR';
-}
-
-function warningMessage(
-  failure: VisionProviderFailureMetadata | null,
-): string {
-  const code = warningCode(failure);
-  if (code === 'AI_PROVIDER_TIMEOUT') {
-    return '실제 AI 응답이 지연되어 준비된 데모 결과를 사용했습니다.';
-  }
-  if (code === 'AI_PROVIDER_RATE_LIMIT') {
-    return 'AI 서비스 사용량 제한으로 준비된 데모 결과를 사용했습니다.';
-  }
-  if (code === 'AI_PROVIDER_QUOTA_EXHAUSTED') {
-    return 'AI 서비스 크레딧 또는 프로젝트 사용 한도로 준비된 데모 결과를 사용했습니다.';
-  }
-  return '실제 AI 분석 오류가 발생해 준비된 데모 결과를 사용했습니다.';
 }
 
 function safeProviderError(error: unknown): { name: string } {

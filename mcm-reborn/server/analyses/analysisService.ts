@@ -363,7 +363,6 @@ export async function createAnalysis(input: CreateAnalysisInput): Promise<Analys
               }
             : null,
         knowledgeTrace: providerOutput.knowledgeTrace ?? null,
-        providerFailure: providerOutput.providerFailure ?? null,
       },
       damages: result.damages,
       warnings: providerOutput.warnings ?? [],

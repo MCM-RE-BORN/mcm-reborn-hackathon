@@ -78,3 +78,20 @@ test('keeps unrelated warnings out of the compact provider label', () => {
 
   assert.deepEqual(warnings, [{ code: 'OTHER_WARNING', message: 'other' }]);
 });
+
+test('preserves provider warnings when the analysis is not a demo fallback', () => {
+  const warnings = [
+    { code: 'AI_PROVIDER_ERROR', message: 'future live warning' },
+  ];
+
+  assert.deepEqual(
+    visibleAnalysisWarnings(
+      analysis({
+        modeUsed: 'LIVE',
+        provider: { name: 'OPENAI' },
+        warnings,
+      }),
+    ),
+    warnings,
+  );
+});
