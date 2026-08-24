@@ -1973,6 +1973,214 @@ def validate_runtime_analysis_contract(
             fail(f'{label} still contains exact-seven analysis fragments: {stale}')
 
 
+def validate_meshy_texture_policy_contract(
+    package_json: dict[str, Any],
+    service: str,
+    quota_policy: str,
+    meshy_http_error: str,
+    retexture_provider: str,
+    source_model_provider: str,
+    texture_studio: str,
+    customer_client: str,
+    ui_error_policy: str,
+    env_example: str,
+    readme: str,
+) -> None:
+    scripts = package_json.get('scripts')
+    if not isinstance(scripts, dict):
+        fail('mcm-reborn/package.json must define scripts')
+    texture_test_script = scripts.get('test:texture-policy')
+    if not isinstance(texture_test_script, str):
+        fail('mcm-reborn/package.json must define test:texture-policy')
+    require_fragments(
+        texture_test_script,
+        'mcm-reborn/package.json test:texture-policy',
+        {
+            'Node test runner': 'node --test',
+            'serialized policy tests': '--test-concurrency=1',
+            'quota policy test': 'server/texture/textureQuotaPolicy.test.mjs',
+            'Meshy HTTP policy test': 'server/texture/meshyHttpPolicy.test.mjs',
+            'UI error policy test': (
+                'components/screens/analysis-design/textureProviderError.test.mjs'
+            ),
+        },
+    )
+
+    require_fragments(
+        quota_policy,
+        'textureQuotaPolicy.ts',
+        {
+            'per-user optional cap': (
+                'MESHY_TARGET_RETEXTURE_DAILY_LIMIT_PER_USER'
+            ),
+            'global optional cap': (
+                'MESHY_TARGET_RETEXTURE_GLOBAL_DAILY_LIMIT'
+            ),
+            'blank-or-zero disables cap': (
+                "if (!normalized || normalized === '0') return null;"
+            ),
+            'configured cap upper bound': 'MAX_CONFIGURED_DAILY_LIMIT = 100',
+        },
+    )
+    require_fragments(
+        service,
+        'texturePreviewService.ts',
+        {
+            'resolved job quota policy': (
+                'resolveTextureDailyQuotaPolicy(input.jobKind)'
+            ),
+            'separate response recovery operation': (
+                'const TEXTURE_RESPONSE_RECOVERY_OPERATION = '
+                '"createTexturePreviewRecovery";'
+            ),
+            'explicit Meshy rejection boundary': 'MeshyHttpRejectionError',
+            'cleanup failure propagation': (
+                'if (!released) throw textureReservationCleanupError();'
+            ),
+        },
+    )
+    recovery_start = service.find(
+        'async function readRecoveryCachedTextureResponse('
+    )
+    recovery_end = service.find(
+        'async function storeTextureOperationSuccess(', recovery_start
+    )
+    if recovery_start < 0 or recovery_end < 0:
+        fail('texturePreviewService.ts is missing recovery-cache lookup')
+    recovery_lookup = service[recovery_start:recovery_end]
+    require_fragments(
+        recovery_lookup,
+        'texturePreviewService.ts recovery-cache lookup',
+        {
+            'new recovery receipt': 'TEXTURE_RESPONSE_RECOVERY_OPERATION',
+            'legacy daily-quota receipt': 'TEXTURE_DAILY_QUOTA_OPERATION',
+        },
+    )
+    cleanup_start = service.find('function textureReservationCleanupError()')
+    cleanup_end = service.find('async function releaseTextureOperation(', cleanup_start)
+    if cleanup_start < 0 or cleanup_end < 0:
+        fail('texturePreviewService.ts is missing the cleanup failure policy')
+    require_fragments(
+        service[cleanup_start:cleanup_end],
+        'texturePreviewService.ts cleanup failure policy',
+        {
+            'upstream cleanup error': 'new UpstreamError(',
+            'non-retryable cleanup': '{ retryable: false }',
+        },
+    )
+    stale_service_fragments = [
+        fragment
+        for fragment in (
+            'MAX_DAILY_REQUESTS_PER_PROVIDER',
+            'MAX_GLOBAL_DAILY_REQUESTS_PER_PROVIDER',
+            'Daily ${input.jobKind} preview limit reached',
+        )
+        if fragment in service
+    ]
+    if stale_service_fragments:
+        fail(
+            'texturePreviewService.ts still contains obsolete fixed daily-limit '
+            f'fragments: {stale_service_fragments}'
+        )
+
+    require_fragments(
+        meshy_http_error,
+        'MeshyHttpError.ts',
+        {
+            'explicit rejection class': 'class MeshyHttpRejectionError extends AppError',
+            'shared HTTP rejection helper': 'function throwMeshyHttpError(',
+            'ambiguous upstream is locked': (
+                'new UpstreamError(failure.message, { retryable: false })'
+            ),
+        },
+    )
+    for label, provider in {
+        'MeshyRetextureProvider.ts': retexture_provider,
+        'MeshySourceModelProvider.ts': source_model_provider,
+    }.items():
+        require_fragments(
+            provider,
+            label,
+            {
+                'shared Meshy error import': 'import { throwMeshyHttpError }',
+                'shared Meshy error call': 'return throwMeshyHttpError(response);',
+            },
+        )
+
+    require_fragments(
+        env_example,
+        '.env.example Meshy safety caps',
+        {
+            'per-user target cap': (
+                'MESHY_TARGET_RETEXTURE_DAILY_LIMIT_PER_USER='
+            ),
+            'global target cap': (
+                'MESHY_TARGET_RETEXTURE_GLOBAL_DAILY_LIMIT='
+            ),
+            'disabled-by-default guidance': (
+                'Empty or 0 disables each cap (the default)'
+            ),
+        },
+    )
+    require_fragments(
+        customer_client,
+        'customer-client.ts',
+        {
+            'structured error details': (
+                'public readonly details: Record<string, unknown> = {}'
+            ),
+            'response details parsing': (
+                'const details = readRecord(readRecord(errorRecord)?.details) ?? {};'
+            ),
+            'details passed to CustomerApiError': 'details,\n    );',
+        },
+    )
+    require_fragments(
+        ui_error_policy,
+        'textureProviderError.ts',
+        {
+            'retryable detail contract': 'return details.retryable === true;',
+        },
+    )
+    require_fragments(
+        texture_studio,
+        'TextureMockupStudio.tsx',
+        {
+            'CustomerApiError details read': (
+                'isRetryableTextureCreateFailure(error.details)'
+            ),
+            'terminal inverse of retryable': 'terminal: !retryableRejection',
+        },
+    )
+    target_request = texture_studio.find(
+        'await requestJob("TARGET_RETEXTURE")'
+    )
+    source_request = texture_studio.find('await requestJob("SOURCE_MODEL")')
+    if target_request < 0 or source_request < 0:
+        fail('TextureMockupStudio.tsx must request TARGET_RETEXTURE and SOURCE_MODEL')
+    if target_request > source_request:
+        fail(
+            'TextureMockupStudio.tsx must submit TARGET_RETEXTURE before '
+            'the optional SOURCE_MODEL task'
+        )
+
+    require_fragments(
+        readme,
+        'README.md Meshy daily-cap guidance',
+        {
+            'target cap disabled by default': (
+                '`TARGET_RETEXTURE`)의 앱 일일 한도는 기본적으로 비활성'
+            ),
+            'per-user optional cap': (
+                'MESHY_TARGET_RETEXTURE_DAILY_LIMIT_PER_USER'
+            ),
+            'global optional cap': (
+                'MESHY_TARGET_RETEXTURE_GLOBAL_DAILY_LIMIT'
+            ),
+        },
+    )
+
+
 def validate_guide(guide: str) -> None:
     marker = '## 11. v1 → v2 마이그레이션 이력'
     if marker not in guide:
@@ -2204,6 +2412,36 @@ def main() -> None:
     runtime_request_policy = (
         ROOT / 'mcm-reborn' / 'server' / 'openai' / 'openAiRequestPolicy.ts'
     ).read_text(encoding='utf-8')
+    runtime_package_json = json.loads(
+        (ROOT / 'mcm-reborn' / 'package.json').read_text(encoding='utf-8')
+    )
+    runtime_texture_service = (
+        ROOT / 'mcm-reborn' / 'server' / 'texture' / 'texturePreviewService.ts'
+    ).read_text(encoding='utf-8')
+    runtime_texture_quota_policy = (
+        ROOT / 'mcm-reborn' / 'server' / 'texture' / 'textureQuotaPolicy.ts'
+    ).read_text(encoding='utf-8')
+    runtime_meshy_http_error = (
+        ROOT / 'mcm-reborn' / 'server' / 'texture' / 'MeshyHttpError.ts'
+    ).read_text(encoding='utf-8')
+    runtime_meshy_retexture_provider = (
+        ROOT / 'mcm-reborn' / 'server' / 'texture' / 'MeshyRetextureProvider.ts'
+    ).read_text(encoding='utf-8')
+    runtime_meshy_source_model_provider = (
+        ROOT / 'mcm-reborn' / 'server' / 'texture' / 'MeshySourceModelProvider.ts'
+    ).read_text(encoding='utf-8')
+    runtime_texture_studio = (
+        ROOT / 'mcm-reborn' / 'components' / 'screens' / 'analysis-design'
+        / 'TextureMockupStudio.tsx'
+    ).read_text(encoding='utf-8')
+    runtime_customer_client = (
+        ROOT / 'mcm-reborn' / 'components' / 'screens' / 'order-certificate'
+        / 'customer-client.ts'
+    ).read_text(encoding='utf-8')
+    runtime_texture_error_policy = (
+        ROOT / 'mcm-reborn' / 'components' / 'screens' / 'analysis-design'
+        / 'textureProviderError.ts'
+    ).read_text(encoding='utf-8')
     recommendation = (ROOT / 'examples' / 'recommendation.ts').read_text(encoding='utf-8')
     mock_status = (ROOT / 'examples' / 'mock-status.ts').read_text(encoding='utf-8')
     readme = (ROOT / 'README.md').read_text(encoding='utf-8')
@@ -2297,6 +2535,19 @@ def main() -> None:
         runtime_vision_image_messages,
         runtime_hybrid_provider,
         runtime_request_policy,
+    )
+    validate_meshy_texture_policy_contract(
+        runtime_package_json,
+        runtime_texture_service,
+        runtime_texture_quota_policy,
+        runtime_meshy_http_error,
+        runtime_meshy_retexture_provider,
+        runtime_meshy_source_model_provider,
+        runtime_texture_studio,
+        runtime_customer_client,
+        runtime_texture_error_policy,
+        env_example,
+        readme,
     )
     validate_guide(guide)
     validate_runtime_migration_docs(
