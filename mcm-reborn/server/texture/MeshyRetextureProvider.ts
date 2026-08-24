@@ -167,20 +167,39 @@ export class MeshyRetextureProvider implements RetextureProvider {
 
     if (response.ok) return response;
     if (response.status === 402) {
-      throw new ServiceUnavailableError("Meshy API credits are insufficient", {
-        retryable: false,
-      });
+      throw markMeshyHttpRejection(
+        new ServiceUnavailableError("Meshy API credits are insufficient", {
+          retryable: false,
+        }),
+      );
     }
     if (response.status === 429) {
-      throw new RateLimitError("Meshy API rate limit exceeded");
+      throw markMeshyHttpRejection(
+        new RateLimitError("Meshy API rate limit exceeded"),
+      );
     }
     if (response.status === 401 || response.status === 403) {
-      throw new ServiceUnavailableError("Meshy API credentials are invalid", {
-        retryable: false,
-      });
+      throw markMeshyHttpRejection(
+        new ServiceUnavailableError("Meshy API credentials are invalid", {
+          retryable: false,
+        }),
+      );
     }
-    throw new UpstreamError("Meshy API returned an error");
+    const error = new UpstreamError("Meshy API returned an error");
+    if (
+      response.status >= 400 &&
+      response.status < 500 &&
+      response.status !== 408
+    ) {
+      throw markMeshyHttpRejection(error);
+    }
+    throw error;
   }
+}
+
+function markMeshyHttpRejection<T extends Error>(error: T): T {
+  error.name = "MeshyHttpRejectionError";
+  return error;
 }
 
 export function isMeshyRetextureConfigured() {

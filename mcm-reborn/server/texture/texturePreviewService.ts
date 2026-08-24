@@ -239,12 +239,22 @@ export async function createTexturePreview(
       );
     }
   } catch (error) {
-    await storeTextureOperationFailure(
-      admin,
-      reservation.storageKey,
-      reservation.requestHash,
-      viewer.id,
-    );
+    if (isExplicitMeshyHttpRejection(error)) {
+      await releaseDailyTextureBudget(admin, quotaReservation);
+      await releaseTextureOperation(
+        admin,
+        reservation.storageKey,
+        reservation.requestHash,
+        viewer.id,
+      );
+    } else {
+      await storeTextureOperationFailure(
+        admin,
+        reservation.storageKey,
+        reservation.requestHash,
+        viewer.id,
+      );
+    }
     throw error;
   }
 
@@ -687,6 +697,10 @@ async function storeTextureOperationFailure(
   if (error) {
     console.error("[TexturePreview] Failed to cache provider failure");
   }
+}
+
+function isExplicitMeshyHttpRejection(error: unknown) {
+  return error instanceof Error && error.name === "MeshyHttpRejectionError";
 }
 
 async function recordTextureConsent(

@@ -176,13 +176,21 @@ export function TextureMockupStudio({ analysisId }: TextureMockupStudioProps) {
           if (attempt > 0) await delay(MESHY_POLL_INTERVAL_MS);
           if (pollGenerationRef.current[jobKind] !== generation) return;
 
-          const task = await customerFetch<MeshyTextureTaskResponse>(
-            "/api/demo/texture-preview",
-            {
-              body: JSON.stringify({ analysisId, taskToken }),
-              method: "PUT",
-            },
-          );
+          let task: MeshyTextureTaskResponse;
+          try {
+            task = await customerFetch<MeshyTextureTaskResponse>(
+              "/api/demo/texture-preview",
+              {
+                body: JSON.stringify({ analysisId, taskToken }),
+                method: "PUT",
+              },
+            );
+          } catch (error) {
+            if (error instanceof CustomerApiError && error.status === 429) {
+              continue;
+            }
+            throw error;
+          }
           if (pollGenerationRef.current[jobKind] !== generation) return;
           if (task.jobKind !== jobKind) {
             throw new Error("외관 생성 작업 종류가 일치하지 않습니다.");
@@ -363,6 +371,23 @@ export function TextureMockupStudio({ analysisId }: TextureMockupStudioProps) {
         setPlanState("fallback");
       }
 
+      setExternalStatus("3D 목업을 생성하고 있습니다.");
+      const targetResponse = await requestJob("TARGET_RETEXTURE");
+      if (
+        targetResponse.kind !== "task" ||
+        targetResponse.jobKind !== "TARGET_RETEXTURE"
+      ) {
+        throw new Error("여권 지갑 텍스처 작업 응답 형식이 올바르지 않습니다.");
+      }
+      window.sessionStorage.setItem(
+        meshyTaskStorageKey(analysisId, "TARGET_RETEXTURE"),
+        targetResponse.taskToken,
+      );
+      const targetPolling = pollMeshyTask(
+        "TARGET_RETEXTURE",
+        targetResponse.taskToken,
+      );
+
       if (
         capabilities.features.sourceModel &&
         !sourceTask.terminal &&
@@ -384,7 +409,6 @@ export function TextureMockupStudio({ analysisId }: TextureMockupStudioProps) {
           );
           void pollMeshyTask("SOURCE_MODEL", sourceResponse.taskToken);
         } catch (error) {
-          if (isConsentGuardError(error)) throw error;
           updateTask("SOURCE_MODEL", {
             error: readExternalError(error),
             status: "failed",
@@ -393,19 +417,7 @@ export function TextureMockupStudio({ analysisId }: TextureMockupStudioProps) {
         }
       }
 
-      setExternalStatus("3D 목업을 생성하고 있습니다.");
-      const targetResponse = await requestJob("TARGET_RETEXTURE");
-      if (
-        targetResponse.kind !== "task" ||
-        targetResponse.jobKind !== "TARGET_RETEXTURE"
-      ) {
-        throw new Error("여권 지갑 텍스처 작업 응답 형식이 올바르지 않습니다.");
-      }
-      window.sessionStorage.setItem(
-        meshyTaskStorageKey(analysisId, "TARGET_RETEXTURE"),
-        targetResponse.taskToken,
-      );
-      await pollMeshyTask("TARGET_RETEXTURE", targetResponse.taskToken);
+      await targetPolling;
     } catch (error) {
       const message = readExternalError(error);
       setTargetTask((current) => ({
