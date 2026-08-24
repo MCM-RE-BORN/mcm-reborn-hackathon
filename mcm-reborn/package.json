@@ -14,7 +14,8 @@
     "test:analysis-fallback": "node --test --test-concurrency=1 components/screens/analysis-design/analysisFallback.test.mjs",
     "test:openai-images": "node --test --test-concurrency=1 server/openai/visionImageMessages.test.mjs",
     "test:openai-policy": "node --test --test-concurrency=1 server/openai/openAiRequestPolicy.test.mjs",
-    "test:provider-fallback": "node --test --test-concurrency=1 server/openai/providerFallbackPolicy.test.mjs"
+    "test:provider-fallback": "node --test --test-concurrency=1 server/openai/providerFallbackPolicy.test.mjs",
+    "test:texture-policy": "node --test --test-concurrency=1 server/texture/textureQuotaPolicy.test.mjs components/screens/analysis-design/textureProviderError.test.mjs"
   },
   "dependencies": {
     "@google/model-viewer": "^4.3.1",
