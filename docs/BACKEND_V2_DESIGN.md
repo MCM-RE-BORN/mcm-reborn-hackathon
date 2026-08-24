@@ -81,7 +81,7 @@ flowchart LR
 | `SEEDED_ESTIMATE` | 동일 계약을 사용하는 재현 가능한 예상 결과 |
 | `LIVE` | OpenAI 분석을 우선하고 제공자 장애 시 `DEMO_FIXTURE`로 폴백 |
 
-`LIVE` 구현은 공식 OpenAI JavaScript SDK의 `chat.completions.parse`와 Zod `zodResponseFormat`을 사용하는 **Chat Completions Structured Outputs**다. 저해상도 위키 lookup과 최종 분석은 145초 deadline을 공유하며 같은 서버 프로세스에서 분석 단위로 직렬화한다. lookup의 rate limit·quota 뒤에는 최종 호출을 보내지 않고, 최종 호출의 일시적 429만 `Retry-After`와 jitter 뒤 한 번 재시도한다. quota·billing 한도는 재시도하지 않는다. 최종 실패는 canonical Fixture로 복구하고 작은 `API오류로 인한 DEMO` 표기와 private allowlist 진단으로 정상 LIVE·직접 DEMO와 구분한다. 이미지 품질 실패는 제공자 장애가 아니므로 hybrid 폴백하지 않는다.
+`LIVE` 구현은 공식 OpenAI JavaScript SDK의 `chat.completions.parse`와 Zod `zodResponseFormat`을 사용하는 **Chat Completions Structured Outputs**다. 저해상도 위키 lookup과 최종 분석은 145초 deadline을 공유하며 같은 서버 프로세스에서 분석 단위로 직렬화한다. 최종 분석 시간을 먼저 예약하고 lookup의 rate limit·quota 뒤에는 최종 호출을 보내지 않는다. 최종 호출의 일시적 429만 `Retry-After` 또는 소진 bucket reset과 jitter 뒤 한 번 재시도하며 quota·billing 한도는 재시도하지 않는다. 최종 실패는 canonical Fixture로 복구하고 작은 `API오류로 인한 DEMO` 표기와 allowlist 서버 로그로 정상 LIVE·직접 DEMO와 구분한다. 이미지 품질 실패는 제공자 장애가 아니므로 hybrid 폴백하지 않는다.
 
 고객의 private 이미지를 외부 AI로 보내려면 아래 조건을 모두 만족해야 한다.
 

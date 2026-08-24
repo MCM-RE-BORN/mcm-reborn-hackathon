@@ -1828,6 +1828,8 @@ def validate_runtime_analysis_contract(
     service: str,
     analysis_contract: str,
     provider: str,
+    hybrid_provider: str,
+    request_policy: str,
 ) -> None:
     require_fragments(
         route,
@@ -1891,8 +1893,35 @@ def validate_runtime_analysis_contract(
             'six-image requirement': 'input.imageUrls.length !== 6',
             'six-image index range': 'imageIndex from 0 through 5',
             'six-image user message': '각 VIEW 라벨 바로 다음 이미지만 해당 시점의 증거로 사용하고, 여섯 장을 동일 제품으로 분석하세요.',
+            'serialized LIVE analysis': 'runSerializedOpenAiAnalysis(deadlineAtMs',
+            'reserved final deadline': 'FINAL_ANALYSIS_RESERVED_MS = 65_000',
+            'optional lookup deadline': 'calculateOptionalStageDeadline(',
+            'lookup policy stage': "stage: 'WIKI_LOOKUP'",
+            'final policy stage': "stage: 'FINAL_ANALYSIS'",
+            'final output cap': 'max_completion_tokens: FINAL_ANALYSIS_MAX_COMPLETION_TOKENS',
         },
     )
+    require_fragments(
+        hybrid_provider,
+        'HybridVisionProvider.ts',
+        {
+            'structured failure metadata': 'readProviderFailureMetadata(error)',
+            'canonical fallback input': 'canonicalFixtureFallbackInput(input)',
+            'stable fallback warning': 'providerFallbackWarning(providerFailure)',
+        },
+    )
+    require_fragments(
+        request_policy,
+        'openAiRequestPolicy.ts',
+        {
+            'Retry-After parsing': "headers.get('retry-after')",
+            'project-token reset header': "x-ratelimit-reset-project-tokens",
+            'exhausted reset delay': 'exhaustedBucketResetDelay(metadata)',
+            'quota retry exclusion': "metadata.kind !== 'RATE_LIMIT'",
+        },
+    )
+    if 'providerFailure: providerOutput.providerFailure' in service:
+        fail('analysisService.ts must not expose provider rate-limit diagnostics in provider_result')
     for label, text in {
         'analysis Route Handler': route,
         'analysis service': service,
@@ -2139,6 +2168,12 @@ def main() -> None:
     runtime_vision_provider = (
         ROOT / 'mcm-reborn' / 'server' / 'openai' / 'OpenAiVisionProvider.ts'
     ).read_text(encoding='utf-8')
+    runtime_hybrid_provider = (
+        ROOT / 'mcm-reborn' / 'server' / 'openai' / 'HybridVisionProvider.ts'
+    ).read_text(encoding='utf-8')
+    runtime_request_policy = (
+        ROOT / 'mcm-reborn' / 'server' / 'openai' / 'openAiRequestPolicy.ts'
+    ).read_text(encoding='utf-8')
     recommendation = (ROOT / 'examples' / 'recommendation.ts').read_text(encoding='utf-8')
     mock_status = (ROOT / 'examples' / 'mock-status.ts').read_text(encoding='utf-8')
     readme = (ROOT / 'README.md').read_text(encoding='utf-8')
@@ -2229,6 +2264,8 @@ def main() -> None:
         runtime_analysis_service,
         runtime_analysis_contract,
         runtime_vision_provider,
+        runtime_hybrid_provider,
+        runtime_request_policy,
     )
     validate_guide(guide)
     validate_runtime_migration_docs(

@@ -83,7 +83,7 @@
 
 ## 의존성
 
-새 패키지를 개별 설치하지 말고 lockfile 기준으로 `npm --prefix mcm-reborn ci`를 실행합니다. 현재 정적 목업에는 `@google/model-viewer`를 사용하지 않습니다. 향후 OpenAPI TypeScript client나 3D 런타임을 추가하려면 별도 승인과 계약·자산 검증이 필요합니다.
+Node.js 22.18.0 이상을 사용하고 새 패키지를 개별 설치하지 말고 lockfile 기준으로 `npm --prefix mcm-reborn ci`를 실행합니다. native 테스트는 Node의 TypeScript type stripping을 사용합니다. 현재 정적 목업에는 `@google/model-viewer`를 사용하지 않습니다. 향후 OpenAPI TypeScript client나 3D 런타임을 추가하려면 별도 승인과 계약·자산 검증이 필요합니다.
 
 ## 3D 자산 체크
 
@@ -149,10 +149,11 @@ npm --prefix mcm-reborn run lint
 npm --prefix mcm-reborn run typecheck
 npm --prefix mcm-reborn run test:analysis-fallback
 npm --prefix mcm-reborn run test:openai-policy
+npm --prefix mcm-reborn run test:provider-fallback
 npm --prefix mcm-reborn run build
 ```
 
-Python 검증에는 PyYAML이 필요합니다. `validate_package.py`는 API 참조·operationId, 업로드 제한, 예상치 메타데이터, 제품 4종, 단일 대표 주문, 실물 검수·변경 승인, SQL enum과 제작 시작 guard의 정합성을 확인합니다. native Node 테스트는 LIVE OpenAI 요청 정책과 API 오류 DEMO 표기 조건을 검증합니다.
+Python 검증에는 PyYAML이 필요합니다. `validate_package.py`는 API 참조·operationId, 업로드 제한, 예상치 메타데이터, 제품 4종, 단일 대표 주문, 실물 검수·변경 승인, SQL enum과 제작 시작 guard의 정합성을 확인합니다. native Node 테스트는 LIVE OpenAI 요청 정책, canonical 제공자 폴백과 API 오류 DEMO 표기 조건을 검증합니다.
 
 ## 중요 고지
 
