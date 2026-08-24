@@ -1890,7 +1890,7 @@ def validate_runtime_analysis_contract(
             'six-view order': 'front, rear, top, bottom, left side, and right side',
             'six-image requirement': 'input.imageUrls.length !== 6',
             'six-image index range': 'imageIndex from 0 through 5',
-            'six-image user message': '여섯 이미지를 지정된 순서의 동일 제품으로 보고 분석하세요.',
+            'six-image user message': '각 VIEW 라벨 바로 다음 이미지만 해당 시점의 증거로 사용하고, 여섯 장을 동일 제품으로 분석하세요.',
         },
     )
     for label, text in {

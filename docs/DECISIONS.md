@@ -44,6 +44,7 @@
 | DEC-038 | 2026-08-21 | 승인 | 외관 생성 완료 뒤 `기본 3D 모델과 비교`는 사용자 제공 Meshy GLB를 기반으로 182,361 triangles·2K 텍스처로 경량화한 웹 파생 자산 `reborn-passport-wallet-base-comparison.glb`를 표시하고, `맞춤 외관 다시 적용`은 기존 canonical GLB와 합성 atlas로 복귀한다. canonical GLB는 목표 UV·마스크·스티치/PBR 보존의 기준이므로 교체하지 않는다. 비교 모델 전환은 추가 OpenAI·Meshy 요청을 만들지 않으며 비교 모델 로드 실패 시 맞춤 외관으로 자동 복귀한다. | 원본 3,039,371 triangles·104,640,168-byte 파일은 모바일 브라우저용으로 과도하므로 전송 크기와 GPU 부하를 줄인 파생 자산을 사용한다. 원본 SHA-256은 `e6c24eb068f79cfc5e97403fc80cc4fa922d46ba2002f5aadf87488e4d0b91b5`, 파생 자산 SHA-256은 `863c5297048f7a38d8f2f806d9b80dad81250cf8eb769ad1aa0d84f8c9a71d8b`다. 사용자가 지정한 디자인을 유지하면서 생성 목업의 검증된 UV와 결정론적 합성 계약을 보존한다. |
 | DEC-039 | 2026-08-21 | 승인 | 공개 조사본은 사람용 전체 KB와 분석용 서버 위키를 분리한다. 분석용 snapshot은 검토된 시각 claim 18개와 필요한 provenance만 포함하고 제품 예시·비시각 topic·`context_only`를 제외한다. LIVE 분석은 VIEW 라벨을 유지한 저해상도 lookup 호출로 일반 검색어만 만들고, lexical hit 기반 최대 5개·4,000자 로컬 결과를 원본 해상도 v3 Structured Output 호출에 보강한다. 7개 금지 경계는 항상 포함하며 lookup 실패·무결과는 전체 코퍼스 대신 보수적 safety 경계로 폴백한다. | DEC-037의 고정 16-claim 전체 주입을 요청별 retrieval로 대체해 관련 없는 prompt 토큰과 제품 anchoring을 줄인다. 제품 예시는 schema와 서버에서 비활성화하고 query 원문 대신 lookup request ID, query/context hash, ordered claim·source ID, full retrieval corpus SHA와 검색기 버전을 private `provider_result`와 분석 멱등 hash에 기록한다. 첫 호출은 `detail: low`, 최종 호출은 `detail: auto`로 비용을 제한한다. 현재 provenance를 통과한 v3 profile의 목업 단계 재사용, R5 동의, deterministic exterior/stitch mask와 기존 PBR 보존은 유지한다. API·DB·패키지 계약은 바꾸지 않는다. |
 | DEC-040 | 2026-08-21 | 승인 | 고객 화면과 현재 안내 문서의 생성 결과 명칭은 `3D 목업`으로 통일하고, `외관`은 사진 구도·소재 분류·텍스처 마스크 등 처리 범위를 설명할 때만 사용한다. Meshy AI 연동의 크레딧·비용 보호를 위해 신규 `TARGET_RETEXTURE`는 고객당 UTC 기준 하루 최대 3회로 제한한다. | 버튼·상태·오류·접근성 이름의 혼용을 없애면서 내부 외관 처리 계약은 유지한다. 한국 시간 기준 한도는 매일 오전 9시에 갱신되며 배포 전체 보호 한도와 멱등 캐시도 별도로 적용한다. |
+| DEC-041 | 2026-08-24 | 승인 | DEC-039의 2단계 LIVE 분석을 유지하되 145초 absolute deadline과 프로세스 단위 FIFO를 적용한다. lookup은 35초·1회, 최종 Structured Output은 8,192 completion token과 최대 2회로 제한한다. 일시적 429만 `Retry-After` 최소 대기+jitter 뒤 한 번 재시도하고 quota·billing·spend·usage 한도는 재시도하지 않는다. terminal LIVE 실패는 canonical Fixture로 복구하되 결과 화면에 작게 `API오류로 인한 DEMO`를 표시한다. | lookup 제한 뒤 최종 6장 요청을 추가로 보내는 burst와 첫 429 즉시 폴백을 줄인다. server/client request ID, 제한 종류, retry와 요청·token·project-token 헤더만 private `provider_result.providerFailure`와 안전 로그에 남기며 오류 본문·전체 헤더·signed URL은 배제한다. 직접 `DEMO_FIXTURE`에는 폴백 표기를 하지 않는다. 프로세스 FIFO는 serverless 인스턴스 간 분산 한도를 대체하지 않는다. DEC-024의 장애 Fixture 원칙은 유지하면서 제한 처리·진단·고객 고지를 구체화한다. |
 
 ## 대체 관계
 
@@ -61,11 +62,12 @@
 - `DEC-036`의 버튼 시작, 분석 narrative와 목업 UI 분리, 진행률·placeholder·`applied` 뒤 3D 공개, 스티치/PBR 보존 원칙은 유지한다. R4 통합 안내와 외관 profile 생성·재사용 범위는 **2026-08-21 기준 `DEC-037`의 R5 계약으로 대체**되었다.
 - `DEC-037`의 지식 기반 분석·저장 profile 재사용·Meshy 생성 계약은 유지한다. 생성 완료 뒤 기본/맞춤 비교에 사용하는 모델 자산과 실패 복귀 동작은 **2026-08-21 기준 `DEC-038`이 구체화**한다.
 - `DEC-036`~`DEC-039`의 외관 처리 범위와 생성 계약은 유지하되, 고객에게 보이는 생성 결과 명칭과 일일 생성 상한은 **2026-08-21 기준 `DEC-040`을 적용**한다.
+- `DEC-024`의 LIVE 장애 Fixture 폴백과 `DEC-039`의 2단계 위키 분석은 유지하되, rate-limit 처리·안전 진단·직접 DEMO와의 고객 표기 구분은 **2026-08-24 기준 `DEC-041`이 구체화**한다.
 - `DEC-017`의 Figma 전체 시각 기준은 유지한다. 홈·하단 내비게이션·신청 내역의 구체적인 노드와 탐색 구조는 **2026-08-18 기준 `DEC-019`가 대체·구체화**한다.
 - `DEC-004`의 사용자에게 보이는 분석 모드는 `DEMO_FIXTURE`, `SEEDED_ESTIMATE`, `LIVE`로 유지한다. `hybrid`는 별도 공개 enum이 아니라 `DEC-024`의 `LIVE` 내부 장애 폴백 동작으로 구체화한다.
 - `DEC-018`의 “lifecycle command만 실행 경로”라는 당시 구현 상태는 historical이다. v2 서버 범위와 외부 연결 경계는 `DEC-024`가 대체한다.
 - `DEC-024`의 “고객·운영 UI는 Fixture를 유지하고 후속 연결” 부분은 **2026-08-19 기준 `DEC-025`로 대체**되었다. v1 제거·v2 계약·LIVE 동의 원칙은 유지한다.
-- 기존 행은 결정 당시 기록으로 보존한다. 현재 구현과 체크리스트에는 supersede 관계를 반영한 `DEC-010`~`DEC-040`을 적용한다.
+- 기존 행은 결정 당시 기록으로 보존한다. 현재 구현과 체크리스트에는 supersede 관계를 반영한 `DEC-010`~`DEC-041`을 적용한다.
 
 ## 새 결정 형식
 

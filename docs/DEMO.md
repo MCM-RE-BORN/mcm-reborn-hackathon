@@ -10,7 +10,7 @@
 - 화면과 발표에서 AI 값은 사진 기반 예상, 결제·물류·탄소·보증서는 Mock임을 밝힌다.
 - 주문 전에는 정품·제작 가능·원단 활용·견적을 확정 표현으로 말하지 않는다.
 - 공식 장인 실물 검수는 주문·Mock 결제와 제품 수거가 끝난 뒤에만 수행한다.
-- 기본 브라우저 데모는 외부 API를 호출하지 않고 `DEMO_FIXTURE`와 여권 지갑 전면 placeholder로 같은 주문과 보증서까지 진행한다. R5 통합 동의·키·배포 gate가 준비된 LIVE 시연에서는 최초 분석이 6장을 OpenAI에 한 번 보내 분석과 외관 4부위 profile을 함께 저장한다. 이후 사용자가 목업 화면 버튼을 눌렀을 때 이 profile은 추가 OpenAI 호출·quota 없이 계획으로 재사용되고 외관 4장은 Meshy source/target 작업에 사용된다. 저장 profile이 없는 non-LIVE 데모/seeded 분석에서만 OpenAI 4면 classifier 호환 폴백을 선택적으로 시연한다. 생성 전·중·실패에는 placeholder를 유지하고 최종 텍스처 적용 뒤에만 3D를 공개한다.
+- 기본 브라우저 데모는 외부 API를 호출하지 않고 `DEMO_FIXTURE`와 여권 지갑 전면 placeholder로 같은 주문과 보증서까지 진행한다. R5 통합 동의·키·배포 gate가 준비된 LIVE 시연에서는 최초 분석이 저해상도 위키 lookup과 최종 Structured Output의 두 단계로 같은 6장을 처리하고 분석과 외관 4부위 profile을 함께 저장한다. 이후 사용자가 목업 화면 버튼을 눌렀을 때 이 profile은 추가 OpenAI 호출·quota 없이 계획으로 재사용되고 외관 4장은 Meshy source/target 작업에 사용된다. 저장 profile이 없는 non-LIVE 데모/seeded 분석에서만 OpenAI 4면 classifier 호환 폴백을 선택적으로 시연한다. 생성 전·중·실패에는 placeholder를 유지하고 최종 텍스처 적용 뒤에만 3D를 공개한다.
 
 ## 중앙 시나리오 빠른 참조
 
@@ -95,7 +95,7 @@ npm --prefix mcm-reborn run build
 - 카메라 권한 거부: 권한 안내 뒤 `기기에서 사진 선택`으로 복구한다.
 - 사진 부족·형식·용량: JPG/JPEG·PNG, 필수 6면 6장, 장당 10MB 기준과 남은 슬롯을 안내한다.
 - 사진 품질 미달: LIVE는 같은 6장 OpenAI Structured Output에서 실제 이미지 품질을 검사하고, 데모 모드는 준비된 품질 미달 Fixture를 사용할 수 있다. 어느 모드든 `422 IMAGE_QUALITY_INSUFFICIENT` 계약과 이미지별 재촬영 안내를 유지하며 품질 실패를 성공 분석으로 바꾸지 않는다.
-- OpenAI/Meshy 제공자 오류: LIVE 분석 OpenAI 장애는 `modeUsed=DEMO_FIXTURE`인 호환 결과로 복구될 수 있다. 이 non-LIVE 결과에 저장 profile이 없으면 목업 버튼에서만 OpenAI 4면 classifier 폴백이 가능하다. 반대로 `modeUsed=LIVE`인 기존 분석에 현재 profile이 없으면 409와 새 분석 안내를 표시하고 classifier로 재과금하지 않는다. Meshy 오류에는 전면 placeholder를 유지하고 유료 요청을 연속 클릭하지 않으며 동일 job token으로 상태를 재확인한다. source 3D 실패는 target 작업 실패로 표현하지 않는다.
+- OpenAI/Meshy 제공자 오류: LIVE 분석 OpenAI 장애는 `modeUsed=DEMO_FIXTURE`인 호환 결과로 복구되고 결과 화면에 작게 `API오류로 인한 DEMO`를 표시한다. 직접 실행한 DEMO에는 이 문구가 없다. 이 non-LIVE 결과에 저장 profile이 없으면 목업 버튼에서만 OpenAI 4면 classifier 폴백이 가능하다. 반대로 `modeUsed=LIVE`인 기존 분석에 현재 profile이 없으면 409와 새 분석 안내를 표시하고 classifier로 재과금하지 않는다. Meshy 오류에는 전면 placeholder를 유지하고 유료 요청을 연속 클릭하지 않으며 동일 job token으로 상태를 재확인한다. source 3D 실패는 target 작업 실패로 표현하지 않는다.
 - AI 비대상: `AI_INELIGIBLE`을 공식 가품 판정이 아니라 사진·정보 기반 사전 접수 불가로 표현한다.
 - 변경 조건 거절: `CHANGE_APPROVAL_REQUIRED → CANCELED`와 Mock 결제 취소·환불 안내를 보여 준다.
 - 제작 불가: `/orders/demo?stage=canceled&reason=production-unavailable`에서 `PRODUCTION_UNAVAILABLE → CANCELED`와 상담·Mock 환불 경로를 보여 준다.
@@ -108,7 +108,7 @@ npm --prefix mcm-reborn run build
 |---|---|
 | 카메라 권한·장치 오류 | 파일 선택 폴백 또는 준비한 필수 구도 JPG/PNG 6장 사용 |
 | 사진 품질 미달 | 안내된 슬롯만 재촬영. 품질 오류를 Fixture 성공으로 위장하지 않음 |
-| LIVE 분석 OpenAI 지연·오류 | `modeUsed=DEMO_FIXTURE` 호환 결과와 경고를 사용. 사진 품질 실패는 성공 Fixture로 바꾸지 않음 |
+| LIVE 분석 OpenAI 지연·오류 | `modeUsed=DEMO_FIXTURE` 호환 결과와 작은 `API오류로 인한 DEMO` 표기를 사용. 사진 품질 실패는 성공 Fixture로 바꾸지 않음 |
 | 기존 LIVE 분석의 current profile 부재 | 409와 새 6면 분석 안내. 목업 단계 OpenAI classifier를 호출하지 않음 |
 | non-LIVE profile 부재 | R5 연결 동의·기능 gate가 있을 때만 4면 classifier 호환 폴백. 동일 유료 job을 새로 만들지 않음 |
 | Meshy 지연·오류 | 목업 전면 placeholder를 유지하고 동일 task token으로 조회. terminal provider create 실패는 재요청하지 않음 |

@@ -35,6 +35,8 @@ v2 영속 API는 `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_K
 
 `AI_MODE=LIVE`는 `ENABLE_EXTERNAL_AI=true`, 고정된 `EXTERNAL_AI_PRIVACY_NOTICE_VERSION`, OpenAI 서버 설정과 요청별 명시 동의를 모두 요구한다. 실제 연결 전에는 private 이미지를 외부로 전송하지 말고 `DEMO_FIXTURE`를 사용한다.
 
+LIVE의 위키 조회와 최종 분석은 한 서버 프로세스에서 분석 단위로 직렬화하고 하나의 제한된 deadline을 공유한다. 위키 조회의 rate limit·quota·인증 실패 뒤에는 최종 6장 호출을 추가로 보내지 않는다. 최종 분석의 일시적 429만 `Retry-After`와 jitter 뒤 한 번 재시도하며, quota·billing 한도는 즉시 canonical Fixture로 복구한다. 이 폴백 결과에는 `API오류로 인한 DEMO`가 작게 표시되고 allowlist 진단은 private `provider_result`에 저장된다.
+
 목업 상세의 로컬 텍스처 추출·GLB 결합은 외부 키 없이 동작한다. 선택형 OpenAI/Meshy 텍스처 기능은 `ENABLE_TEXTURE_AI=true`와 provider별 서버 키가 필요하며, Meshy에는 32자 이상의 `TEXTURE_TASK_SIGNING_SECRET`과 공개 HTTPS `.glb` URL도 필요하다. 실제 고객 사진을 전송하기 전에 [`AI_TEXTURE_MOCKUP_PIPELINE.md`](../docs/AI_TEXTURE_MOCKUP_PIPELINE.md)의 동의·보존·비용·시연 절차를 확인한다.
 
 개발 서버를 시작한다.
@@ -52,7 +54,9 @@ npm --prefix mcm-reborn run dev
 ```bash
 npm --prefix mcm-reborn run lint
 npm --prefix mcm-reborn run typecheck
+npm --prefix mcm-reborn run test:analysis-fallback
+npm --prefix mcm-reborn run test:openai-policy
 npm --prefix mcm-reborn run build
 ```
 
-현재 `package.json`에는 자동 테스트 스크립트가 없다. 테스트를 실행했다고 표시하지 말고, 테스트가 추가되기 전까지 이를 남은 검증 공백으로 기록한다. 루트 계약이나 협업 문서를 변경했다면 루트 README의 Python 검증 명령도 함께 실행한다.
+native Node 테스트는 LIVE OpenAI 요청 정책과 API 오류 DEMO 표기 조건을 검증한다. 루트 계약이나 협업 문서를 변경했다면 루트 README의 Python 검증 명령도 함께 실행한다.

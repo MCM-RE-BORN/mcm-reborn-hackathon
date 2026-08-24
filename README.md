@@ -43,7 +43,7 @@
 - 고객용 웹과 `OPERATOR` 경계의 최소 PC 운영 콘솔을 구현합니다.
 - `/operations` 콘솔은 중앙 Fixture 신청 목록·상세와 단계별 관리자·장인 담당 표시, 다음 단계 진행을 제공합니다. 실제 영속 쓰기는 현행 v2 lifecycle command에 연결한 뒤 활성화합니다.
 - 분석 모드는 `DEMO_FIXTURE`, `SEEDED_ESTIMATE`, `LIVE` 중 하나이며 모두 같은 예상값 응답 계약을 사용합니다.
-- `LIVE`는 배포 opt-in, privacy notice와 요청별 외부 처리 동의를 요구합니다. 공식 OpenAI JavaScript SDK의 Chat Completions Structured Outputs를 사용하고 제공자 오류에는 검증된 `DEMO_FIXTURE` 응답으로 폴백합니다.
+- `LIVE`는 배포 opt-in, privacy notice와 요청별 외부 처리 동의를 요구합니다. 공식 OpenAI JavaScript SDK의 Chat Completions Structured Outputs를 사용합니다. 일시적 429는 `Retry-After`를 지키며 한 번만 재시도하고, quota·billing 한도는 재시도하지 않습니다. 최종 실패에는 검증된 `DEMO_FIXTURE` 응답으로 복구하되 결과 화면에 작게 `API오류로 인한 DEMO`를 표시합니다.
 - 사진 품질이 분석 기준에 못 미치면 폴백 성공으로 바꾸지 않고 `422 IMAGE_QUALITY_INSUFFICIENT`와 한국어 재촬영 안내를 반환합니다.
 - `authenticityPrecheck`는 사진 기반 주문 가능성 사전 신호이며 공식 정품 판정 또는 보증이 아닙니다.
 - 고객 데이터와 private 원본 이미지는 소유자 기반 RLS·Storage 정책으로 격리하고 운영자만 업무상 조회합니다.
@@ -122,6 +122,8 @@ public/assets/mvp-beta/source-backpack-engraving.webp
 
 - OpenAI Images and vision: https://developers.openai.com/api/docs/guides/images-vision
 - OpenAI Structured model outputs: https://developers.openai.com/api/docs/guides/structured-outputs
+- OpenAI rate limits: https://developers.openai.com/api/docs/guides/rate-limits
+- OpenAI API request IDs and rate-limit headers: https://developers.openai.com/api/reference/overview
 - OpenAI API key safety: https://help.openai.com/en/articles/5112595-best-practices-for-api-key-safety
 - OpenAI project keys: https://help.openai.com/en/articles/5008148-can-i-share-my-api-key-with-my-teammatecoworker
 - Next.js Route Handlers: https://nextjs.org/docs/app/getting-started/route-handlers
@@ -145,10 +147,12 @@ python -X utf8 scripts/validate_collaboration.py
 python -X utf8 validate_package.py
 npm --prefix mcm-reborn run lint
 npm --prefix mcm-reborn run typecheck
+npm --prefix mcm-reborn run test:analysis-fallback
+npm --prefix mcm-reborn run test:openai-policy
 npm --prefix mcm-reborn run build
 ```
 
-Python 검증에는 PyYAML이 필요합니다. `validate_package.py`는 API 참조·operationId, 업로드 제한, 예상치 메타데이터, 제품 4종, 단일 대표 주문, 실물 검수·변경 승인, SQL enum과 제작 시작 guard의 정합성을 확인합니다. 현재 `mcm-reborn/package.json`에는 자동 테스트 스크립트가 없으므로 테스트를 실행했다고 표시하지 말고, 추가 전까지 이 점을 남은 검증 공백으로 기록합니다.
+Python 검증에는 PyYAML이 필요합니다. `validate_package.py`는 API 참조·operationId, 업로드 제한, 예상치 메타데이터, 제품 4종, 단일 대표 주문, 실물 검수·변경 승인, SQL enum과 제작 시작 guard의 정합성을 확인합니다. native Node 테스트는 LIVE OpenAI 요청 정책과 API 오류 DEMO 표기 조건을 검증합니다.
 
 ## 중요 고지
 
