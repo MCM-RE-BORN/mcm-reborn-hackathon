@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit --incremental false",
+    "test:analysis-fallback": "node --test --test-concurrency=1 components/screens/analysis-design/analysisFallback.test.mjs",
     "test:openai-policy": "node --test --test-concurrency=1 server/openai/openAiRequestPolicy.test.mjs"
   },
   "dependencies": {
