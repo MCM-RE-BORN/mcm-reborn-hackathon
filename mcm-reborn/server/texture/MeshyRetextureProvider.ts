@@ -1,11 +1,8 @@
 import { z } from "zod";
-import {
-  RateLimitError,
-  ServiceUnavailableError,
-  UpstreamError,
-} from "@/contracts/errors";
+import { ServiceUnavailableError, UpstreamError } from "@/contracts/errors";
 import type { MeshyTextureTaskResponse } from "@/lib/texture-preview";
 import type { RetextureProvider } from "./types";
+import { throwMeshyHttpError } from "./MeshyHttpError";
 
 const MESHY_API_BASE_URL = "https://api.meshy.ai/openapi/v1";
 const REQUEST_TIMEOUT_MS = 30_000;
@@ -166,40 +163,8 @@ export class MeshyRetextureProvider implements RetextureProvider {
     }
 
     if (response.ok) return response;
-    if (response.status === 402) {
-      throw markMeshyHttpRejection(
-        new ServiceUnavailableError("Meshy API credits are insufficient", {
-          retryable: false,
-        }),
-      );
-    }
-    if (response.status === 429) {
-      throw markMeshyHttpRejection(
-        new RateLimitError("Meshy API rate limit exceeded"),
-      );
-    }
-    if (response.status === 401 || response.status === 403) {
-      throw markMeshyHttpRejection(
-        new ServiceUnavailableError("Meshy API credentials are invalid", {
-          retryable: false,
-        }),
-      );
-    }
-    const error = new UpstreamError("Meshy API returned an error");
-    if (
-      response.status >= 400 &&
-      response.status < 500 &&
-      response.status !== 408
-    ) {
-      throw markMeshyHttpRejection(error);
-    }
-    throw error;
+    return throwMeshyHttpError(response);
   }
-}
-
-function markMeshyHttpRejection<T extends Error>(error: T): T {
-  error.name = "MeshyHttpRejectionError";
-  return error;
 }
 
 export function isMeshyRetextureConfigured() {

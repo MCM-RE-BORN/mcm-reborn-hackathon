@@ -1,7 +1,11 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
-import { textureProviderErrorMessage } from './textureProviderError.ts';
+import {
+  isRetryableTextureCreateFailure,
+  textureProviderErrorMessage,
+} from './textureProviderError.ts';
 
 test('distinguishes an operator safety cap from a Meshy transient limit', () => {
   assert.equal(
@@ -41,5 +45,22 @@ test('preserves an unknown safe application message', () => {
   assert.equal(
     textureProviderErrorMessage(''),
     '3D 목업을 생성하지 못했습니다.',
+  );
+});
+
+test('enables another create only for an explicitly retryable response', () => {
+  assert.equal(isRetryableTextureCreateFailure({ retryable: true }), true);
+  assert.equal(isRetryableTextureCreateFailure({ retryable: false }), false);
+  assert.equal(isRetryableTextureCreateFailure({}), false);
+});
+
+test('submits required target retexture before optional source model', () => {
+  const source = readFileSync(
+    new URL('./TextureMockupStudio.tsx', import.meta.url),
+    'utf8',
+  );
+  assert.ok(
+    source.indexOf('requestJob("TARGET_RETEXTURE")') <
+      source.indexOf('requestJob("SOURCE_MODEL")'),
   );
 });

@@ -23,6 +23,10 @@ import {
 } from "@/lib/texture-preview";
 import { composeExteriorAtlas } from "./compose-exterior-atlas";
 import {
+  isRetryableTextureCreateFailure,
+  textureProviderErrorMessage,
+} from "./textureProviderError";
+import {
   MockupViewer,
   type TextureApplicationState,
 } from "./MockupViewer";
@@ -383,6 +387,9 @@ export function TextureMockupStudio({ analysisId }: TextureMockupStudioProps) {
         meshyTaskStorageKey(analysisId, "TARGET_RETEXTURE"),
         targetResponse.taskToken,
       );
+      // Secure the required target queue slot before starting the optional
+      // 30-credit source reference task. The source task can no longer cause
+      // the target create request itself to hit Meshy's concurrent-task cap.
       const targetPolling = pollMeshyTask(
         "TARGET_RETEXTURE",
         targetResponse.taskToken,
@@ -420,14 +427,15 @@ export function TextureMockupStudio({ analysisId }: TextureMockupStudioProps) {
       await targetPolling;
     } catch (error) {
       const message = readExternalError(error);
+      const retryableRejection = isRetryableTextureCreateRejection(error);
       setTargetTask((current) => ({
         ...current,
         error: message,
         status: "failed",
-        // A create request may have reached the paid provider before its task
-        // token reached this browser. Keep this attempt terminal so a second
-        // click cannot create another paid job.
-        terminal: true,
+        // Only responses explicitly marked retryable by the server release
+        // their reservation. Ambiguous 502 failures and non-retryable account
+        // configuration errors stay terminal to prevent duplicate paid jobs.
+        terminal: !retryableRejection,
       }));
       setExternalError(message);
       setExternalStatus(null);
@@ -741,7 +749,6 @@ function isExteriorProfileGuardError(error: unknown) {
 
 function readExternalError(error: unknown) {
   const message = error instanceof Error ? error.message : "";
-  const normalized = message.toLowerCase();
   if (isConsentGuardError(error)) {
     return "분석 시 3D 목업 생성 동의를 확인하지 못했습니다.";
   }
@@ -751,16 +758,14 @@ function readExternalError(error: unknown) {
   if (isExteriorProfileGuardError(error)) {
     return "현재 지식 기준의 외관 소재 정보가 없어 새 AI 분석이 필요합니다.";
   }
-  if (normalized.includes("credits")) {
-    return "Meshy API credits가 부족합니다.";
-  }
-  if (normalized.includes("quota") || normalized.includes("rate limit")) {
-    return "오늘 사용할 수 있는 3D 목업 생성 횟수를 초과했습니다.";
-  }
-  if (normalized.includes("not enabled")) {
-    return "3D 목업 생성 기능이 활성화되지 않았습니다.";
-  }
-  return message || "3D 목업을 생성하지 못했습니다.";
+  return textureProviderErrorMessage(message);
+}
+
+function isRetryableTextureCreateRejection(error: unknown) {
+  return (
+    error instanceof CustomerApiError &&
+    isRetryableTextureCreateFailure(error.details)
+  );
 }
 
 function readDisplayStatus({

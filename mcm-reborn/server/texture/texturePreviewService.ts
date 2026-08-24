@@ -7,10 +7,11 @@ import {
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import {
+  AppError,
   ConflictError,
   ForbiddenError,
-  RateLimitError,
   ServiceUnavailableError,
+  UpstreamError,
   ValidationError,
 } from "@/contracts/errors";
 import {
@@ -43,18 +44,17 @@ import {
   MeshySourceModelProvider,
   isMeshySourceModelConfigured,
 } from "./MeshySourceModelProvider";
+import { MeshyHttpRejectionError } from "./MeshyHttpError";
 import {
   persistTrustedMeshyTexture,
   type MeshyTextureAssetAccess,
 } from "./MeshyTextureAssetProxy";
 import { getAnalysisSourceImageUrls } from "./analysisSourceImages";
+import { resolveTextureDailyQuotaPolicy } from "./textureQuotaPolicy";
 
 const TEXTURE_OPERATION = "createTexturePreview";
 const TEXTURE_DAILY_QUOTA_OPERATION = "createTexturePreviewDailyQuota";
-const MAX_DAILY_REQUESTS_PER_PROVIDER = 3;
-const MAX_GLOBAL_DAILY_REQUESTS_PER_PROVIDER = 5;
-const MAX_DAILY_SOURCE_MODEL_REQUESTS = 1;
-const MAX_GLOBAL_DAILY_SOURCE_MODEL_REQUESTS = 2;
+const TEXTURE_RESPONSE_RECOVERY_OPERATION = "createTexturePreviewRecovery";
 const TASK_TOKEN_TTL_MS = 72 * 60 * 60 * 1000;
 const MESHY_POLL_CACHE_TTL_MS = 2_500;
 const MAX_POLL_CACHE_ENTRIES = 1_000;
@@ -74,11 +74,11 @@ type PollCacheEntry = {
   promise: Promise<MeshyTextureTaskResponse>;
 };
 
-type DailyQuotaReservation = {
+type TextureBudgetReservation = {
   customerId: string;
-  globalQuotaKey: string;
+  quotaKeys: string[];
+  recoveryKey: string;
   requestHash: string;
-  userQuotaKey: string;
 };
 
 const meshyPollCache = new Map<string, PollCacheEntry>();
@@ -196,9 +196,9 @@ export async function createTexturePreview(
   );
   if (reservation.cachedResponse) return reservation.cachedResponse;
 
-  let quotaReservation: DailyQuotaReservation | null = null;
+  let quotaReservation: TextureBudgetReservation | null = null;
   try {
-    quotaReservation = await reserveDailyTextureBudget(
+    quotaReservation = await reserveTextureBudgetAndRecovery(
       admin,
       input,
       viewer.id,
@@ -206,13 +206,19 @@ export async function createTexturePreview(
     );
     await recordTextureConsent(admin, input, viewer.id, reservation.requestHash);
   } catch (error) {
-    await releaseDailyTextureBudget(admin, quotaReservation);
-    await releaseTextureOperation(
+    const budgetReleased = await releaseTextureBudgetReservation(
+      admin,
+      quotaReservation,
+    );
+    const operationReleased = await releaseTextureOperation(
       admin,
       reservation.storageKey,
       reservation.requestHash,
       viewer.id,
     );
+    if (!budgetReleased || !operationReleased) {
+      throw textureReservationCleanupError();
+    }
     throw error;
   }
 
@@ -239,15 +245,24 @@ export async function createTexturePreview(
       );
     }
   } catch (error) {
-    if (isExplicitMeshyHttpRejection(error)) {
-      await releaseDailyTextureBudget(admin, quotaReservation);
-      await releaseTextureOperation(
+    if (isKnownUnacceptedProviderRequest(error)) {
+      const budgetReleased = await releaseTextureBudgetReservation(
+        admin,
+        quotaReservation,
+      );
+      const operationReleased = await releaseTextureOperation(
         admin,
         reservation.storageKey,
         reservation.requestHash,
         viewer.id,
       );
+      if (!budgetReleased || !operationReleased) {
+        throw textureReservationCleanupError();
+      }
     } else {
+      // A timeout, connection reset, 5xx, or malformed success can happen
+      // after Meshy accepted a paid task. Keep the primary reservation locked
+      // so an automatic retry cannot create a duplicate charged task.
       await storeTextureOperationFailure(
         admin,
         reservation.storageKey,
@@ -465,7 +480,7 @@ async function reserveTextureOperation(
     };
   }
   if (row.response_status === null) {
-    const recovered = await readQuotaCachedTextureResponse(
+    const recovered = await readRecoveryCachedTextureResponse(
       admin,
       customerId,
       requestHash,
@@ -495,7 +510,7 @@ async function reserveTextureOperation(
   );
 }
 
-async function readQuotaCachedTextureResponse(
+async function readRecoveryCachedTextureResponse(
   admin: SupabaseClient,
   customerId: string,
   requestHash: string,
@@ -504,7 +519,10 @@ async function readQuotaCachedTextureResponse(
     .from("idempotency_keys")
     .select("response_body,response_status")
     .eq("user_id", customerId)
-    .eq("operation", TEXTURE_DAILY_QUOTA_OPERATION)
+    .in("operation", [
+      TEXTURE_RESPONSE_RECOVERY_OPERATION,
+      TEXTURE_DAILY_QUOTA_OPERATION,
+    ])
     .eq("request_hash", requestHash)
     .in("response_status", [200, 202])
     .limit(1)
@@ -522,7 +540,7 @@ async function storeTextureOperationSuccess(
   requestHash: string,
   customerId: string,
   response: TexturePreviewCreateResponse,
-  quotaReservation: DailyQuotaReservation | null = null,
+  quotaReservation: TextureBudgetReservation | null = null,
 ) {
   const responseStatus = response.kind === "task" ? 202 : 200;
   for (let attempt = 0; attempt < 3; attempt += 1) {
@@ -536,7 +554,17 @@ async function storeTextureOperationSuccess(
       .is("response_status", null)
       .select("key")
       .maybeSingle();
-    if (!error && data?.key === storageKey) return;
+    if (!error && data?.key === storageKey) {
+      if (quotaReservation) {
+        await releaseTextureReservationKeys(
+          admin,
+          [quotaReservation.recoveryKey],
+          customerId,
+          requestHash,
+        );
+      }
+      return;
+    }
     if (attempt < 2) await waitForDatabaseRetry(100 * (attempt + 1));
   }
 
@@ -544,57 +572,110 @@ async function storeTextureOperationSuccess(
     const { data, error } = await admin
       .from("idempotency_keys")
       .update({ response_body: response, response_status: responseStatus })
-      .eq("key", quotaReservation.globalQuotaKey)
+      .eq("key", quotaReservation.recoveryKey)
       .eq("user_id", customerId)
-      .eq("operation", TEXTURE_DAILY_QUOTA_OPERATION)
+      .eq("operation", TEXTURE_RESPONSE_RECOVERY_OPERATION)
       .eq("request_hash", requestHash)
       .is("response_status", null)
       .select("key")
       .maybeSingle();
-    if (!error && data?.key === quotaReservation.globalQuotaKey) return;
+    if (!error && data?.key === quotaReservation.recoveryKey) return;
   }
 
   throw new ServiceUnavailableError("Texture response could not be cached");
 }
 
-async function reserveDailyTextureBudget(
+async function reserveTextureBudgetAndRecovery(
   admin: SupabaseClient,
   input: CreateTexturePreviewInput,
   customerId: string,
   requestHash: string,
-): Promise<DailyQuotaReservation> {
+): Promise<TextureBudgetReservation> {
   const utcDate = new Date().toISOString().slice(0, 10);
   const provider = providerForJob(input.jobKind);
-  const userLimit =
-    input.jobKind === "SOURCE_MODEL"
-      ? MAX_DAILY_SOURCE_MODEL_REQUESTS
-      : MAX_DAILY_REQUESTS_PER_PROVIDER;
-  const globalLimit =
-    input.jobKind === "SOURCE_MODEL"
-      ? MAX_GLOBAL_DAILY_SOURCE_MODEL_REQUESTS
-      : MAX_GLOBAL_DAILY_REQUESTS_PER_PROVIDER;
-  const userQuotaKey = await claimDailyQuotaSlot(
+  let policy;
+  try {
+    policy = resolveTextureDailyQuotaPolicy(input.jobKind);
+  } catch (error) {
+    throw new ServiceUnavailableError(
+      error instanceof Error
+        ? error.message
+        : "Texture quota configuration is invalid",
+      { retryable: false },
+    );
+  }
+
+  const recoveryKey = await claimTextureResponseRecovery(
     admin,
-    `${customerId}:${provider}:${input.jobKind}:${utcDate}`,
-    userLimit,
     input,
     customerId,
     requestHash,
   );
+  const quotaKeys: string[] = [];
   try {
-    const globalQuotaKey = await claimDailyQuotaSlot(
+    if (policy.userLimit !== null) {
+      quotaKeys.push(
+        await claimDailyQuotaSlot(
+          admin,
+          `${customerId}:${provider}:${input.jobKind}:${utcDate}`,
+          policy.userLimit,
+          input,
+          customerId,
+          requestHash,
+        ),
+      );
+    }
+    if (policy.globalLimit !== null) {
+      quotaKeys.push(
+        await claimDailyQuotaSlot(
+          admin,
+          `GLOBAL:${provider}:${input.jobKind}:${utcDate}`,
+          policy.globalLimit,
+          input,
+          customerId,
+          requestHash,
+        ),
+      );
+    }
+    return { customerId, quotaKeys, recoveryKey, requestHash };
+  } catch (error) {
+    const released = await releaseTextureReservationKeys(
       admin,
-      `GLOBAL:${provider}:${input.jobKind}:${utcDate}`,
-      globalLimit,
-      input,
+      [recoveryKey, ...quotaKeys],
       customerId,
       requestHash,
     );
-    return { customerId, globalQuotaKey, requestHash, userQuotaKey };
-  } catch (error) {
-    await releaseQuotaKeys(admin, [userQuotaKey], customerId, requestHash);
+    if (!released) throw textureReservationCleanupError();
     throw error;
   }
+}
+
+async function claimTextureResponseRecovery(
+  admin: SupabaseClient,
+  input: CreateTexturePreviewInput,
+  customerId: string,
+  requestHash: string,
+) {
+  const recoveryKey = createHash("sha256")
+    .update(`${TEXTURE_RESPONSE_RECOVERY_OPERATION}:${customerId}:${requestHash}`)
+    .digest("hex");
+  const { error } = await admin.from("idempotency_keys").insert({
+    key: recoveryKey,
+    operation: TEXTURE_RESPONSE_RECOVERY_OPERATION,
+    request_hash: requestHash,
+    resource_id: input.analysisId,
+    user_id: customerId,
+  });
+  if (!error) return recoveryKey;
+  if (error.code === "23505") {
+    throw new ConflictError(
+      "TEXTURE_REQUEST_IN_PROGRESS",
+      "This texture request already has a recovery reservation",
+    );
+  }
+  throw new ServiceUnavailableError(
+    "Texture response recovery could not be reserved",
+  );
 }
 
 async function claimDailyQuotaSlot(
@@ -621,41 +702,64 @@ async function claimDailyQuotaSlot(
       throw new ServiceUnavailableError("Texture usage limit is unavailable");
     }
   }
-  throw new RateLimitError(
-    `Daily ${input.jobKind} preview limit reached`,
+  throw new AppError(
+    "TEXTURE_DAILY_LIMIT_REACHED",
+    429,
+    `Configured daily ${input.jobKind} safety limit reached`,
+    { retryable: false },
   );
 }
 
-async function releaseDailyTextureBudget(
+async function releaseTextureBudgetReservation(
   admin: SupabaseClient,
-  reservation: DailyQuotaReservation | null,
+  reservation: TextureBudgetReservation | null,
 ) {
-  if (!reservation) return;
-  await releaseQuotaKeys(
+  if (!reservation) return true;
+  return releaseTextureReservationKeys(
     admin,
-    [reservation.userQuotaKey, reservation.globalQuotaKey],
+    [reservation.recoveryKey, ...reservation.quotaKeys],
     reservation.customerId,
     reservation.requestHash,
   );
 }
 
-async function releaseQuotaKeys(
+async function releaseTextureReservationKeys(
   admin: SupabaseClient,
   keys: string[],
   customerId: string,
   requestHash: string,
 ) {
-  const { error } = await admin
-    .from("idempotency_keys")
-    .delete()
-    .in("key", keys)
-    .eq("user_id", customerId)
-    .eq("operation", TEXTURE_DAILY_QUOTA_OPERATION)
-    .eq("request_hash", requestHash)
-    .is("response_status", null);
-  if (error) {
-    console.error("[TexturePreview] Failed to release unused quota");
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const { error } = await admin
+      .from("idempotency_keys")
+      .delete()
+      .in("key", keys)
+      .eq("user_id", customerId)
+      .in("operation", [
+        TEXTURE_DAILY_QUOTA_OPERATION,
+        TEXTURE_RESPONSE_RECOVERY_OPERATION,
+      ])
+      .eq("request_hash", requestHash)
+      .is("response_status", null);
+    if (!error) return true;
+    if (attempt < 2) await waitForDatabaseRetry(100 * (attempt + 1));
   }
+  console.error("[TexturePreview] Failed to release unused reservation");
+  return false;
+}
+
+function isKnownUnacceptedProviderRequest(error: unknown) {
+  return (
+    error instanceof MeshyHttpRejectionError ||
+    error instanceof ValidationError
+  );
+}
+
+function textureReservationCleanupError() {
+  return new UpstreamError(
+    "Texture request cleanup failed; retry is locked to prevent duplicate billing",
+    { retryable: false },
+  );
 }
 
 async function releaseTextureOperation(
@@ -664,17 +768,20 @@ async function releaseTextureOperation(
   requestHash: string,
   customerId: string,
 ) {
-  const { error } = await admin
-    .from("idempotency_keys")
-    .delete()
-    .eq("key", storageKey)
-    .eq("user_id", customerId)
-    .eq("operation", TEXTURE_OPERATION)
-    .eq("request_hash", requestHash)
-    .is("response_status", null);
-  if (error) {
-    console.error("[TexturePreview] Failed to release unused reservation");
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const { error } = await admin
+      .from("idempotency_keys")
+      .delete()
+      .eq("key", storageKey)
+      .eq("user_id", customerId)
+      .eq("operation", TEXTURE_OPERATION)
+      .eq("request_hash", requestHash)
+      .is("response_status", null);
+    if (!error) return true;
+    if (attempt < 2) await waitForDatabaseRetry(100 * (attempt + 1));
   }
+  console.error("[TexturePreview] Failed to release primary reservation");
+  return false;
 }
 
 async function storeTextureOperationFailure(

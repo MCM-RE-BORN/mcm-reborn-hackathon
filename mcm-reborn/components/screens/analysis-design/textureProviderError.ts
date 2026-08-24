@@ -20,3 +20,9 @@ export function textureProviderErrorMessage(message: string): string {
   }
   return message || '3D 목업을 생성하지 못했습니다.';
 }
+
+export function isRetryableTextureCreateFailure(
+  details: Readonly<Record<string, unknown>>,
+): boolean {
+  return details.retryable === true;
+}
