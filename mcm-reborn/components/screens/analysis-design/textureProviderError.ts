@@ -18,6 +18,15 @@ export function textureProviderErrorMessage(message: string): string {
   if (normalized.includes('not enabled')) {
     return '3D 목업 생성 기능이 활성화되지 않았습니다.';
   }
+  if (
+    normalized.includes('meshy api rejected') ||
+    normalized.includes('meshy task submission outcome is unknown') ||
+    normalized.includes('recovery reservation') ||
+    normalized.includes('texture response recovery could not be reserved') ||
+    normalized.includes('texture request cleanup failed')
+  ) {
+    return '3D 목업을 생성하지 못했습니다.';
+  }
   return message || '3D 목업을 생성하지 못했습니다.';
 }
 

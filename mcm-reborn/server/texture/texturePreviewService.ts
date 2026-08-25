@@ -813,10 +813,6 @@ async function storeTextureOperationFailure(
   }
 }
 
-function isExplicitMeshyHttpRejection(error: unknown) {
-  return error instanceof Error && error.name === "MeshyHttpRejectionError";
-}
-
 async function recordTextureConsent(
   admin: SupabaseClient,
   input: CreateTexturePreviewInput,

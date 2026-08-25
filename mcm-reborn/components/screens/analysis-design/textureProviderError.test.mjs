@@ -49,6 +49,24 @@ test('preserves an unknown safe application message', () => {
   );
 });
 
+test('keeps internal recovery diagnostics out of customer UI', () => {
+  const diagnostics = [
+    'Meshy API rejected the task request',
+    'Meshy API rejected the request',
+    'Meshy task submission outcome is unknown; retry is locked to prevent duplicate billing',
+    'This texture request already has a recovery reservation',
+    'Texture response recovery could not be reserved',
+    'Texture request cleanup failed; retry is locked to prevent duplicate billing',
+  ];
+
+  for (const diagnostic of diagnostics) {
+    assert.equal(
+      textureProviderErrorMessage(diagnostic),
+      '3D 목업을 생성하지 못했습니다.',
+    );
+  }
+});
+
 test('enables another create only for an explicitly retryable response', () => {
   assert.equal(isRetryableTextureCreateFailure({ retryable: true }), true);
   assert.equal(isRetryableTextureCreateFailure({ retryable: false }), false);
