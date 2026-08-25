@@ -43,13 +43,13 @@
 - 고객용 웹과 `OPERATOR` 경계의 최소 PC 운영 콘솔을 구현합니다.
 - `/operations` 콘솔은 중앙 Fixture 신청 목록·상세와 단계별 관리자·장인 담당 표시, 다음 단계 진행을 제공합니다. 실제 영속 쓰기는 현행 v2 lifecycle command에 연결한 뒤 활성화합니다.
 - 분석 모드는 `DEMO_FIXTURE`, `SEEDED_ESTIMATE`, `LIVE` 중 하나이며 모두 같은 예상값 응답 계약을 사용합니다.
-- `LIVE`는 배포 opt-in, privacy notice와 요청별 외부 처리 동의를 요구합니다. 공식 OpenAI JavaScript SDK의 Chat Completions Structured Outputs를 사용합니다. 일시적 429는 `Retry-After`를 지키며 한 번만 재시도하고, quota·billing 한도는 재시도하지 않습니다. 최종 실패에는 검증된 `DEMO_FIXTURE` 응답으로 복구하되 결과 화면에 작게 `API오류로 인한 DEMO`를 표시합니다.
+- `LIVE`는 배포 opt-in, privacy notice와 요청별 외부 처리 동의를 요구합니다. 공식 OpenAI JavaScript SDK의 Chat Completions Structured Outputs를 사용합니다. 최종 분석의 일시적 429·408·409·5xx·연결 timeout은 전체 deadline 안에서 한 번만 재시도하고, 429는 `Retry-After` 또는 소진 bucket reset을 지킵니다. quota·billing 한도와 일반 4xx는 재시도하지 않습니다. 최종 실패에는 검증된 `DEMO_FIXTURE` 응답으로 복구하되 결과 화면에 작게 `API오류로 인한 DEMO`를 표시합니다.
 - 사진 품질이 분석 기준에 못 미치면 폴백 성공으로 바꾸지 않고 `422 IMAGE_QUALITY_INSUFFICIENT`와 한국어 재촬영 안내를 반환합니다.
 - `authenticityPrecheck`는 사진 기반 주문 가능성 사전 신호이며 공식 정품 판정 또는 보증이 아닙니다.
 - 고객 데이터와 private 원본 이미지는 소유자 기반 RLS·Storage 정책으로 격리하고 운영자만 업무상 조회합니다.
 - 제품 목록은 각 결과 제품의 완성형 전체 이미지를 표시합니다.
 - 현재 제품 상세는 정적 다각도 목업을 제공합니다. Product3D JSON은 DB와 canonical Mock에 보존하지만 실제 GLB/poster가 준비되기 전에는 `model_3d_ready`/`model3dReady=false`이며 API는 `has3d=false`, `model3d=null`로 응답합니다.
-- 신규 `3D 목업` 생성(`TARGET_RETEXTURE`)의 앱 일일 한도는 기본적으로 비활성입니다. 필요하면 `MESHY_TARGET_RETEXTURE_DAILY_LIMIT_PER_USER`와 `MESHY_TARGET_RETEXTURE_GLOBAL_DAILY_LIMIT`에 각각 `1`~`100`을 설정해 UTC 일일 안전 한도를 켤 수 있으며 빈값 또는 `0`은 비활성입니다. Meshy의 실제 크레딧·요청 제한은 provider의 `402`·`429` 응답을 기준으로 처리하고, 완료·진행 중인 동일 작업과 복구 영수증을 재사용해 중복 생성·과금을 막습니다.
+- 신규 `3D 목업` 생성(`TARGET_RETEXTURE`)의 앱 일일 한도는 기본적으로 비활성입니다. 필요하면 `MESHY_TARGET_RETEXTURE_DAILY_LIMIT_PER_USER`와 `MESHY_TARGET_RETEXTURE_GLOBAL_DAILY_LIMIT`에 각각 `1`~`100`을 설정해 UTC 일일 안전 한도를 켤 수 있으며 빈값 또는 `0`은 비활성입니다. Meshy의 실제 크레딧·요청 제한은 provider의 `402`·`429` 응답을 기준으로 처리합니다. task polling의 429는 같은 token으로 `Retry-After`를 최대 60초까지 반영해 재조회하고, 완료·진행 중인 동일 작업과 복구 영수증을 재사용해 중복 생성·과금을 막습니다.
 - 결제, 물류, ESG 산식, 보증서는 Mock입니다.
 - 결제 성공은 `ORDER_PLACED`이며, 주문 후 전문가 실물 검수와 필요한 고객 변경 승인 전에는 `IN_PRODUCTION`으로 전환할 수 없습니다.
 

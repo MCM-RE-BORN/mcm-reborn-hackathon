@@ -61,6 +61,7 @@ PDF 지식은 새 공개 API 필드를 임의로 만들지 않고 현재 구조�
 - LIVE 성공 결과의 `analyses.provider_result.knowledgeVersion`에는 재사용 가이드, 공개 위키 코퍼스·검색기, 분석 프롬프트 버전을 합친 값을 저장한다.
 - `knowledgeTrace`에는 위키 조회 요청 ID, query hash, 순서가 보존된 claim·source ID, 최종 tool context SHA-256과 적용 상태를 저장한다. 제품 예시는 런타임에서 비활성화하고 자유 검색어 원문은 저장하지 않는다. 조회 뒤 최종 호출이 실패해 Fixture로 폴백한 경우에도 `LOOKUP_COMPLETED_FINAL_FAILED`를 보존한다.
 - LIVE 제공자 실패 뒤 Fixture로 폴백하면 stage, 제한 종류, HTTP status, provider/client request ID, 재시도 횟수와 요청·토큰·프로젝트 토큰 rate-limit 헤더만 allowlist 서버 로그에 남긴다. 고객이 Supabase REST로 조회할 수 있는 `analyses.provider_result`에는 운영 한도 진단을 저장하지 않는다. provider 오류 본문·메시지·전체 헤더·signed URL은 저장하거나 로그하지 않는다.
+- 최종 LIVE 호출은 일시적 429·408·409·5xx·연결 timeout만 전체 deadline 안에서 한 번 재시도한다. quota·billing·spend·usage 한도와 일반 4xx는 재시도하지 않으며 SDK 자동 재시도는 0으로 고정해 정책 횟수가 중첩되지 않게 한다.
 - LIVE 분석 idempotency request hash에도 통합 지식 버전을 포함해, 다른 코퍼스·검색기·프롬프트 결과를 같은 요청으로 재생하지 않는다.
 - Fixture 결과는 실제 사진 판독이나 이 지식의 적용 결과가 아니므로 `knowledgeVersion`을 기록하지 않는다.
 - 버전 변경 전에는 대표 사진 세트로 소재 분류, 부위별 손상 위치, 품질 재촬영, 불확실성, 긴 스트립 판정을 회귀 평가한다.

@@ -1944,7 +1944,11 @@ def validate_runtime_analysis_contract(
             'Retry-After parsing': "headers.get('retry-after')",
             'project-token reset header': "x-ratelimit-reset-project-tokens",
             'exhausted reset delay': 'exhaustedBucketResetDelay(metadata)',
-            'quota retry exclusion': "metadata.kind !== 'RATE_LIMIT'",
+            'central retry classifier': 'isRetryableProviderFailure(metadata)',
+            'transient timeout retry': "metadata.kind === 'TIMEOUT'",
+            'transient 408 retry': 'metadata.status === 408',
+            'transient 409 retry': 'metadata.status === 409',
+            'transient upstream retry': 'metadata.status >= 500',
         },
     )
     if 'providerFailure: providerOutput.providerFailure' in service:
@@ -2096,6 +2100,7 @@ def validate_meshy_texture_policy_contract(
             'ambiguous upstream is locked': (
                 'new UpstreamError(failure.message, { retryable: false })'
             ),
+            'provider retry window': 'readMeshyRetryAfterMs(response.headers)',
         },
     )
     for label, provider in {
@@ -2167,6 +2172,8 @@ def validate_meshy_texture_policy_contract(
             'terminal inverse of retryable': 'terminal: !retryableRejection',
             'polling 429 handled in place': 'error.status === 429',
             'polling retry continues': 'continue;',
+            'provider retry delay': 'textureProviderRetryDelayMs(',
+            'bounded consecutive 429': 'MAX_MESHY_RATE_LIMIT_RETRIES = 20',
         },
     )
     target_request = texture_studio.find(

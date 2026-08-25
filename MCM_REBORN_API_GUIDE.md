@@ -120,7 +120,7 @@ RECEIVED | ANALYZING | SUPPLEMENT_REQUIRED | COMPLETED | FAILED
 
 어떤 모드를 사용하더라도 UI는 `confidencePercent`와 `notice`를 숨기지 않습니다. 재활용률 필드명은 항상 `estimatedReusableMaterialRate`입니다.
 
-`LIVE`는 공식 OpenAI JavaScript SDK의 `chat.completions.parse`와 Zod `zodResponseFormat`을 사용하는 Chat Completions Structured Outputs 구현입니다. 두 단계 호출은 하나의 deadline과 프로세스 단위 FIFO를 사용하며 최종 분석 시간을 먼저 예약합니다. lookup의 rate limit·quota 뒤에는 최종 호출을 추가하지 않습니다. 최종 호출의 일시적 429만 `Retry-After` 또는 소진 bucket reset과 jitter 뒤 한 번 재시도하고 quota·billing 한도는 재시도하지 않습니다. 제공자 최종 장애에는 canonical `DEMO_FIXTURE`로 폴백해 작은 `API오류로 인한 DEMO` 표기와 allowlist 서버 로그를 남기지만, 이미지 품질 실패는 성공으로 바꾸지 않습니다.
+`LIVE`는 공식 OpenAI JavaScript SDK의 `chat.completions.parse`와 Zod `zodResponseFormat`을 사용하는 Chat Completions Structured Outputs 구현입니다. 두 단계 호출은 하나의 deadline과 프로세스 단위 FIFO를 사용하며 최종 분석 시간을 먼저 예약합니다. lookup의 rate limit·quota 뒤에는 최종 호출을 추가하지 않습니다. 최종 호출의 일시적 429·408·409·5xx·연결 timeout은 deadline 안에서 한 번 재시도하고, 429는 `Retry-After` 또는 소진 bucket reset과 jitter를 따릅니다. quota·billing 한도와 일반 4xx는 재시도하지 않습니다. 제공자 최종 장애에는 canonical `DEMO_FIXTURE`로 폴백해 작은 `API오류로 인한 DEMO` 표기와 allowlist 서버 로그를 남기지만, 이미지 품질 실패는 성공으로 바꾸지 않습니다.
 
 private 이미지를 외부 AI에 보내려면 배포의 `ENABLE_EXTERNAL_AI=true`, 고정된 `EXTERNAL_AI_PRIVACY_NOTICE_VERSION`, OpenAI 서버 설정과 아래 요청 필드를 모두 만족해야 합니다.
 
