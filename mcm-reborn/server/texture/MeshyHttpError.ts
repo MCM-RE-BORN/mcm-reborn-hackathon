@@ -17,12 +17,21 @@ export class MeshyHttpRejectionError extends AppError {
   }
 }
 
+export type MeshyHttpRequestKind = "CREATE" | "POLL";
+
 /** Convert only Meshy's documented HTTP statuses and allowlisted 429 kinds. */
-export async function throwMeshyHttpError(response: Response): Promise<never> {
+export async function throwMeshyHttpError(
+  response: Response,
+  requestKind: MeshyHttpRequestKind,
+): Promise<never> {
   const payload = response.status === 429 ? await readJson(response) : null;
   const failure = classifyMeshyHttpFailure(response.status, payload);
   if (failure.kind === "UPSTREAM") {
-    throw new UpstreamError(failure.message, { retryable: false });
+    const retryAfterMs = readMeshyRetryAfterMs(response.headers);
+    throw new UpstreamError(failure.message, {
+      retryable: requestKind === "POLL",
+      ...(retryAfterMs === null ? {} : { retryAfterMs }),
+    });
   }
   if (failure.kind === "RATE_LIMIT") {
     const retryAfterMs = readMeshyRetryAfterMs(response.headers);

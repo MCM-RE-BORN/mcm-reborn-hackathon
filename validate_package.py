@@ -1946,6 +1946,9 @@ def validate_runtime_analysis_contract(
             'exhausted reset delay': 'exhaustedBucketResetDelay(metadata)',
             'central retry classifier': 'isRetryableProviderFailure(metadata)',
             'transient timeout retry': "metadata.kind === 'TIMEOUT'",
+            'transient connection retry': (
+                "metadata.kind === 'CONNECTION_ERROR'"
+            ),
             'transient 408 retry': 'metadata.status === 408',
             'transient 409 retry': 'metadata.status === 409',
             'transient upstream retry': 'metadata.status >= 500',
@@ -1981,9 +1984,11 @@ def validate_meshy_texture_policy_contract(
     package_json: dict[str, Any],
     service: str,
     quota_policy: str,
+    task_receipt_policy: str,
     meshy_http_error: str,
     retexture_provider: str,
     source_model_provider: str,
+    exterior_classifier: str,
     texture_studio: str,
     customer_client: str,
     ui_error_policy: str,
@@ -2004,6 +2009,9 @@ def validate_meshy_texture_policy_contract(
             'serialized policy tests': '--test-concurrency=1',
             'quota policy test': 'server/texture/textureQuotaPolicy.test.mjs',
             'Meshy HTTP policy test': 'server/texture/meshyHttpPolicy.test.mjs',
+            'Meshy receipt policy test': (
+                'server/texture/meshyTaskReceiptPolicy.test.mjs'
+            ),
             'UI error policy test': (
                 'components/screens/analysis-design/textureProviderError.test.mjs'
             ),
@@ -2027,6 +2035,18 @@ def validate_meshy_texture_policy_contract(
         },
     )
     require_fragments(
+        task_receipt_policy,
+        'meshyTaskReceiptPolicy.ts',
+        {
+            'server-stored receipt binding': 'StoredMeshyTaskReceiptBinding',
+            'analysis binding check': (
+                'value.analysisId !== expected.analysisId'
+            ),
+            'job binding check': 'value.jobKind !== expected.jobKind',
+            'owner binding check': 'value.userId !== expected.userId',
+        },
+    )
+    require_fragments(
         service,
         'texturePreviewService.ts',
         {
@@ -2044,6 +2064,11 @@ def validate_meshy_texture_policy_contract(
             'ambiguous create is non-retryable': (
                 'Meshy task submission outcome is unknown; retry is locked '
                 'to prevent duplicate billing'
+            ),
+            'cached task token refresh': 'refreshCachedTextureResponse(',
+            'stored receipt reader': 'readStoredMeshyTaskReceipt(',
+            'classifier failure releases reservation': (
+                'input.jobKind === "EXTERIOR_PLAN"'
             ),
         },
     )
@@ -2097,9 +2122,7 @@ def validate_meshy_texture_policy_contract(
         {
             'explicit rejection class': 'class MeshyHttpRejectionError extends AppError',
             'shared HTTP rejection helper': 'function throwMeshyHttpError(',
-            'ambiguous upstream is locked': (
-                'new UpstreamError(failure.message, { retryable: false })'
-            ),
+            'poll-only upstream retry': 'retryable: requestKind === "POLL"',
             'provider retry window': 'readMeshyRetryAfterMs(response.headers)',
         },
     )
@@ -2112,7 +2135,9 @@ def validate_meshy_texture_policy_contract(
             label,
             {
                 'shared Meshy error import': 'import { throwMeshyHttpError }',
-                'shared Meshy error call': 'return throwMeshyHttpError(response);',
+                'shared Meshy error call': (
+                    'return throwMeshyHttpError(response, requestKind);'
+                ),
             },
         )
     require_fragments(
@@ -2127,6 +2152,17 @@ def validate_meshy_texture_policy_contract(
         },
     )
 
+    require_fragments(
+        exterior_classifier,
+        'ExteriorMaterialClassifier.ts',
+        {
+            'serialized classifier': 'runSerializedOpenAiAnalysis(',
+            'classifier retry stage': 'stage: "EXTERIOR_PLAN"',
+            'bounded classifier attempts': 'maxAttempts: 2',
+            'SDK retries disabled': 'maxRetries: 0',
+            'classifier output cap': 'EXTERIOR_PLAN_MAX_COMPLETION_TOKENS',
+        },
+    )
     require_fragments(
         env_example,
         '.env.example Meshy safety caps',
@@ -2160,6 +2196,7 @@ def validate_meshy_texture_policy_contract(
         'textureProviderError.ts',
         {
             'retryable detail contract': 'return details.retryable === true;',
+            'minimum provider delay': 'Math.max(fallbackMs',
         },
     )
     require_fragments(
@@ -2173,9 +2210,31 @@ def validate_meshy_texture_policy_contract(
             'polling 429 handled in place': 'error.status === 429',
             'polling retry continues': 'continue;',
             'provider retry delay': 'textureProviderRetryDelayMs(',
-            'bounded consecutive 429': 'MAX_MESHY_RATE_LIMIT_RETRIES = 20',
+            'bounded provider retries': 'MAX_MESHY_PROVIDER_RETRIES = 20',
+            'total provider retry counter': 'providerRetries += 1',
+            'generation-safe in-flight release': (
+                'pollGenerationRef.current[jobKind] === generation'
+            ),
+            'poll request timeout': (
+                'AbortSignal.timeout(MESHY_POLL_REQUEST_TIMEOUT_MS)'
+            ),
+            'asset request timeout': (
+                'AbortSignal.timeout(TEXTURE_ASSET_REQUEST_TIMEOUT_MS)'
+            ),
+            'expired browser token recovery': (
+                'forgetMeshyTaskToken(analysisId, jobKind);'
+            ),
+            'local demo mockup fallback': 'activateDemoMockup();',
+            'demo fallback disclosure': (
+                'AI 3D 목업 생성에 문제가 있어 데모 3D 목업으로 대체했습니다.'
+            ),
+            'demo fallback recovery': (
+                'hasRememberedDemoMockup(analysisId)'
+            ),
         },
     )
+    if texture_studio.count('providerRetries = 0') != 1:
+        fail('TextureMockupStudio.tsx must not reset the total provider retry counter')
     target_request = texture_studio.find(
         'await requestJob("TARGET_RETEXTURE")'
     )
@@ -2445,6 +2504,10 @@ def main() -> None:
     runtime_texture_quota_policy = (
         ROOT / 'mcm-reborn' / 'server' / 'texture' / 'textureQuotaPolicy.ts'
     ).read_text(encoding='utf-8')
+    runtime_meshy_task_receipt_policy = (
+        ROOT / 'mcm-reborn' / 'server' / 'texture'
+        / 'meshyTaskReceiptPolicy.ts'
+    ).read_text(encoding='utf-8')
     runtime_meshy_http_error = (
         ROOT / 'mcm-reborn' / 'server' / 'texture' / 'MeshyHttpError.ts'
     ).read_text(encoding='utf-8')
@@ -2453,6 +2516,10 @@ def main() -> None:
     ).read_text(encoding='utf-8')
     runtime_meshy_source_model_provider = (
         ROOT / 'mcm-reborn' / 'server' / 'texture' / 'MeshySourceModelProvider.ts'
+    ).read_text(encoding='utf-8')
+    runtime_exterior_classifier = (
+        ROOT / 'mcm-reborn' / 'server' / 'texture'
+        / 'ExteriorMaterialClassifier.ts'
     ).read_text(encoding='utf-8')
     runtime_texture_studio = (
         ROOT / 'mcm-reborn' / 'components' / 'screens' / 'analysis-design'
@@ -2564,9 +2631,11 @@ def main() -> None:
         runtime_package_json,
         runtime_texture_service,
         runtime_texture_quota_policy,
+        runtime_meshy_task_receipt_policy,
         runtime_meshy_http_error,
         runtime_meshy_retexture_provider,
         runtime_meshy_source_model_provider,
+        runtime_exterior_classifier,
         runtime_texture_studio,
         runtime_customer_client,
         runtime_texture_error_policy,

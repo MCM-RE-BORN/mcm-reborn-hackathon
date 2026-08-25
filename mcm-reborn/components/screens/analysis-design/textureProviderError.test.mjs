@@ -57,6 +57,7 @@ test('keeps internal recovery diagnostics out of customer UI', () => {
     'This texture request already has a recovery reservation',
     'Texture response recovery could not be reserved',
     'Texture request cleanup failed; retry is locked to prevent duplicate billing',
+    'Stored Meshy task receipt is invalid',
   ];
 
   for (const diagnostic of diagnostics) {
@@ -74,6 +75,7 @@ test('enables another create only for an explicitly retryable response', () => {
 });
 
 test('uses a bounded provider retry delay when available', () => {
+  assert.equal(textureProviderRetryDelayMs({ retryAfterMs: 0 }, 3_000), 3_000);
   assert.equal(textureProviderRetryDelayMs({ retryAfterMs: 8_000 }, 3_000), 8_000);
   assert.equal(textureProviderRetryDelayMs({ retryAfterMs: 90_000 }, 3_000), 60_000);
   assert.equal(textureProviderRetryDelayMs({ retryAfterMs: '8000' }, 3_000), 3_000);
@@ -107,6 +109,82 @@ test('keeps ambiguous create failures terminal and retries polling 429 in place'
   );
   assert.match(
     studio,
-    /error\.status === 429[\s\S]*isRetryableTextureCreateFailure\(error\.details\)[\s\S]*continue;/,
+    /isRetryableTextureCreateFailure\(error\.details\)[\s\S]*continue;/,
+  );
+});
+
+test('replaces terminal target-generation problems with the local demo 3D mockup', () => {
+  const studio = readFileSync(
+    new URL('./TextureMockupStudio.tsx', import.meta.url),
+    'utf8',
+  );
+  const viewer = readFileSync(
+    new URL('./MockupViewer.tsx', import.meta.url),
+    'utf8',
+  );
+  const composer = readFileSync(
+    new URL('./compose-exterior-atlas.ts', import.meta.url),
+    'utf8',
+  );
+
+  assert.match(
+    studio,
+    /AI 3D 목업 생성에 문제가 있어 데모 3D 목업으로 대체했습니다\./,
+  );
+  assert.match(
+    studio,
+    /if \(jobKind === "TARGET_RETEXTURE"\) \{\s*activateDemoMockup\(\);/,
+  );
+  assert.match(
+    studio,
+    /state === "error" && textureBlob[\s\S]*activateDemoMockup\(\)/,
+  );
+  assert.match(
+    studio,
+    /hasRememberedDemoMockup\(analysisId\)/,
+  );
+  assert.match(
+    studio,
+    /demoFallbackActiveRef\.current = true[\s\S]*setViewerReady\(modelReadyAnalysisRef\.current === analysisId\)/,
+  );
+  assert.match(
+    studio,
+    /setViewerReady\(false\);\s*clearDemoMockup\(\);\s*setTextureBlob\(composedAtlas\)/,
+  );
+  assert.match(
+    studio,
+    /signal: AbortSignal\.timeout\(MESHY_POLL_REQUEST_TIMEOUT_MS\)/,
+  );
+  assert.match(
+    studio,
+    /signal: AbortSignal\.timeout\(TEXTURE_ASSET_REQUEST_TIMEOUT_MS\)/,
+  );
+  assert.match(
+    studio,
+    /signal: AbortSignal\.timeout\(TEXTURE_DOWNLOAD_TIMEOUT_MS\)/,
+  );
+  assert.match(
+    viewer,
+    /withTimeout\([\s\S]*TEXTURE_APPLICATION_TIMEOUT_MS/,
+  );
+  assert.match(
+    composer,
+    /signal: AbortSignal\.timeout\(MATERIAL_ASSET_TIMEOUT_MS\)/,
+  );
+});
+
+test('allows an expired browser task token to recover through the server receipt', () => {
+  const studio = readFileSync(
+    new URL('./TextureMockupStudio.tsx', import.meta.url),
+    'utf8',
+  );
+
+  assert.match(
+    studio,
+    /if \(taskTokenError\) \{\s*forgetMeshyTaskToken\(analysisId, jobKind\);\s*\}/,
+  );
+  assert.match(
+    studio,
+    /terminal: providerTerminal,/,
   );
 });

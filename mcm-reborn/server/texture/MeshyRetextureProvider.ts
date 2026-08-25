@@ -81,20 +81,24 @@ export class MeshyRetextureProvider implements RetextureProvider {
         "Exactly four HTTPS exterior images are required for Meshy retexture",
       );
     }
-    const response = await this.request("/retexture", {
-      body: JSON.stringify({
-        ai_model: readMeshyModel(),
-        enable_original_uv: true,
-        enable_pbr: true,
-        model_url: modelUrl,
-        multiview_image_urls: imageUrls,
-        target_formats: ["glb"],
-        texture_resolution: "2k",
-      }),
-      headers: { "Content-Type": "application/json" },
-      method: "POST",
-      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-    });
+    const response = await this.request(
+      "/retexture",
+      {
+        body: JSON.stringify({
+          ai_model: readMeshyModel(),
+          enable_original_uv: true,
+          enable_pbr: true,
+          model_url: modelUrl,
+          multiview_image_urls: imageUrls,
+          target_formats: ["glb"],
+          texture_resolution: "2k",
+        }),
+        headers: { "Content-Type": "application/json" },
+        method: "POST",
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      },
+      "CREATE",
+    );
     const parsed = CreateTaskResponseSchema.safeParse(await response.json());
     if (!parsed.success) {
       throw new UpstreamError("Meshy returned an invalid task response");
@@ -103,10 +107,14 @@ export class MeshyRetextureProvider implements RetextureProvider {
   }
 
   async getTask(taskId: string): Promise<MeshyTextureTaskResponse> {
-    const response = await this.request(`/retexture/${encodeURIComponent(taskId)}`, {
-      method: "GET",
-      signal: AbortSignal.timeout(POLL_TIMEOUT_MS),
-    });
+    const response = await this.request(
+      `/retexture/${encodeURIComponent(taskId)}`,
+      {
+        method: "GET",
+        signal: AbortSignal.timeout(POLL_TIMEOUT_MS),
+      },
+      "POLL",
+    );
     const parsed = MeshyTaskSchema.safeParse(await response.json());
     if (!parsed.success) {
       throw new UpstreamError("Meshy returned an invalid task status");
@@ -150,7 +158,11 @@ export class MeshyRetextureProvider implements RetextureProvider {
     };
   }
 
-  private async request(path: string, init: RequestInit) {
+  private async request(
+    path: string,
+    init: RequestInit,
+    requestKind: "CREATE" | "POLL",
+  ) {
     let response: Response;
     try {
       response = await fetch(`${MESHY_API_BASE_URL}${path}`, {
@@ -166,7 +178,7 @@ export class MeshyRetextureProvider implements RetextureProvider {
     }
 
     if (response.ok) return response;
-    return throwMeshyHttpError(response);
+    return throwMeshyHttpError(response, requestKind);
   }
 }
 

@@ -23,7 +23,8 @@ export function textureProviderErrorMessage(message: string): string {
     normalized.includes('meshy task submission outcome is unknown') ||
     normalized.includes('recovery reservation') ||
     normalized.includes('texture response recovery could not be reserved') ||
-    normalized.includes('texture request cleanup failed')
+    normalized.includes('texture request cleanup failed') ||
+    normalized.includes('stored meshy task receipt')
   ) {
     return '3D 목업을 생성하지 못했습니다.';
   }
@@ -48,5 +49,5 @@ export function textureProviderRetryDelayMs(
   ) {
     return fallbackMs;
   }
-  return Math.min(60_000, Math.round(retryAfterMs));
+  return Math.max(fallbackMs, Math.min(60_000, Math.round(retryAfterMs)));
 }

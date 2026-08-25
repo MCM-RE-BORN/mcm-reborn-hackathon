@@ -6,6 +6,7 @@ const EXTERIOR_MASK_URL = `${MATERIAL_ASSET_ROOT}/exterior-mask.png`;
 const STITCH_PRESERVE_MASK_URL = `${MATERIAL_ASSET_ROOT}/stitch-preserve-mask.png`;
 const OUTPUT_SIZE = 2048;
 const MANIFEST_SCHEMA = "MCM_PASSPORT_WALLET_MATERIAL_MAP_V2";
+const MATERIAL_ASSET_TIMEOUT_MS = 15_000;
 
 type MaterialAssetManifest = {
   atlasSize: [number, number];
@@ -144,7 +145,10 @@ function rememberDecodedImage(
 }
 
 async function loadVerifiedAsset(url: string, expectedSha256: string) {
-  const response = await fetch(url, { cache: "force-cache" });
+  const response = await fetch(url, {
+    cache: "force-cache",
+    signal: AbortSignal.timeout(MATERIAL_ASSET_TIMEOUT_MS),
+  });
   if (!response.ok) {
     throw new Error("여권 지갑 소재 맵 자산을 불러오지 못했습니다.");
   }
@@ -158,6 +162,7 @@ async function loadVerifiedAsset(url: string, expectedSha256: string) {
 async function loadMaterialAssetManifest(): Promise<MaterialAssetManifest> {
   const response = await fetch(MATERIAL_MANIFEST_URL, {
     cache: "force-cache",
+    signal: AbortSignal.timeout(MATERIAL_ASSET_TIMEOUT_MS),
   });
   if (!response.ok) {
     throw new Error("여권 지갑 소재 맵 정보를 불러오지 못했습니다.");

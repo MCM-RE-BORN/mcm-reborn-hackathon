@@ -11,12 +11,12 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit --incremental false",
-    "test": "node --test --test-concurrency=1 components/screens/analysis-design/analysisFallback.test.mjs components/screens/analysis-design/textureProviderError.test.mjs server/openai/openAiRequestPolicy.test.mjs server/openai/providerFallbackPolicy.test.mjs server/openai/visionImageMessages.test.mjs server/texture/meshyHttpPolicy.test.mjs server/texture/textureQuotaPolicy.test.mjs",
+    "test": "node --test --test-concurrency=1 components/screens/analysis-design/analysisFallback.test.mjs components/screens/analysis-design/textureProviderError.test.mjs server/openai/openAiRequestPolicy.test.mjs server/openai/providerFallbackPolicy.test.mjs server/openai/visionImageMessages.test.mjs server/texture/meshyHttpPolicy.test.mjs server/texture/meshyTaskReceiptPolicy.test.mjs server/texture/textureQuotaPolicy.test.mjs",
     "test:analysis-fallback": "node --test --test-concurrency=1 components/screens/analysis-design/analysisFallback.test.mjs",
     "test:openai-images": "node --test --test-concurrency=1 server/openai/visionImageMessages.test.mjs",
     "test:openai-policy": "node --test --test-concurrency=1 server/openai/openAiRequestPolicy.test.mjs",
     "test:provider-fallback": "node --test --test-concurrency=1 server/openai/providerFallbackPolicy.test.mjs",
-    "test:texture-policy": "node --test --test-concurrency=1 server/texture/textureQuotaPolicy.test.mjs server/texture/meshyHttpPolicy.test.mjs components/screens/analysis-design/textureProviderError.test.mjs"
+    "test:texture-policy": "node --test --test-concurrency=1 server/texture/textureQuotaPolicy.test.mjs server/texture/meshyHttpPolicy.test.mjs server/texture/meshyTaskReceiptPolicy.test.mjs components/screens/analysis-design/textureProviderError.test.mjs"
   },
   "dependencies": {
     "@google/model-viewer": "^4.3.1",

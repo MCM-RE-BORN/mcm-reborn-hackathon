@@ -50,6 +50,7 @@ import {
   type MeshyTextureAssetAccess,
 } from "./MeshyTextureAssetProxy";
 import { getAnalysisSourceImageUrls } from "./analysisSourceImages";
+import { readStoredMeshyTaskReceipt } from "./meshyTaskReceiptPolicy";
 import { resolveTextureDailyQuotaPolicy } from "./textureQuotaPolicy";
 
 const TEXTURE_OPERATION = "createTexturePreview";
@@ -245,7 +246,10 @@ export async function createTexturePreview(
       );
     }
   } catch (error) {
-    if (isKnownUnacceptedProviderRequest(error)) {
+    if (
+      input.jobKind === "EXTERIOR_PLAN" ||
+      isKnownUnacceptedProviderRequest(error)
+    ) {
       const budgetReleased = await releaseTextureBudgetReservation(
         admin,
         quotaReservation,
@@ -478,7 +482,11 @@ async function reserveTextureOperation(
     cached.success
   ) {
     return {
-      cachedResponse: cached.data as TexturePreviewCreateResponse,
+      cachedResponse: refreshCachedTextureResponse(
+        cached.data as TexturePreviewCreateResponse,
+        input,
+        customerId,
+      ),
       requestHash,
       storageKey,
     };
@@ -486,6 +494,7 @@ async function reserveTextureOperation(
   if (row.response_status === null) {
     const recovered = await readRecoveryCachedTextureResponse(
       admin,
+      input,
       customerId,
       requestHash,
     );
@@ -516,6 +525,7 @@ async function reserveTextureOperation(
 
 async function readRecoveryCachedTextureResponse(
   admin: SupabaseClient,
+  input: CreateTexturePreviewInput,
   customerId: string,
   requestHash: string,
 ) {
@@ -534,8 +544,39 @@ async function readRecoveryCachedTextureResponse(
   if (error || !data) return null;
   const parsed = TexturePreviewCreateResponseSchema.safeParse(data.response_body);
   return parsed.success
-    ? (parsed.data as TexturePreviewCreateResponse)
+    ? refreshCachedTextureResponse(
+        parsed.data as TexturePreviewCreateResponse,
+        input,
+        customerId,
+      )
     : null;
+}
+
+function refreshCachedTextureResponse(
+  response: TexturePreviewCreateResponse,
+  input: CreateTexturePreviewInput,
+  customerId: string,
+): TexturePreviewCreateResponse {
+  if (response.kind !== "task") return response;
+  if (response.jobKind !== input.jobKind) {
+    throw new ServiceUnavailableError("Stored Meshy task receipt is invalid", {
+      retryable: false,
+    });
+  }
+  const receipt = readStoredMeshyTaskReceipt(response.taskToken, {
+    analysisId: input.analysisId,
+    jobKind: response.jobKind,
+    userId: customerId,
+  });
+  if (!receipt) {
+    throw new ServiceUnavailableError("Stored Meshy task receipt is invalid", {
+      retryable: false,
+    });
+  }
+  return {
+    ...response,
+    taskToken: createMeshyTaskToken(receipt),
+  };
 }
 
 async function storeTextureOperationSuccess(

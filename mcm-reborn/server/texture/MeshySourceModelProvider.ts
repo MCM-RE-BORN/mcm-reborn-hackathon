@@ -79,19 +79,23 @@ export class MeshySourceModelProvider {
       );
     }
 
-    const response = await this.request("/multi-image-to-3d", {
-      body: JSON.stringify({
-        ai_model: readMeshySourceModel(),
-        enable_pbr: true,
-        image_urls: parsedUrls.data,
-        should_texture: true,
-        target_formats: ["glb"],
-        texture_resolution: "2k",
-      }),
-      headers: { "Content-Type": "application/json" },
-      method: "POST",
-      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-    });
+    const response = await this.request(
+      "/multi-image-to-3d",
+      {
+        body: JSON.stringify({
+          ai_model: readMeshySourceModel(),
+          enable_pbr: true,
+          image_urls: parsedUrls.data,
+          should_texture: true,
+          target_formats: ["glb"],
+          texture_resolution: "2k",
+        }),
+        headers: { "Content-Type": "application/json" },
+        method: "POST",
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      },
+      "CREATE",
+    );
     const parsed = CreateTaskResponseSchema.safeParse(await response.json());
     if (!parsed.success) {
       throw new UpstreamError("Meshy returned an invalid source-model task response");
@@ -111,6 +115,7 @@ export class MeshySourceModelProvider {
         method: "GET",
         signal: AbortSignal.timeout(POLL_TIMEOUT_MS),
       },
+      "POLL",
     );
     const parsed = MeshySourceModelTaskSchema.safeParse(await response.json());
     if (!parsed.success) {
@@ -148,7 +153,11 @@ export class MeshySourceModelProvider {
     };
   }
 
-  private async request(path: string, init: RequestInit) {
+  private async request(
+    path: string,
+    init: RequestInit,
+    requestKind: "CREATE" | "POLL",
+  ) {
     let response: Response;
     try {
       response = await fetch(`${MESHY_API_BASE_URL}${path}`, {
@@ -164,7 +173,7 @@ export class MeshySourceModelProvider {
     }
 
     if (response.ok) return response;
-    return throwMeshyHttpError(response);
+    return throwMeshyHttpError(response, requestKind);
   }
 }
 
