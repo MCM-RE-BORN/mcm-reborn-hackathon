@@ -1,12 +1,16 @@
 import { randomUUID } from 'crypto';
 import OpenAI, { type APIError } from 'openai';
 
-export type OpenAiRequestStage = 'WIKI_LOOKUP' | 'FINAL_ANALYSIS';
+export type OpenAiRequestStage =
+  | 'WIKI_LOOKUP'
+  | 'FINAL_ANALYSIS'
+  | 'EXTERIOR_PLAN';
 
 export type OpenAiFailureKind =
   | 'QUOTA_EXHAUSTED'
   | 'RATE_LIMIT'
   | 'TIMEOUT'
+  | 'CONNECTION_ERROR'
   | 'PROVIDER_ERROR'
   | 'QUEUE_TIMEOUT';
 
@@ -251,6 +255,13 @@ function failureMetadata(
     };
   }
 
+  if (findConnectionError(error)) {
+    return {
+      ...emptyFailureMetadata(stage, 'CONNECTION_ERROR', attempts, elapsedMs),
+      clientRequestId,
+    };
+  }
+
   const apiError = findApiError(error);
   if (!apiError) {
     return {
@@ -358,6 +369,17 @@ function findConnectionTimeoutError(error: unknown): Error | null {
   return null;
 }
 
+function findConnectionError(error: unknown): Error | null {
+  let current = error;
+  const visited = new Set<unknown>();
+  while (current && !visited.has(current)) {
+    visited.add(current);
+    if (current instanceof OpenAI.APIConnectionError) return current;
+    current = readCause(current);
+  }
+  return null;
+}
+
 function readCause(error: unknown): unknown {
   return error instanceof Error && 'cause' in error ? error.cause : null;
 }
@@ -378,7 +400,11 @@ function isQuotaFailure(code: string | null, type: string | null): boolean {
 function isRetryableProviderFailure(
   metadata: VisionProviderFailureMetadata,
 ): boolean {
-  if (metadata.kind === 'RATE_LIMIT' || metadata.kind === 'TIMEOUT') {
+  if (
+    metadata.kind === 'RATE_LIMIT' ||
+    metadata.kind === 'TIMEOUT' ||
+    metadata.kind === 'CONNECTION_ERROR'
+  ) {
     return true;
   }
   if (metadata.kind !== 'PROVIDER_ERROR' || metadata.status === null) {

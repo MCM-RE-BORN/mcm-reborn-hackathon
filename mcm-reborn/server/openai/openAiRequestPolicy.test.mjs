@@ -134,6 +134,34 @@ test('retries one transient HTTP provider failure within the deadline', async (t
   }
 });
 
+test('retries one transient connection failure', async () => {
+  let calls = 0;
+  let nowMs = 1_000;
+  const result = await runOpenAiStage({
+    stage: 'FINAL_ANALYSIS',
+    maxAttempts: 2,
+    deadlineAtMs: 20_000,
+    now: () => nowMs,
+    random: () => 0,
+    sleep: async (delayMs) => {
+      nowMs += delayMs;
+    },
+    call: async () => {
+      calls += 1;
+      if (calls === 1) {
+        throw new OpenAI.APIConnectionError({
+          message: 'transient socket disconnect',
+          cause: new Error('ECONNRESET'),
+        });
+      }
+      return 'ok';
+    },
+  });
+
+  assert.equal(result, 'ok');
+  assert.equal(calls, 2);
+});
+
 test('does not retry non-transient client failures', async () => {
   let calls = 0;
   await assert.rejects(
