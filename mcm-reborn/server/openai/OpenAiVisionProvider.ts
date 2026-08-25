@@ -197,7 +197,7 @@ export class OpenAiVisionProvider implements VisionProvider {
         deadlineAtMs,
         onRetry: (failure) => {
           console.warn(
-            '[OpenAiVisionProvider] retrying final analysis after rate limit',
+            '[OpenAiVisionProvider] retrying final analysis after transient failure',
             failure,
           );
         },

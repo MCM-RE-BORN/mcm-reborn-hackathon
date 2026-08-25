@@ -37,6 +37,22 @@ function rateLimitError({
   );
 }
 
+function httpProviderError(status) {
+  return OpenAI.APIError.generate(
+    status,
+    {
+      error: {
+        code: 'provider_error',
+        message: 'SENSITIVE_PROVIDER_FAILURE',
+        param: null,
+        type: 'server_error',
+      },
+    },
+    undefined,
+    new Headers({ 'x-request-id': `req_${status}` }),
+  );
+}
+
 test.beforeEach(() => {
   resetOpenAiRequestPolicyForTests();
 });
@@ -85,6 +101,59 @@ test('waits for Retry-After plus jitter and retries one transient 429', async ()
       { attempt: 2, clientRequestId: 'client_2' },
     ],
   );
+});
+
+test('retries one transient HTTP provider failure within the deadline', async (t) => {
+  for (const status of [408, 409, 500, 503]) {
+    await t.test(String(status), async () => {
+      resetOpenAiRequestPolicyForTests();
+      let calls = 0;
+      let nowMs = 1_000;
+      const sleeps = [];
+      const result = await runOpenAiStage({
+        stage: 'FINAL_ANALYSIS',
+        maxAttempts: 2,
+        deadlineAtMs: 20_000,
+        now: () => nowMs,
+        random: () => 0,
+        sleep: async (delayMs) => {
+          sleeps.push(delayMs);
+          nowMs += delayMs;
+        },
+        call: async () => {
+          calls += 1;
+          if (calls === 1) throw httpProviderError(status);
+          return 'ok';
+        },
+      });
+
+      assert.equal(result, 'ok');
+      assert.equal(calls, 2);
+      assert.deepEqual(sleeps, [1_100]);
+    });
+  }
+});
+
+test('does not retry non-transient client failures', async () => {
+  let calls = 0;
+  await assert.rejects(
+    runOpenAiStage({
+      stage: 'FINAL_ANALYSIS',
+      maxAttempts: 2,
+      deadlineAtMs: Date.now() + 20_000,
+      call: async () => {
+        calls += 1;
+        throw httpProviderError(400);
+      },
+    }),
+    (error) => {
+      assert.ok(error instanceof OpenAiProviderExecutionError);
+      assert.equal(error.metadata.status, 400);
+      assert.equal(error.metadata.attempts, 1);
+      return true;
+    },
+  );
+  assert.equal(calls, 1);
 });
 
 test('does not retry quota, billing, spend, or usage exhaustion', async (t) => {

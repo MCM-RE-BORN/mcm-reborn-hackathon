@@ -122,9 +122,9 @@ export async function runSerializedOpenAiAnalysis<T>(
 }
 
 /**
- * Run one provider stage within a shared deadline. Only a transient 429 can be
- * retried, and callers explicitly choose whether the stage gets one or two
- * attempts. SDK retries must remain disabled so attempts are not multiplied.
+ * Run one provider stage within a shared deadline. Transient rate, timeout,
+ * conflict, and upstream failures may be retried; quota and client failures
+ * never are. SDK retries stay disabled so attempts are not multiplied.
  */
 export async function runOpenAiStage<T>(
   options: RunOpenAiStageOptions<T>,
@@ -168,19 +168,20 @@ export async function runOpenAiStage<T>(
         now() - startedAtMs,
         now(),
       );
-      if (metadata.kind !== 'RATE_LIMIT') {
+      if (!isRetryableProviderFailure(metadata)) {
         throw new OpenAiProviderExecutionError(metadata, error);
       }
 
-      // Preserve the provider's minimum wait even when this request cannot
-      // retry, so the next queued analysis does not immediately collide with
-      // the same bucket.
       const delayMs = retryDelay(metadata, random);
-      const state = policyState();
-      state.cooldownUntilMs = Math.max(
-        state.cooldownUntilMs,
-        now() + delayMs,
-      );
+      if (metadata.kind === 'RATE_LIMIT') {
+        // Preserve the provider's minimum wait even when this request cannot
+        // retry, so the next queued analysis does not collide with the bucket.
+        const state = policyState();
+        state.cooldownUntilMs = Math.max(
+          state.cooldownUntilMs,
+          now() + delayMs,
+        );
+      }
 
       const retryFitsDeadline =
         retryBaseDelay(metadata) <= MAX_SERVER_RETRY_DELAY_MS &&
@@ -190,6 +191,9 @@ export async function runOpenAiStage<T>(
       }
 
       options.onRetry?.(metadata);
+      if (metadata.kind !== 'RATE_LIMIT') {
+        await sleep(delayMs);
+      }
     }
   }
 
@@ -369,6 +373,22 @@ function isQuotaFailure(code: string | null, type: string | null): boolean {
       )
     );
   });
+}
+
+function isRetryableProviderFailure(
+  metadata: VisionProviderFailureMetadata,
+): boolean {
+  if (metadata.kind === 'RATE_LIMIT' || metadata.kind === 'TIMEOUT') {
+    return true;
+  }
+  if (metadata.kind !== 'PROVIDER_ERROR' || metadata.status === null) {
+    return false;
+  }
+  return (
+    metadata.status === 408 ||
+    metadata.status === 409 ||
+    metadata.status >= 500
+  );
 }
 
 function parseRetryAfterMs(
