@@ -72,7 +72,8 @@ python -X utf8 scripts/validate_collaboration.py
 npm --prefix mcm-reborn ci
 npm --prefix mcm-reborn run lint
 npm --prefix mcm-reborn run typecheck
+npm --prefix mcm-reborn test
 npm --prefix mcm-reborn run build
 ```
 
-현재 `mcm-reborn/package.json`에는 테스트 스크립트가 없다. 테스트를 추가하면 같은 PR에서 실제 테스트 명령을 `package.json`, 이 문서와 PR 검증 항목에 함께 등록한다.
+현재 `mcm-reborn/package.json`의 native Node 테스트는 OpenAI 요청·폴백·이미지 범위와 Meshy quota·오류·복구 정책을 검증한다. 외부 LIVE·브라우저·DB 통합 검사는 별도 staging 게이트로 유지한다.

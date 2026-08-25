@@ -147,11 +147,7 @@ python -X utf8 scripts/validate_collaboration.py
 python -X utf8 validate_package.py
 npm --prefix mcm-reborn run lint
 npm --prefix mcm-reborn run typecheck
-npm --prefix mcm-reborn run test:analysis-fallback
-npm --prefix mcm-reborn run test:openai-images
-npm --prefix mcm-reborn run test:openai-policy
-npm --prefix mcm-reborn run test:provider-fallback
-npm --prefix mcm-reborn run test:texture-policy
+npm --prefix mcm-reborn test
 npm --prefix mcm-reborn run build
 ```
 

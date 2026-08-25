@@ -54,11 +54,7 @@ npm --prefix mcm-reborn run dev
 ```bash
 npm --prefix mcm-reborn run lint
 npm --prefix mcm-reborn run typecheck
-npm --prefix mcm-reborn run test:analysis-fallback
-npm --prefix mcm-reborn run test:openai-images
-npm --prefix mcm-reborn run test:openai-policy
-npm --prefix mcm-reborn run test:provider-fallback
-npm --prefix mcm-reborn run test:texture-policy
+npm --prefix mcm-reborn test
 npm --prefix mcm-reborn run build
 ```
 
