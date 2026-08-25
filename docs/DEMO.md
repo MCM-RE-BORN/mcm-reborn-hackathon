@@ -10,7 +10,7 @@
 - 화면과 발표에서 AI 값은 사진 기반 예상, 결제·물류·탄소·보증서는 Mock임을 밝힌다.
 - 주문 전에는 정품·제작 가능·원단 활용·견적을 확정 표현으로 말하지 않는다.
 - 공식 장인 실물 검수는 주문·Mock 결제와 제품 수거가 끝난 뒤에만 수행한다.
-- 기본 브라우저 데모는 외부 API를 호출하지 않고 `DEMO_FIXTURE`와 여권 지갑 전면 placeholder로 같은 주문과 보증서까지 진행한다. R5 통합 동의·키·배포 gate가 준비된 LIVE 시연에서는 최초 분석이 저해상도 외관 4면 위키 lookup과 최종 6면 Structured Output의 두 단계로 처리되고 분석과 외관 4부위 profile을 함께 저장한다. 이후 사용자가 목업 화면 버튼을 눌렀을 때 이 profile은 추가 OpenAI 호출·quota 없이 계획으로 재사용되고 외관 4장은 Meshy source/target 작업에 사용된다. 저장 profile이 없는 non-LIVE 데모/seeded 분석에서만 OpenAI 4면 classifier 호환 폴백을 선택적으로 시연한다. 생성 전·중·실패에는 placeholder를 유지하고 최종 텍스처 적용 뒤에만 3D를 공개한다.
+- 기본 브라우저 데모는 외부 API를 호출하지 않고 `DEMO_FIXTURE`와 여권 지갑 전면 placeholder로 같은 주문과 보증서까지 진행한다. R5 통합 동의·키·배포 gate가 준비된 LIVE 시연에서는 최초 분석이 저해상도 외관 4면 위키 lookup과 최종 6면 Structured Output의 두 단계로 처리되고 분석과 외관 4부위 profile을 함께 저장한다. 이후 사용자가 목업 화면 버튼을 눌렀을 때 이 profile은 추가 OpenAI 호출·quota 없이 계획으로 재사용되고 외관 4장은 Meshy source/target 작업에 사용된다. 저장 profile이 없는 non-LIVE 데모/seeded 분석에서만 OpenAI 4면 classifier 호환 폴백을 선택적으로 시연한다. 생성 전·중에는 placeholder를 유지하고 최종 텍스처 적용 뒤 맞춤 3D를 공개한다. target 생성·조회·합성·적용의 최종 실패에는 provider 실패 상태를 유지하면서 로컬 canonical GLB의 내장 PBR·스티치를 사용하는 데모 3D 목업으로 대체한다.
 
 ## 중앙 시나리오 빠른 참조
 
@@ -96,7 +96,7 @@ npm --prefix mcm-reborn run build
 - 카메라 권한 거부: 권한 안내 뒤 `기기에서 사진 선택`으로 복구한다.
 - 사진 부족·형식·용량: JPG/JPEG·PNG, 필수 6면 6장, 장당 10MB 기준과 남은 슬롯을 안내한다.
 - 사진 품질 미달: LIVE는 같은 6장 OpenAI Structured Output에서 실제 이미지 품질을 검사하고, 데모 모드는 준비된 품질 미달 Fixture를 사용할 수 있다. 어느 모드든 `422 IMAGE_QUALITY_INSUFFICIENT` 계약과 이미지별 재촬영 안내를 유지하며 품질 실패를 성공 분석으로 바꾸지 않는다.
-- OpenAI/Meshy 제공자 오류: LIVE 분석 OpenAI 장애는 `modeUsed=DEMO_FIXTURE`인 호환 결과로 복구되고 결과 화면에 작게 `API오류로 인한 DEMO`를 표시한다. 직접 실행한 DEMO에는 이 문구가 없다. 이 non-LIVE 결과에 저장 profile이 없으면 목업 버튼에서만 OpenAI 4면 classifier 폴백이 가능하다. 반대로 `modeUsed=LIVE`인 기존 분석에 현재 profile이 없으면 409와 새 분석 안내를 표시하고 classifier로 재과금하지 않는다. Meshy가 명시적으로 거절한 `429`는 앱 예약 해제 뒤 재시도할 수 있지만 `402` 크레딧 부족과 인증·설정 오류는 `retryable: false`다. 네트워크·`408`·`5xx`·잘못된 성공 응답처럼 task 접수 여부가 불명확한 오류는 중복 과금 방지를 위해 terminal lock을 유지한다. token이 있으면 동일 job token과 별도 recovery receipt로 상태를 복구하며 source 3D 실패는 target 작업 실패로 표현하지 않는다.
+- OpenAI/Meshy 제공자 오류: LIVE 분석 OpenAI 장애는 `modeUsed=DEMO_FIXTURE`인 호환 결과로 복구되고 결과 화면에 작게 `API오류로 인한 DEMO`를 표시한다. 직접 실행한 DEMO에는 이 문구가 없다. 이 non-LIVE 결과에 저장 profile이 없으면 목업 버튼에서만 공통 bounded OpenAI 정책의 4면 classifier 폴백이 가능하다. 반대로 `modeUsed=LIVE`인 기존 분석에 현재 profile이 없으면 409와 새 분석 안내를 표시하고 classifier로 재과금하지 않는다. Meshy가 명시적으로 거절한 `429`는 앱 예약 해제 뒤 재시도할 수 있지만 `402` 크레딧 부족과 인증·설정 오류는 `retryable: false`다. 생성 POST의 네트워크·`408`·`5xx`·잘못된 성공 응답처럼 task 접수 여부가 불명확한 오류는 중복 과금 방지를 위해 terminal lock을 유지한다. polling GET의 429·네트워크·408·5xx는 같은 token으로 bounded 재조회한다. token이 있으면 동일 job token과 소유권을 재검증한 recovery receipt로 상태를 복구하며 source 3D 실패는 target 작업 실패로 표현하지 않는다. target 파이프라인 최종 실패 시에는 로컬 데모 3D 목업으로 UI를 대체한다.
 - AI 비대상: `AI_INELIGIBLE`을 공식 가품 판정이 아니라 사진·정보 기반 사전 접수 불가로 표현한다.
 - 변경 조건 거절: `CHANGE_APPROVAL_REQUIRED → CANCELED`와 Mock 결제 취소·환불 안내를 보여 준다.
 - 제작 불가: `/orders/demo?stage=canceled&reason=production-unavailable`에서 `PRODUCTION_UNAVAILABLE → CANCELED`와 상담·Mock 환불 경로를 보여 준다.
@@ -114,9 +114,10 @@ npm --prefix mcm-reborn run build
 | non-LIVE profile 부재 | R5 연결 동의·기능 gate가 있을 때만 4면 classifier 호환 폴백. 동일 유료 job을 새로 만들지 않음 |
 | Meshy 명시적 요청 거절 | 앱 예약을 해제한다. provider `429`는 잠시 후 재시도할 수 있고, `402` 크레딧 부족·인증·설정 오류는 `retryable: false`로 반복 요청을 막음 |
 | Meshy 접수 여부 불명 오류 | 네트워크·`408`·`5xx`·잘못된 성공 응답은 중복 과금 방지를 위해 terminal lock 유지. token이 있으면 동일 token과 recovery receipt로 조회 |
+| Meshy target·파생 텍스처·로컬 적용 최종 실패 | provider 상태와 token을 유지하고 canonical GLB의 내장 PBR·스티치를 사용하는 데모 3D 목업으로 화면 대체. 새 유료 job은 만들지 않음 |
 | 분석 화면 진행 지연 | 접수 ID를 유지한 준비된 `AI_COMPLETED` 상태로 이동 |
 | 타임라인 진행 지연 | 빠른 데모 프로필 또는 준비된 상태 전이 사용 |
-| 파생 텍스처 Storage 실패 | 전면 placeholder를 유지하고 같은 task token·멱등 키로 파생 자산을 다시 확인. 새 유료 job은 만들지 않음 |
+| 파생 텍스처 Storage 실패 | 같은 task token·멱등 키로 파생 자산을 다시 확인하고 최종 실패 시 데모 3D 목업으로 대체. 새 유료 job은 만들지 않음 |
 | 변경 승인 처리 실패 | 준비된 `CHANGE_APPROVAL_REQUIRED`와 승인 완료 fixture로 복구 |
 | 네트워크 불안정 | 로컬 Fixture로 주문·보증서까지 완주하고 실제 연동은 녹화로 보조 |
 
@@ -143,11 +144,11 @@ npm --prefix mcm-reborn run build
 - [ ] JPG/JPEG·PNG, 필수 구도 6장, 장당 10MB 규칙이 UI와 계약에 일치한다.
 - [ ] `/operations` 목록→상세→다음 단계 진행과 관리자·장인 담당 표시를 PC 폭에서 확인했다.
 - [ ] 접수 `SUB-RB-20260817-0001`에서 72%·91% 예상치가 일관되게 표시된다.
-- [ ] 추천 순위·사유가 실제 API 제품과 분석 정보를 반영하고, 여권지갑 목업은 완료 전 placeholder와 완료 후 맞춤 3D를 명확히 구분한다.
+- [ ] 추천 순위·사유가 실제 API 제품과 분석 정보를 반영하고, 여권지갑 목업은 생성 전·중 placeholder, 성공 후 맞춤 3D, 최종 실패 후 명시된 데모 3D를 명확히 구분한다.
 - [ ] 외부 texture 기능을 켠 경우 분석 접수의 R5 통합 동의, 저해상도 외관 4면 lookup·최종 6면 LIVE 분석과 private 4부위 profile 저장, 버튼 시작과 Meshy 상태 복구를 확인했다.
 - [ ] current LIVE `EXTERIOR_PLAN`은 저장 profile을 재사용해 추가 OpenAI 호출·quota가 없고, profile 없는 LIVE 기존 분석은 409로 새 분석을 요구한다.
 - [ ] OpenAI 4면 classifier는 profile 없는 non-LIVE 데모/seeded 경로에서만 실행된다.
-- [ ] 최종 atlas는 `stitch-preserve-mask.png`를 우선 적용해 원본 스티치 RGB를 보존하며 PNG로 합성되고, 실제 적용 전에는 3D가 공개되지 않는다.
+- [ ] 최종 atlas는 `stitch-preserve-mask.png`를 우선 적용해 원본 스티치 RGB를 보존하며 PNG로 합성되고, 실제 적용 성공 전에는 맞춤 3D가 공개되지 않는다. 실패 시에는 내장 PBR·스티치의 데모 3D임을 명시한다.
 - [ ] 91%가 정품 확정이 아니라는 안내가 있다.
 - [ ] Mock 결제 뒤 주문 `RB-20260817-0001`이 생성된다.
 - [ ] 전문가 실물 검수는 `PRODUCT_RECEIVED` 뒤에만 나타난다.

@@ -35,9 +35,9 @@ v2 영속 API는 `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_K
 
 `AI_MODE=LIVE`는 `ENABLE_EXTERNAL_AI=true`, 고정된 `EXTERNAL_AI_PRIVACY_NOTICE_VERSION`, OpenAI 서버 설정과 요청별 명시 동의를 모두 요구한다. 실제 연결 전에는 private 이미지를 외부로 전송하지 말고 `DEMO_FIXTURE`를 사용한다.
 
-LIVE의 위키 조회와 최종 분석은 한 서버 프로세스에서 분석 단위로 직렬화하고 하나의 제한된 deadline을 공유한다. 저해상도 위키 조회는 전면·후면·좌측면·우측면 4장만 사용하고, 상태·손상 판정을 포함한 최종 분석은 상단·하단을 포함한 6장을 유지한다. 위키 조회의 rate limit·quota·인증 실패 뒤에는 최종 6장 호출을 추가로 보내지 않는다. 최종 분석의 일시적 429·408·409·5xx·연결 timeout은 deadline 안에서 한 번 재시도하며, 429는 `Retry-After` 또는 소진 bucket reset과 jitter를 따른다. quota·billing 한도와 일반 4xx는 즉시 canonical Fixture로 복구한다. 이 폴백 결과에는 `API오류로 인한 DEMO`가 작게 표시되고 allowlist 진단은 고객 조회 행이 아닌 서버 로그에만 남긴다.
+LIVE의 위키 조회와 최종 분석은 한 서버 프로세스에서 분석 단위로 직렬화하고 하나의 제한된 deadline을 공유한다. 저해상도 위키 조회는 전면·후면·좌측면·우측면 4장만 사용하고, 상태·손상 판정을 포함한 최종 분석은 상단·하단을 포함한 6장을 유지한다. 위키 조회의 rate limit·quota·인증 실패 뒤에는 최종 6장 호출을 추가로 보내지 않는다. 최종 분석의 일시적 429·408·409·5xx·연결 오류·timeout은 deadline 안에서 한 번 재시도하며, 429는 `Retry-After` 또는 소진 bucket reset과 jitter를 따른다. quota·billing 한도와 일반 4xx는 즉시 canonical Fixture로 복구한다. 이 폴백 결과에는 `API오류로 인한 DEMO`가 작게 표시되고 allowlist 진단은 고객 조회 행이 아닌 서버 로그에만 남긴다.
 
-목업 상세의 로컬 텍스처 추출·GLB 결합은 외부 키 없이 동작한다. 선택형 OpenAI/Meshy 텍스처 기능은 `ENABLE_TEXTURE_AI=true`와 provider별 서버 키가 필요하며, Meshy에는 32자 이상의 `TEXTURE_TASK_SIGNING_SECRET`과 공개 HTTPS `.glb` URL도 필요하다. `TARGET_RETEXTURE`의 앱 일일 한도는 기본 비활성이며 `MESHY_TARGET_RETEXTURE_DAILY_LIMIT_PER_USER`와 `MESHY_TARGET_RETEXTURE_GLOBAL_DAILY_LIMIT`에 각각 `1`~`100`을 설정할 때만 UTC 일일 안전 한도가 적용된다. 빈값 또는 `0`은 비활성이다. 실제 고객 사진을 전송하기 전에 [`AI_TEXTURE_MOCKUP_PIPELINE.md`](../docs/AI_TEXTURE_MOCKUP_PIPELINE.md)의 동의·보존·비용·시연 절차를 확인한다.
+목업 상세의 로컬 텍스처 추출·GLB 결합은 외부 키 없이 동작한다. 선택형 OpenAI/Meshy 텍스처 기능은 `ENABLE_TEXTURE_AI=true`와 provider별 서버 키가 필요하며, Meshy에는 32자 이상의 `TEXTURE_TASK_SIGNING_SECRET`과 공개 HTTPS `.glb` URL도 필요하다. `TARGET_RETEXTURE`의 앱 일일 한도는 기본 비활성이며 `MESHY_TARGET_RETEXTURE_DAILY_LIMIT_PER_USER`와 `MESHY_TARGET_RETEXTURE_GLOBAL_DAILY_LIMIT`에 각각 `1`~`100`을 설정할 때만 UTC 일일 안전 한도가 적용된다. 빈값 또는 `0`은 비활성이다. Meshy target 생성·폴링·자산 합성·적용이 최종 실패하면 로컬 canonical GLB의 내장 PBR·스티치를 사용하는 데모 3D 목업으로 UI를 대체하되 provider 실패 상태는 유지한다. 실제 고객 사진을 전송하기 전에 [`AI_TEXTURE_MOCKUP_PIPELINE.md`](../docs/AI_TEXTURE_MOCKUP_PIPELINE.md)의 동의·보존·비용·시연 절차를 확인한다.
 
 개발 서버를 시작한다.
 
