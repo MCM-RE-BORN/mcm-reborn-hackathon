@@ -4,6 +4,7 @@ import test from 'node:test';
 
 import {
   isRetryableTextureCreateFailure,
+  textureProviderRetryDelayMs,
   textureProviderErrorMessage,
 } from './textureProviderError.ts';
 
@@ -52,6 +53,13 @@ test('enables another create only for an explicitly retryable response', () => {
   assert.equal(isRetryableTextureCreateFailure({ retryable: true }), true);
   assert.equal(isRetryableTextureCreateFailure({ retryable: false }), false);
   assert.equal(isRetryableTextureCreateFailure({}), false);
+});
+
+test('uses a bounded provider retry delay when available', () => {
+  assert.equal(textureProviderRetryDelayMs({ retryAfterMs: 8_000 }, 3_000), 8_000);
+  assert.equal(textureProviderRetryDelayMs({ retryAfterMs: 90_000 }, 3_000), 60_000);
+  assert.equal(textureProviderRetryDelayMs({ retryAfterMs: '8000' }, 3_000), 3_000);
+  assert.equal(textureProviderRetryDelayMs({}, 3_000), 3_000);
 });
 
 test('submits required target retexture before optional source model', () => {

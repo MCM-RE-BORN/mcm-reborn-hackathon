@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { classifyMeshyHttpFailure } from "./meshyHttpPolicy.ts";
+import {
+  classifyMeshyHttpFailure,
+  readMeshyRetryAfterMs,
+} from "./meshyHttpPolicy.ts";
 
 test("classifies documented credit and authentication rejections", () => {
   assert.deepEqual(classifyMeshyHttpFailure(402), {
@@ -47,6 +50,29 @@ test("does not surface an unrecognized provider body", () => {
     classifyMeshyHttpFailure(429, null).message,
     "Meshy API rate limit exceeded",
   );
+});
+
+test("honors bounded Meshy retry windows", () => {
+  assert.equal(
+    readMeshyRetryAfterMs(new Headers({ "retry-after": "2.5" })),
+    2_500,
+  );
+  assert.equal(
+    readMeshyRetryAfterMs(new Headers({ "retry-after-ms": "1750" })),
+    1_750,
+  );
+  assert.equal(
+    readMeshyRetryAfterMs(
+      new Headers({ "retry-after": "Wed, 26 Aug 2026 00:00:10 GMT" }),
+      Date.parse("Wed, 26 Aug 2026 00:00:00 GMT"),
+    ),
+    10_000,
+  );
+  assert.equal(
+    readMeshyRetryAfterMs(new Headers({ "retry-after": "999" })),
+    60_000,
+  );
+  assert.equal(readMeshyRetryAfterMs(new Headers()), null);
 });
 
 test("separates explicit 4xx rejection from ambiguous timeout and 5xx", () => {

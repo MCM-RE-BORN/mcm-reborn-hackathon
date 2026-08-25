@@ -24,6 +24,7 @@ import {
 import { composeExteriorAtlas } from "./compose-exterior-atlas";
 import {
   isRetryableTextureCreateFailure,
+  textureProviderRetryDelayMs,
   textureProviderErrorMessage,
 } from "./textureProviderError";
 import {
@@ -34,6 +35,7 @@ import styles from "./analysis-design.module.css";
 
 const MESHY_POLL_INTERVAL_MS = 3_000;
 const MAX_MESHY_POLLS = 80;
+const MAX_MESHY_RATE_LIMIT_RETRIES = 20;
 const MAX_TEXTURE_BYTES = 8 * 1024 * 1024;
 const PASSPORT_WALLET_FRONT_IMAGE =
   "/assets/mvp-beta/passport-wallet-front.png";
@@ -168,6 +170,9 @@ export function TextureMockupStudio({ analysisId }: TextureMockupStudioProps) {
       pollInFlightRef.current[jobKind] = true;
       const generation = ++pollGenerationRef.current[jobKind];
       let providerTerminal = false;
+      let completedPolls = 0;
+      let rateLimitRetries = 0;
+      let retryDelayMs = 0;
       updateTask(jobKind, {
         error: null,
         status: "queued",
@@ -175,9 +180,10 @@ export function TextureMockupStudio({ analysisId }: TextureMockupStudioProps) {
       });
 
       try {
-        for (let attempt = 0; attempt < MAX_MESHY_POLLS; attempt += 1) {
+        while (completedPolls < MAX_MESHY_POLLS) {
           if (pollGenerationRef.current[jobKind] !== generation) return;
-          if (attempt > 0) await delay(MESHY_POLL_INTERVAL_MS);
+          if (retryDelayMs > 0) await delay(retryDelayMs);
+          retryDelayMs = MESHY_POLL_INTERVAL_MS;
           if (pollGenerationRef.current[jobKind] !== generation) return;
 
           let task: MeshyTextureTaskResponse;
@@ -195,6 +201,14 @@ export function TextureMockupStudio({ analysisId }: TextureMockupStudioProps) {
               error.status === 429 &&
               isRetryableTextureCreateFailure(error.details)
             ) {
+              rateLimitRetries += 1;
+              if (rateLimitRetries > MAX_MESHY_RATE_LIMIT_RETRIES) {
+                throw error;
+              }
+              retryDelayMs = textureProviderRetryDelayMs(
+                error.details,
+                MESHY_POLL_INTERVAL_MS,
+              );
               updateTask(jobKind, {
                 error: null,
                 status: "queued",
@@ -209,6 +223,8 @@ export function TextureMockupStudio({ analysisId }: TextureMockupStudioProps) {
             }
             throw error;
           }
+          completedPolls += 1;
+          rateLimitRetries = 0;
           if (pollGenerationRef.current[jobKind] !== generation) return;
           if (task.jobKind !== jobKind) {
             throw new Error("외관 생성 작업 종류가 일치하지 않습니다.");

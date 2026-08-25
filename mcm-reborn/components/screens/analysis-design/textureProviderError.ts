@@ -26,3 +26,18 @@ export function isRetryableTextureCreateFailure(
 ): boolean {
   return details.retryable === true;
 }
+
+export function textureProviderRetryDelayMs(
+  details: Readonly<Record<string, unknown>>,
+  fallbackMs: number,
+): number {
+  const retryAfterMs = details.retryAfterMs;
+  if (
+    typeof retryAfterMs !== 'number' ||
+    !Number.isFinite(retryAfterMs) ||
+    retryAfterMs < 0
+  ) {
+    return fallbackMs;
+  }
+  return Math.min(60_000, Math.round(retryAfterMs));
+}

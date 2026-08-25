@@ -1,11 +1,13 @@
 import {
   AppError,
-  RateLimitError,
   ServiceUnavailableError,
   UpstreamError,
   ValidationError,
 } from "@/contracts/errors";
-import { classifyMeshyHttpFailure } from "./meshyHttpPolicy";
+import {
+  classifyMeshyHttpFailure,
+  readMeshyRetryAfterMs,
+} from "./meshyHttpPolicy";
 
 /** A documented HTTP rejection received before a usable task ID exists. */
 export class MeshyHttpRejectionError extends AppError {
@@ -23,7 +25,13 @@ export async function throwMeshyHttpError(response: Response): Promise<never> {
     throw new UpstreamError(failure.message, { retryable: false });
   }
   if (failure.kind === "RATE_LIMIT") {
-    throw new MeshyHttpRejectionError(new RateLimitError(failure.message));
+    const retryAfterMs = readMeshyRetryAfterMs(response.headers);
+    throw new MeshyHttpRejectionError(
+      new AppError("RATE_LIMITED", 429, failure.message, {
+        retryable: true,
+        ...(retryAfterMs === null ? {} : { retryAfterMs }),
+      }),
+    );
   }
   if (failure.kind === "VALIDATION") {
     throw new MeshyHttpRejectionError(new ValidationError(failure.message));

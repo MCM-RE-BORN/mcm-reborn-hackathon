@@ -4,6 +4,8 @@ export type MeshyHttpFailurePolicy = {
   retryable: boolean;
 };
 
+const MAX_RETRY_AFTER_MS = 60_000;
+
 export function classifyMeshyHttpFailure(
   status: number,
   payload: unknown = null,
@@ -44,6 +46,27 @@ export function classifyMeshyHttpFailure(
     message: "Meshy API returned an error",
     retryable: false,
   };
+}
+
+export function readMeshyRetryAfterMs(
+  headers: Headers,
+  nowMs: number = Date.now(),
+): number | null {
+  const retryAfterMs = Number.parseFloat(headers.get("retry-after-ms") ?? "");
+  if (Number.isFinite(retryAfterMs) && retryAfterMs >= 0) {
+    return Math.min(MAX_RETRY_AFTER_MS, Math.round(retryAfterMs));
+  }
+
+  const rawRetryAfter = headers.get("retry-after");
+  if (!rawRetryAfter) return null;
+  const seconds = Number.parseFloat(rawRetryAfter);
+  if (Number.isFinite(seconds) && seconds >= 0) {
+    return Math.min(MAX_RETRY_AFTER_MS, Math.round(seconds * 1_000));
+  }
+
+  const timestamp = Date.parse(rawRetryAfter);
+  if (!Number.isFinite(timestamp)) return null;
+  return Math.min(MAX_RETRY_AFTER_MS, Math.max(0, timestamp - nowMs));
 }
 
 function safeMeshyRateLimitMessage(payload: unknown): string {
