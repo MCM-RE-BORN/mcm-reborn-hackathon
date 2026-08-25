@@ -1828,6 +1828,9 @@ def validate_runtime_analysis_contract(
     service: str,
     analysis_contract: str,
     provider: str,
+    image_messages: str,
+    hybrid_provider: str,
+    request_policy: str,
 ) -> None:
     require_fragments(
         route,
@@ -1890,9 +1893,69 @@ def validate_runtime_analysis_contract(
             'six-view order': 'front, rear, top, bottom, left side, and right side',
             'six-image requirement': 'input.imageUrls.length !== 6',
             'six-image index range': 'imageIndex from 0 through 5',
-            'six-image user message': '여섯 이미지를 지정된 순서의 동일 제품으로 보고 분석하세요.',
+            'four-view lookup prompt': '0 (FRONT), 1 (REAR), 4 (LEFT), and 5 (RIGHT)',
+            'final six-view message builder': 'createFinalAnalysisImageMessage(input.imageUrls)',
+            'lookup four-view message builder': 'createWikiLookupImageMessage(input.imageUrls)',
+            'serialized LIVE analysis': 'runSerializedOpenAiAnalysis(deadlineAtMs',
+            'reserved final deadline': 'FINAL_ANALYSIS_RESERVED_MS = 65_000',
+            'optional lookup deadline': 'calculateOptionalStageDeadline(',
+            'lookup policy stage': "stage: 'WIKI_LOOKUP'",
+            'final policy stage': "stage: 'FINAL_ANALYSIS'",
+            'final output cap': 'max_completion_tokens: FINAL_ANALYSIS_MAX_COMPLETION_TOKENS',
         },
     )
+    require_fragments(
+        image_messages,
+        'visionImageMessages.ts',
+        {
+            'canonical six-view order': (
+                "'FRONT',\n  'REAR',\n  'TOP',\n  'BOTTOM',\n  'LEFT',\n  'RIGHT',"
+            ),
+            'final six-view indexes': (
+                'const FINAL_ANALYSIS_IMAGE_INDEXES = [0, 1, 2, 3, 4, 5] as const;'
+            ),
+            'lookup exterior indexes': (
+                'const WIKI_LOOKUP_IMAGE_INDEXES = [0, 1, 4, 5] as const;'
+            ),
+            'lookup low detail': (
+                "createImageMessage(imageUrls, WIKI_LOOKUP_IMAGE_INDEXES, 'low')"
+            ),
+            'final automatic detail': (
+                "createImageMessage(imageUrls, FINAL_ANALYSIS_IMAGE_INDEXES, 'auto')"
+            ),
+            'original index label': (
+                'text: `IMAGE_INDEX: ${index}; VIEW: ${view}`'
+            ),
+        },
+    )
+    require_fragments(
+        hybrid_provider,
+        'HybridVisionProvider.ts',
+        {
+            'structured failure metadata': 'readProviderFailureMetadata(error)',
+            'canonical fallback input': 'canonicalFixtureFallbackInput(input)',
+            'stable fallback warning': 'providerFallbackWarning(providerFailure)',
+        },
+    )
+    require_fragments(
+        request_policy,
+        'openAiRequestPolicy.ts',
+        {
+            'Retry-After parsing': "headers.get('retry-after')",
+            'project-token reset header': "x-ratelimit-reset-project-tokens",
+            'exhausted reset delay': 'exhaustedBucketResetDelay(metadata)',
+            'central retry classifier': 'isRetryableProviderFailure(metadata)',
+            'transient timeout retry': "metadata.kind === 'TIMEOUT'",
+            'transient connection retry': (
+                "metadata.kind === 'CONNECTION_ERROR'"
+            ),
+            'transient 408 retry': 'metadata.status === 408',
+            'transient 409 retry': 'metadata.status === 409',
+            'transient upstream retry': 'metadata.status >= 500',
+        },
+    )
+    if 'providerFailure: providerOutput.providerFailure' in service:
+        fail('analysisService.ts must not expose provider rate-limit diagnostics in provider_result')
     for label, text in {
         'analysis Route Handler': route,
         'analysis service': service,
@@ -1915,6 +1978,290 @@ def validate_runtime_analysis_contract(
         ]
         if stale:
             fail(f'{label} still contains exact-seven analysis fragments: {stale}')
+
+
+def validate_meshy_texture_policy_contract(
+    package_json: dict[str, Any],
+    service: str,
+    quota_policy: str,
+    task_receipt_policy: str,
+    meshy_http_error: str,
+    retexture_provider: str,
+    source_model_provider: str,
+    exterior_classifier: str,
+    texture_studio: str,
+    customer_client: str,
+    ui_error_policy: str,
+    env_example: str,
+    readme: str,
+) -> None:
+    scripts = package_json.get('scripts')
+    if not isinstance(scripts, dict):
+        fail('mcm-reborn/package.json must define scripts')
+    texture_test_script = scripts.get('test:texture-policy')
+    if not isinstance(texture_test_script, str):
+        fail('mcm-reborn/package.json must define test:texture-policy')
+    require_fragments(
+        texture_test_script,
+        'mcm-reborn/package.json test:texture-policy',
+        {
+            'Node test runner': 'node --test',
+            'serialized policy tests': '--test-concurrency=1',
+            'quota policy test': 'server/texture/textureQuotaPolicy.test.mjs',
+            'Meshy HTTP policy test': 'server/texture/meshyHttpPolicy.test.mjs',
+            'Meshy receipt policy test': (
+                'server/texture/meshyTaskReceiptPolicy.test.mjs'
+            ),
+            'UI error policy test': (
+                'components/screens/analysis-design/textureProviderError.test.mjs'
+            ),
+        },
+    )
+
+    require_fragments(
+        quota_policy,
+        'textureQuotaPolicy.ts',
+        {
+            'per-user optional cap': (
+                'MESHY_TARGET_RETEXTURE_DAILY_LIMIT_PER_USER'
+            ),
+            'global optional cap': (
+                'MESHY_TARGET_RETEXTURE_GLOBAL_DAILY_LIMIT'
+            ),
+            'blank-or-zero disables cap': (
+                "if (!normalized || normalized === '0') return null;"
+            ),
+            'configured cap upper bound': 'MAX_CONFIGURED_DAILY_LIMIT = 100',
+        },
+    )
+    require_fragments(
+        task_receipt_policy,
+        'meshyTaskReceiptPolicy.ts',
+        {
+            'server-stored receipt binding': 'StoredMeshyTaskReceiptBinding',
+            'analysis binding check': (
+                'value.analysisId !== expected.analysisId'
+            ),
+            'job binding check': 'value.jobKind !== expected.jobKind',
+            'owner binding check': 'value.userId !== expected.userId',
+        },
+    )
+    require_fragments(
+        service,
+        'texturePreviewService.ts',
+        {
+            'resolved job quota policy': (
+                'resolveTextureDailyQuotaPolicy(input.jobKind)'
+            ),
+            'separate response recovery operation': (
+                'const TEXTURE_RESPONSE_RECOVERY_OPERATION = '
+                '"createTexturePreviewRecovery";'
+            ),
+            'explicit Meshy rejection boundary': 'MeshyHttpRejectionError',
+            'cleanup failure propagation': (
+                'if (!released) throw textureReservationCleanupError();'
+            ),
+            'ambiguous create is non-retryable': (
+                'Meshy task submission outcome is unknown; retry is locked '
+                'to prevent duplicate billing'
+            ),
+            'cached task token refresh': 'refreshCachedTextureResponse(',
+            'stored receipt reader': 'readStoredMeshyTaskReceipt(',
+            'classifier failure releases reservation': (
+                'input.jobKind === "EXTERIOR_PLAN"'
+            ),
+        },
+    )
+    recovery_start = service.find(
+        'async function readRecoveryCachedTextureResponse('
+    )
+    recovery_end = service.find(
+        'async function storeTextureOperationSuccess(', recovery_start
+    )
+    if recovery_start < 0 or recovery_end < 0:
+        fail('texturePreviewService.ts is missing recovery-cache lookup')
+    recovery_lookup = service[recovery_start:recovery_end]
+    require_fragments(
+        recovery_lookup,
+        'texturePreviewService.ts recovery-cache lookup',
+        {
+            'new recovery receipt': 'TEXTURE_RESPONSE_RECOVERY_OPERATION',
+            'legacy daily-quota receipt': 'TEXTURE_DAILY_QUOTA_OPERATION',
+        },
+    )
+    cleanup_start = service.find('function textureReservationCleanupError()')
+    cleanup_end = service.find('async function releaseTextureOperation(', cleanup_start)
+    if cleanup_start < 0 or cleanup_end < 0:
+        fail('texturePreviewService.ts is missing the cleanup failure policy')
+    require_fragments(
+        service[cleanup_start:cleanup_end],
+        'texturePreviewService.ts cleanup failure policy',
+        {
+            'upstream cleanup error': 'new UpstreamError(',
+            'non-retryable cleanup': '{ retryable: false }',
+        },
+    )
+    stale_service_fragments = [
+        fragment
+        for fragment in (
+            'MAX_DAILY_REQUESTS_PER_PROVIDER',
+            'MAX_GLOBAL_DAILY_REQUESTS_PER_PROVIDER',
+            'Daily ${input.jobKind} preview limit reached',
+        )
+        if fragment in service
+    ]
+    if stale_service_fragments:
+        fail(
+            'texturePreviewService.ts still contains obsolete fixed daily-limit '
+            f'fragments: {stale_service_fragments}'
+        )
+
+    require_fragments(
+        meshy_http_error,
+        'MeshyHttpError.ts',
+        {
+            'explicit rejection class': 'class MeshyHttpRejectionError extends AppError',
+            'shared HTTP rejection helper': 'function throwMeshyHttpError(',
+            'poll-only upstream retry': 'retryable: requestKind === "POLL"',
+            'provider retry window': 'readMeshyRetryAfterMs(response.headers)',
+        },
+    )
+    for label, provider in {
+        'MeshyRetextureProvider.ts': retexture_provider,
+        'MeshySourceModelProvider.ts': source_model_provider,
+    }.items():
+        require_fragments(
+            provider,
+            label,
+            {
+                'shared Meshy error import': 'import { throwMeshyHttpError }',
+                'shared Meshy error call': (
+                    'return throwMeshyHttpError(response, requestKind);'
+                ),
+            },
+        )
+    require_fragments(
+        retexture_provider,
+        'MeshyRetextureProvider.ts local request validation',
+        {
+            'pre-provider four-view validation': (
+                'throw new ValidationError(\n'
+                '        "Exactly four HTTPS exterior images are required '
+                'for Meshy retexture"'
+            ),
+        },
+    )
+
+    require_fragments(
+        exterior_classifier,
+        'ExteriorMaterialClassifier.ts',
+        {
+            'serialized classifier': 'runSerializedOpenAiAnalysis(',
+            'classifier retry stage': 'stage: "EXTERIOR_PLAN"',
+            'bounded classifier attempts': 'maxAttempts: 2',
+            'SDK retries disabled': 'maxRetries: 0',
+            'classifier output cap': 'EXTERIOR_PLAN_MAX_COMPLETION_TOKENS',
+        },
+    )
+    require_fragments(
+        env_example,
+        '.env.example Meshy safety caps',
+        {
+            'per-user target cap': (
+                'MESHY_TARGET_RETEXTURE_DAILY_LIMIT_PER_USER='
+            ),
+            'global target cap': (
+                'MESHY_TARGET_RETEXTURE_GLOBAL_DAILY_LIMIT='
+            ),
+            'disabled-by-default guidance': (
+                'Empty or 0 disables each cap (the default)'
+            ),
+        },
+    )
+    require_fragments(
+        customer_client,
+        'customer-client.ts',
+        {
+            'structured error details': (
+                'public readonly details: Record<string, unknown> = {}'
+            ),
+            'response details parsing': (
+                'const details = readRecord(readRecord(errorRecord)?.details) ?? {};'
+            ),
+            'details passed to CustomerApiError': 'details,\n    );',
+        },
+    )
+    require_fragments(
+        ui_error_policy,
+        'textureProviderError.ts',
+        {
+            'retryable detail contract': 'return details.retryable === true;',
+            'minimum provider delay': 'Math.max(fallbackMs',
+        },
+    )
+    require_fragments(
+        texture_studio,
+        'TextureMockupStudio.tsx',
+        {
+            'CustomerApiError details read': (
+                'isRetryableTextureCreateFailure(error.details)'
+            ),
+            'terminal inverse of retryable': 'terminal: !retryableRejection',
+            'polling 429 handled in place': 'error.status === 429',
+            'polling retry continues': 'continue;',
+            'provider retry delay': 'textureProviderRetryDelayMs(',
+            'bounded provider retries': 'MAX_MESHY_PROVIDER_RETRIES = 20',
+            'total provider retry counter': 'providerRetries += 1',
+            'generation-safe in-flight release': (
+                'pollGenerationRef.current[jobKind] === generation'
+            ),
+            'poll request timeout': (
+                'AbortSignal.timeout(MESHY_POLL_REQUEST_TIMEOUT_MS)'
+            ),
+            'asset request timeout': (
+                'AbortSignal.timeout(TEXTURE_ASSET_REQUEST_TIMEOUT_MS)'
+            ),
+            'expired browser token recovery': (
+                'forgetMeshyTaskToken(analysisId, jobKind);'
+            ),
+            'local demo mockup fallback': 'activateDemoMockup();',
+            'demo fallback disclosure': (
+                'AI 3D 목업 생성에 문제가 있어 데모 3D 목업으로 대체했습니다.'
+            ),
+            'demo fallback recovery': (
+                'hasRememberedDemoMockup(analysisId)'
+            ),
+        },
+    )
+    if texture_studio.count('providerRetries = 0') != 1:
+        fail('TextureMockupStudio.tsx must not reset the total provider retry counter')
+    target_request = texture_studio.find(
+        'await requestJob("TARGET_RETEXTURE")'
+    )
+    source_request = texture_studio.find('await requestJob("SOURCE_MODEL")')
+    if target_request < 0 or source_request < 0:
+        fail('TextureMockupStudio.tsx must request TARGET_RETEXTURE and SOURCE_MODEL')
+    if target_request > source_request:
+        fail(
+            'TextureMockupStudio.tsx must submit TARGET_RETEXTURE before '
+            'the optional SOURCE_MODEL task'
+        )
+
+    require_fragments(
+        readme,
+        'README.md Meshy daily-cap guidance',
+        {
+            'target cap disabled by default': (
+                '`TARGET_RETEXTURE`)의 앱 일일 한도는 기본적으로 비활성'
+            ),
+            'per-user optional cap': (
+                'MESHY_TARGET_RETEXTURE_DAILY_LIMIT_PER_USER'
+            ),
+            'global optional cap': (
+                'MESHY_TARGET_RETEXTURE_GLOBAL_DAILY_LIMIT'
+            ),
+        },
+    )
 
 
 def validate_guide(guide: str) -> None:
@@ -2139,6 +2486,53 @@ def main() -> None:
     runtime_vision_provider = (
         ROOT / 'mcm-reborn' / 'server' / 'openai' / 'OpenAiVisionProvider.ts'
     ).read_text(encoding='utf-8')
+    runtime_vision_image_messages = (
+        ROOT / 'mcm-reborn' / 'server' / 'openai' / 'visionImageMessages.ts'
+    ).read_text(encoding='utf-8')
+    runtime_hybrid_provider = (
+        ROOT / 'mcm-reborn' / 'server' / 'openai' / 'HybridVisionProvider.ts'
+    ).read_text(encoding='utf-8')
+    runtime_request_policy = (
+        ROOT / 'mcm-reborn' / 'server' / 'openai' / 'openAiRequestPolicy.ts'
+    ).read_text(encoding='utf-8')
+    runtime_package_json = json.loads(
+        (ROOT / 'mcm-reborn' / 'package.json').read_text(encoding='utf-8')
+    )
+    runtime_texture_service = (
+        ROOT / 'mcm-reborn' / 'server' / 'texture' / 'texturePreviewService.ts'
+    ).read_text(encoding='utf-8')
+    runtime_texture_quota_policy = (
+        ROOT / 'mcm-reborn' / 'server' / 'texture' / 'textureQuotaPolicy.ts'
+    ).read_text(encoding='utf-8')
+    runtime_meshy_task_receipt_policy = (
+        ROOT / 'mcm-reborn' / 'server' / 'texture'
+        / 'meshyTaskReceiptPolicy.ts'
+    ).read_text(encoding='utf-8')
+    runtime_meshy_http_error = (
+        ROOT / 'mcm-reborn' / 'server' / 'texture' / 'MeshyHttpError.ts'
+    ).read_text(encoding='utf-8')
+    runtime_meshy_retexture_provider = (
+        ROOT / 'mcm-reborn' / 'server' / 'texture' / 'MeshyRetextureProvider.ts'
+    ).read_text(encoding='utf-8')
+    runtime_meshy_source_model_provider = (
+        ROOT / 'mcm-reborn' / 'server' / 'texture' / 'MeshySourceModelProvider.ts'
+    ).read_text(encoding='utf-8')
+    runtime_exterior_classifier = (
+        ROOT / 'mcm-reborn' / 'server' / 'texture'
+        / 'ExteriorMaterialClassifier.ts'
+    ).read_text(encoding='utf-8')
+    runtime_texture_studio = (
+        ROOT / 'mcm-reborn' / 'components' / 'screens' / 'analysis-design'
+        / 'TextureMockupStudio.tsx'
+    ).read_text(encoding='utf-8')
+    runtime_customer_client = (
+        ROOT / 'mcm-reborn' / 'components' / 'screens' / 'order-certificate'
+        / 'customer-client.ts'
+    ).read_text(encoding='utf-8')
+    runtime_texture_error_policy = (
+        ROOT / 'mcm-reborn' / 'components' / 'screens' / 'analysis-design'
+        / 'textureProviderError.ts'
+    ).read_text(encoding='utf-8')
     recommendation = (ROOT / 'examples' / 'recommendation.ts').read_text(encoding='utf-8')
     mock_status = (ROOT / 'examples' / 'mock-status.ts').read_text(encoding='utf-8')
     readme = (ROOT / 'README.md').read_text(encoding='utf-8')
@@ -2229,6 +2623,24 @@ def main() -> None:
         runtime_analysis_service,
         runtime_analysis_contract,
         runtime_vision_provider,
+        runtime_vision_image_messages,
+        runtime_hybrid_provider,
+        runtime_request_policy,
+    )
+    validate_meshy_texture_policy_contract(
+        runtime_package_json,
+        runtime_texture_service,
+        runtime_texture_quota_policy,
+        runtime_meshy_task_receipt_policy,
+        runtime_meshy_http_error,
+        runtime_meshy_retexture_provider,
+        runtime_meshy_source_model_provider,
+        runtime_exterior_classifier,
+        runtime_texture_studio,
+        runtime_customer_client,
+        runtime_texture_error_policy,
+        env_example,
+        readme,
     )
     validate_guide(guide)
     validate_runtime_migration_docs(

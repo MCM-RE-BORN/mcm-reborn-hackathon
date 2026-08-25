@@ -1,5 +1,12 @@
 import { FixtureVisionProvider } from './FixtureVisionProvider';
 import { OpenAiVisionProvider } from './OpenAiVisionProvider';
+import {
+  readProviderFailureMetadata,
+} from './openAiRequestPolicy';
+import {
+  canonicalFixtureFallbackInput,
+  providerFallbackWarning,
+} from './providerFallbackPolicy';
 import type {
   VisionAnalyzeInput,
   VisionAnalyzeResult,
@@ -24,11 +31,14 @@ export class HybridVisionProvider implements VisionProvider {
         throw error;
       }
 
+      const providerFailure = readProviderFailureMetadata(error);
       console.warn(
         '[HybridVisionProvider] OpenAI failed; using canonical fixture',
-        safeProviderError(error),
+        providerFailure ?? safeProviderError(error),
       );
-      const fallback = await this.fixtureProvider.analyze(input);
+      const fallback = await this.fixtureProvider.analyze(
+        canonicalFixtureFallbackInput(input),
+      );
 
       return {
         ...fallback,
@@ -36,39 +46,15 @@ export class HybridVisionProvider implements VisionProvider {
           error instanceof VisionWikiGroundingError
             ? error.knowledgeTrace
             : undefined,
-        warnings: [
-          {
-            code: warningCode(error),
-            message: warningMessage(error),
-          },
-        ],
+        providerFailure: providerFailure ?? undefined,
+        warnings: [providerFallbackWarning(providerFailure)],
       };
     }
   }
 }
 
-function warningCode(error: unknown): string {
-  const message = error instanceof Error ? error.message.toLowerCase() : '';
-  if (message.includes('timeout') || message.includes('etimedout')) {
-    return 'AI_PROVIDER_TIMEOUT';
-  }
-  if (message.includes('rate limit')) {
-    return 'AI_PROVIDER_RATE_LIMIT';
-  }
-  return 'AI_PROVIDER_ERROR';
-}
-
-function warningMessage(error: unknown): string {
-  const code = warningCode(error);
-  if (code === 'AI_PROVIDER_TIMEOUT') {
-    return '실제 AI 응답이 지연되어 준비된 데모 결과를 사용했습니다.';
-  }
-  if (code === 'AI_PROVIDER_RATE_LIMIT') {
-    return 'AI 서비스 사용량 제한으로 준비된 데모 결과를 사용했습니다.';
-  }
-  return '실제 AI 분석 오류가 발생해 준비된 데모 결과를 사용했습니다.';
-}
-
-function safeProviderError(error: unknown): string {
-  return error instanceof Error ? error.name : 'Unknown provider error';
+function safeProviderError(error: unknown): { name: string } {
+  return {
+    name: error instanceof Error ? error.name : 'UnknownProviderError',
+  };
 }

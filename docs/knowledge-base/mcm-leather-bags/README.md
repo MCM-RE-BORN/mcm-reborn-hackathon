@@ -139,7 +139,7 @@ python -X utf8 scripts/build_mcm_leather_wiki.py --check
 
 ## LIVE 분석의 내부 위키 사용
 
-전체 지식 베이스를 고정 developer prompt에 붙이지 않는다. LIVE 분석은 먼저 `detail: low`로 제출 사진에서 관찰 가능한 일반 용어만 만들고 서버 전용 `search_mcm_leather_wiki` 조회를 정확히 한 번 요청한다. 서버 검색기는 정확한 lexical hit가 있는 dynamic claim만 결정론적으로 정렬해 최대 5개·4,000자 이하의 출처·시기·적용 경계를 반환한다. 두 번째 `detail: auto` Structured Output 호출이 같은 6면 사진, PDF 재사용 가이드, always-on 금지 경계와 작은 검색 결과를 사용해 최종 분석과 외관 profile을 함께 만든다. lookup 실패·무결과에는 전체 코퍼스를 붙이지 않고 always-on 경계만 사용한다.
+전체 지식 베이스를 고정 developer prompt에 붙이지 않는다. LIVE 분석은 먼저 `detail: low` 외관 4면(FRONT·REAR·LEFT·RIGHT)에서 관찰 가능한 일반 용어만 만들고 서버 전용 `search_mcm_leather_wiki` 조회를 정확히 한 번 요청한다. 서버 검색기는 정확한 lexical hit가 있는 dynamic claim만 결정론적으로 정렬해 최대 5개·4,000자 이하의 출처·시기·적용 경계를 반환한다. 두 번째 `detail: auto` Structured Output 호출은 상단·하단을 포함한 6면 사진, PDF 재사용 가이드, always-on 금지 경계와 작은 검색 결과를 사용해 최종 분석과 외관 profile을 함께 만든다. lookup 실패·무결과에는 전체 코퍼스를 붙이지 않고 always-on 경계만 사용한다.
 
 - 작성 원본: 이 디렉터리의 `sources.json`, `claims.jsonl`, `products.jsonl`
 - 배포 산출물: `mcm-reborn/server/knowledge/mcmLeatherWiki.generated.json`

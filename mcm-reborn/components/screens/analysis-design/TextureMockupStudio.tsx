@@ -23,6 +23,11 @@ import {
 } from "@/lib/texture-preview";
 import { composeExteriorAtlas } from "./compose-exterior-atlas";
 import {
+  isRetryableTextureCreateFailure,
+  textureProviderRetryDelayMs,
+  textureProviderErrorMessage,
+} from "./textureProviderError";
+import {
   MockupViewer,
   type TextureApplicationState,
 } from "./MockupViewer";
@@ -30,7 +35,15 @@ import styles from "./analysis-design.module.css";
 
 const MESHY_POLL_INTERVAL_MS = 3_000;
 const MAX_MESHY_POLLS = 80;
+const MAX_MESHY_PROVIDER_RETRIES = 20;
 const MAX_TEXTURE_BYTES = 8 * 1024 * 1024;
+const CAPABILITIES_REQUEST_TIMEOUT_MS = 15_000;
+const TEXTURE_CREATE_REQUEST_TIMEOUT_MS = 150_000;
+const MESHY_POLL_REQUEST_TIMEOUT_MS = 45_000;
+const TEXTURE_ASSET_REQUEST_TIMEOUT_MS = 65_000;
+const TEXTURE_DOWNLOAD_TIMEOUT_MS = 30_000;
+const DEMO_MOCKUP_FALLBACK_MESSAGE =
+  "AI 3D 목업 생성에 문제가 있어 데모 3D 목업으로 대체했습니다.";
 const PASSPORT_WALLET_FRONT_IMAGE =
   "/assets/mvp-beta/passport-wallet-front.png";
 const PASSPORT_WALLET_CUSTOM_MODEL_SRC =
@@ -89,11 +102,14 @@ export function TextureMockupStudio({ analysisId }: TextureMockupStudioProps) {
   const [pipelineRunning, setPipelineRunning] = useState(false);
   const [textureBlob, setTextureBlob] = useState<Blob | null>(null);
   const [textureEnabled, setTextureEnabled] = useState(true);
+  const [demoFallbackActive, setDemoFallbackActive] = useState(false);
   const [modelReady, setModelReady] = useState(false);
   const [modelFailed, setModelFailed] = useState(false);
   const [viewerReady, setViewerReady] = useState(false);
   const showingBaseComparison = !textureEnabled && Boolean(textureBlob);
   const pipelineInFlightRef = useRef(false);
+  const demoFallbackActiveRef = useRef(false);
+  const modelReadyAnalysisRef = useRef<string | null>(null);
   const pollInFlightRef = useRef<Record<MeshyTaskKind, boolean>>({
     SOURCE_MODEL: false,
     TARGET_RETEXTURE: false,
@@ -103,19 +119,46 @@ export function TextureMockupStudio({ analysisId }: TextureMockupStudioProps) {
     TARGET_RETEXTURE: 0,
   });
 
+  const activateDemoMockup = useCallback(() => {
+    demoFallbackActiveRef.current = true;
+    setDemoFallbackActive(true);
+    setTextureBlob(null);
+    setTextureEnabled(true);
+    setExternalError(null);
+    setExternalStatus(null);
+    setComparisonError(null);
+    setComparisonSwitching(false);
+    setApplicationState("idle");
+    setViewerReady(modelReadyAnalysisRef.current === analysisId);
+    rememberDemoMockup(analysisId);
+  }, [analysisId]);
+
+  const clearDemoMockup = useCallback(() => {
+    demoFallbackActiveRef.current = false;
+    setDemoFallbackActive(false);
+    forgetDemoMockup(analysisId);
+  }, [analysisId]);
+
   useEffect(() => {
     let active = true;
-    customerFetch<TextureProviderCapabilities>("/api/demo/texture-preview")
+    customerFetch<TextureProviderCapabilities>("/api/demo/texture-preview", {
+      signal: AbortSignal.timeout(CAPABILITIES_REQUEST_TIMEOUT_MS),
+    })
       .then((value) => {
-        if (active) setCapabilities(value);
+        if (!active) return;
+        setCapabilities(value);
+        setCapabilitiesUnavailable(false);
+        if (!value.features.targetRetexture) activateDemoMockup();
       })
       .catch(() => {
-        if (active) setCapabilitiesUnavailable(true);
+        if (!active) return;
+        setCapabilitiesUnavailable(true);
+        activateDemoMockup();
       });
     return () => {
       active = false;
     };
-  }, []);
+  }, [activateDemoMockup]);
 
   useEffect(() => {
     const pollGenerations = pollGenerationRef.current;
@@ -152,6 +195,7 @@ export function TextureMockupStudio({ analysisId }: TextureMockupStudioProps) {
             "Idempotency-Key": getTextureRequestKey(analysisId, jobKind),
           },
           method: "POST",
+          signal: AbortSignal.timeout(TEXTURE_CREATE_REQUEST_TIMEOUT_MS),
         },
       ),
     [analysisId],
@@ -164,6 +208,9 @@ export function TextureMockupStudio({ analysisId }: TextureMockupStudioProps) {
       pollInFlightRef.current[jobKind] = true;
       const generation = ++pollGenerationRef.current[jobKind];
       let providerTerminal = false;
+      let completedPolls = 0;
+      let providerRetries = 0;
+      let retryDelayMs = 0;
       updateTask(jobKind, {
         error: null,
         status: "queued",
@@ -171,18 +218,52 @@ export function TextureMockupStudio({ analysisId }: TextureMockupStudioProps) {
       });
 
       try {
-        for (let attempt = 0; attempt < MAX_MESHY_POLLS; attempt += 1) {
+        while (completedPolls < MAX_MESHY_POLLS) {
           if (pollGenerationRef.current[jobKind] !== generation) return;
-          if (attempt > 0) await delay(MESHY_POLL_INTERVAL_MS);
+          if (retryDelayMs > 0) await delay(retryDelayMs);
+          retryDelayMs = MESHY_POLL_INTERVAL_MS;
           if (pollGenerationRef.current[jobKind] !== generation) return;
 
-          const task = await customerFetch<MeshyTextureTaskResponse>(
-            "/api/demo/texture-preview",
-            {
-              body: JSON.stringify({ analysisId, taskToken }),
-              method: "PUT",
-            },
-          );
+          let task: MeshyTextureTaskResponse;
+          try {
+            task = await customerFetch<MeshyTextureTaskResponse>(
+              "/api/demo/texture-preview",
+              {
+                body: JSON.stringify({ analysisId, taskToken }),
+                method: "PUT",
+                signal: AbortSignal.timeout(MESHY_POLL_REQUEST_TIMEOUT_MS),
+              },
+            );
+          } catch (error) {
+            if (
+              error instanceof CustomerApiError &&
+              isRetryableTextureCreateFailure(error.details)
+            ) {
+              providerRetries += 1;
+              if (providerRetries > MAX_MESHY_PROVIDER_RETRIES) {
+                throw error;
+              }
+              retryDelayMs = textureProviderRetryDelayMs(
+                error.details,
+                MESHY_POLL_INTERVAL_MS,
+              );
+              updateTask(jobKind, {
+                error: null,
+                status: "queued",
+                terminal: false,
+              });
+              if (jobKind === "TARGET_RETEXTURE") {
+                setExternalStatus(
+                  error.status === 429
+                    ? "Meshy 요청이 몰려 있어 잠시 후 다시 확인합니다."
+                    : "Meshy 연결이 일시적으로 불안정해 다시 확인합니다.",
+                );
+              }
+              continue;
+            }
+            throw error;
+          }
+          completedPolls += 1;
           if (pollGenerationRef.current[jobKind] !== generation) return;
           if (task.jobKind !== jobKind) {
             throw new Error("외관 생성 작업 종류가 일치하지 않습니다.");
@@ -213,6 +294,8 @@ export function TextureMockupStudio({ analysisId }: TextureMockupStudioProps) {
             const composedAtlas = await composeExteriorAtlas(generatedAtlas);
             if (pollGenerationRef.current[jobKind] !== generation) return;
 
+            setViewerReady(false);
+            clearDemoMockup();
             setTextureBlob(composedAtlas);
             setTextureEnabled(true);
             updateTask(jobKind, {
@@ -250,32 +333,30 @@ export function TextureMockupStudio({ analysisId }: TextureMockupStudioProps) {
         if (pollGenerationRef.current[jobKind] !== generation) return;
         const taskTokenError = isMeshyTaskTokenError(error);
         if (taskTokenError) {
-          providerTerminal = true;
-          window.sessionStorage.removeItem(
-            meshyTaskStorageKey(analysisId, jobKind),
-          );
+          forgetMeshyTaskToken(analysisId, jobKind);
         }
         const message = readExternalError(error);
         updateTask(jobKind, {
           error: message,
           status: "failed",
-          terminal: providerTerminal || taskTokenError,
+          terminal: providerTerminal,
         });
         if (jobKind === "TARGET_RETEXTURE") {
-          setExternalError(message);
-          setExternalStatus(null);
-          setTextureEnabled(false);
+          activateDemoMockup();
         }
       } finally {
-        pollInFlightRef.current[jobKind] = false;
+        if (pollGenerationRef.current[jobKind] === generation) {
+          pollInFlightRef.current[jobKind] = false;
+        }
       }
     },
-    [analysisId, updateTask],
+    [activateDemoMockup, analysisId, clearDemoMockup, updateTask],
   );
 
   useEffect(() => {
     pollGenerationRef.current.SOURCE_MODEL += 1;
     pollGenerationRef.current.TARGET_RETEXTURE += 1;
+    modelReadyAnalysisRef.current = null;
 
     let active = true;
     const restoreTimer = window.setTimeout(() => {
@@ -285,6 +366,10 @@ export function TextureMockupStudio({ analysisId }: TextureMockupStudioProps) {
       setPipelineRunning(false);
       setTextureBlob(null);
       setTextureEnabled(true);
+      demoFallbackActiveRef.current = false;
+      setDemoFallbackActive(false);
+      setModelReady(false);
+      setModelFailed(false);
       setViewerReady(false);
       setExternalError(null);
       setExternalStatus(null);
@@ -293,6 +378,11 @@ export function TextureMockupStudio({ analysisId }: TextureMockupStudioProps) {
       pipelineInFlightRef.current = false;
       pollInFlightRef.current.SOURCE_MODEL = false;
       pollInFlightRef.current.TARGET_RETEXTURE = false;
+
+      if (hasRememberedDemoMockup(analysisId)) {
+        demoFallbackActiveRef.current = true;
+        setDemoFallbackActive(true);
+      }
 
       const sourceToken = window.sessionStorage.getItem(
         meshyTaskStorageKey(analysisId, "SOURCE_MODEL"),
@@ -327,6 +417,8 @@ export function TextureMockupStudio({ analysisId }: TextureMockupStudioProps) {
     pipelineInFlightRef.current = true;
     setPipelineRunning(true);
     setExternalError(null);
+    clearDemoMockup();
+    setViewerReady(false);
 
     try {
       const existingTargetToken = window.sessionStorage.getItem(
@@ -363,6 +455,26 @@ export function TextureMockupStudio({ analysisId }: TextureMockupStudioProps) {
         setPlanState("fallback");
       }
 
+      setExternalStatus("3D 목업을 생성하고 있습니다.");
+      const targetResponse = await requestJob("TARGET_RETEXTURE");
+      if (
+        targetResponse.kind !== "task" ||
+        targetResponse.jobKind !== "TARGET_RETEXTURE"
+      ) {
+        throw new Error("여권 지갑 텍스처 작업 응답 형식이 올바르지 않습니다.");
+      }
+      window.sessionStorage.setItem(
+        meshyTaskStorageKey(analysisId, "TARGET_RETEXTURE"),
+        targetResponse.taskToken,
+      );
+      // Secure the required target queue slot before starting the optional
+      // 30-credit source reference task. The source task can no longer cause
+      // the target create request itself to hit Meshy's concurrent-task cap.
+      const targetPolling = pollMeshyTask(
+        "TARGET_RETEXTURE",
+        targetResponse.taskToken,
+      );
+
       if (
         capabilities.features.sourceModel &&
         !sourceTask.terminal &&
@@ -384,7 +496,6 @@ export function TextureMockupStudio({ analysisId }: TextureMockupStudioProps) {
           );
           void pollMeshyTask("SOURCE_MODEL", sourceResponse.taskToken);
         } catch (error) {
-          if (isConsentGuardError(error)) throw error;
           updateTask("SOURCE_MODEL", {
             error: readExternalError(error),
             status: "failed",
@@ -393,40 +504,29 @@ export function TextureMockupStudio({ analysisId }: TextureMockupStudioProps) {
         }
       }
 
-      setExternalStatus("3D 목업을 생성하고 있습니다.");
-      const targetResponse = await requestJob("TARGET_RETEXTURE");
-      if (
-        targetResponse.kind !== "task" ||
-        targetResponse.jobKind !== "TARGET_RETEXTURE"
-      ) {
-        throw new Error("여권 지갑 텍스처 작업 응답 형식이 올바르지 않습니다.");
-      }
-      window.sessionStorage.setItem(
-        meshyTaskStorageKey(analysisId, "TARGET_RETEXTURE"),
-        targetResponse.taskToken,
-      );
-      await pollMeshyTask("TARGET_RETEXTURE", targetResponse.taskToken);
+      await targetPolling;
     } catch (error) {
       const message = readExternalError(error);
+      const retryableRejection = isRetryableTextureCreateRejection(error);
       setTargetTask((current) => ({
         ...current,
         error: message,
         status: "failed",
-        // A create request may have reached the paid provider before its task
-        // token reached this browser. Keep this attempt terminal so a second
-        // click cannot create another paid job.
-        terminal: true,
+        // Only responses explicitly marked retryable by the server release
+        // their reservation. Ambiguous 502 failures and non-retryable account
+        // configuration errors stay terminal to prevent duplicate paid jobs.
+        terminal: !retryableRejection,
       }));
-      setExternalError(message);
-      setExternalStatus(null);
-      setTextureEnabled(false);
+      activateDemoMockup();
     } finally {
       pipelineInFlightRef.current = false;
       setPipelineRunning(false);
     }
   }, [
     analysisId,
+    activateDemoMockup,
     capabilities,
+    clearDemoMockup,
     pollMeshyTask,
     requestJob,
     sourceTask.status,
@@ -444,24 +544,29 @@ export function TextureMockupStudio({ analysisId }: TextureMockupStudioProps) {
       if (state === "applied" || state === "error") {
         setComparisonSwitching(false);
       }
+      if (state === "error" && textureBlob) {
+        activateDemoMockup();
+      }
     },
-    [],
+    [activateDemoMockup, textureBlob],
   );
 
   const handleModelLoad = useCallback(() => {
+    modelReadyAnalysisRef.current = analysisId;
     setModelReady(true);
     setModelFailed(false);
-    if (showingBaseComparison) {
+    if (showingBaseComparison || demoFallbackActiveRef.current) {
       setViewerReady(true);
       setComparisonSwitching(false);
     }
-  }, [showingBaseComparison]);
+  }, [analysisId, showingBaseComparison]);
 
   const handleModelError = useCallback(() => {
     if (showingBaseComparison) {
       setComparisonError(
         "기본 3D 모델을 불러오지 못해 맞춤 외관으로 돌아왔습니다.",
       );
+      modelReadyAnalysisRef.current = null;
       setModelReady(false);
       setModelFailed(false);
       setViewerReady(false);
@@ -470,6 +575,7 @@ export function TextureMockupStudio({ analysisId }: TextureMockupStudioProps) {
       return;
     }
 
+    modelReadyAnalysisRef.current = null;
     setModelReady(false);
     setModelFailed(true);
     setViewerReady(false);
@@ -480,6 +586,7 @@ export function TextureMockupStudio({ analysisId }: TextureMockupStudioProps) {
   const handleComparisonToggle = useCallback(() => {
     setComparisonError(null);
     setComparisonSwitching(true);
+    modelReadyAnalysisRef.current = null;
     setModelReady(false);
     setModelFailed(false);
     setViewerReady(false);
@@ -499,6 +606,7 @@ export function TextureMockupStudio({ analysisId }: TextureMockupStudioProps) {
 
   const targetAvailable = Boolean(capabilities?.features.targetRetexture);
   const generationComplete = viewerReady && Boolean(textureBlob);
+  const demoFallbackComplete = viewerReady && demoFallbackActive;
   const generationDisabled =
     !targetAvailable ||
     !modelReady ||
@@ -520,6 +628,12 @@ export function TextureMockupStudio({ analysisId }: TextureMockupStudioProps) {
     generationButtonLabel = `3D 목업 생성 중 ${overallProgress}%`;
   } else if (generationComplete) {
     generationButtonLabel = "3D 목업 생성 완료";
+  } else if (demoFallbackComplete && targetTask.terminal) {
+    generationButtonLabel = "데모 3D 목업 표시 중";
+  } else if (demoFallbackComplete) {
+    generationButtonLabel = targetAvailable
+      ? "AI 3D 목업 다시 시도"
+      : "데모 3D 목업 표시 중";
   } else if (targetTask.terminal) {
     generationButtonLabel = "3D 목업 생성 실패";
   } else if (
@@ -534,6 +648,7 @@ export function TextureMockupStudio({ analysisId }: TextureMockupStudioProps) {
     capabilities,
     capabilitiesUnavailable,
     externalStatus,
+    demoFallbackActive,
     generationComplete,
     pipelineRunning,
   });
@@ -541,7 +656,7 @@ export function TextureMockupStudio({ analysisId }: TextureMockupStudioProps) {
     (modelFailed
       ? "3D 목업을 불러오지 못했습니다. 페이지를 새로고침해 다시 시도해 주세요."
       : null) ??
-    externalError ??
+    (demoFallbackActive ? null : externalError) ??
     (applicationState === "error" && textureBlob
       ? "외관 텍스처를 3D 목업에 적용하지 못했습니다."
       : null);
@@ -549,6 +664,7 @@ export function TextureMockupStudio({ analysisId }: TextureMockupStudioProps) {
     !comparisonSwitching &&
     !displayError &&
     !generationComplete &&
+    !demoFallbackComplete &&
     overallProgress > 0;
   const activeModelSrc = showingBaseComparison
     ? PASSPORT_WALLET_BASE_COMPARISON_MODEL_SRC
@@ -656,6 +772,7 @@ async function downloadTextureBlob(analysisId: string, taskToken: string) {
   }>("/api/demo/texture-preview/asset", {
     body: JSON.stringify({ analysisId, taskToken }),
     method: "POST",
+    signal: AbortSignal.timeout(TEXTURE_ASSET_REQUEST_TIMEOUT_MS),
   });
 
   let response: Response;
@@ -663,6 +780,7 @@ async function downloadTextureBlob(analysisId: string, taskToken: string) {
     response = await fetch(asset.signedUrl, {
       cache: "no-store",
       referrerPolicy: "no-referrer",
+      signal: AbortSignal.timeout(TEXTURE_DOWNLOAD_TIMEOUT_MS),
     });
   } catch {
     throw new Error("보호된 텍스처 자산을 불러오지 못했습니다.");
@@ -729,7 +847,6 @@ function isExteriorProfileGuardError(error: unknown) {
 
 function readExternalError(error: unknown) {
   const message = error instanceof Error ? error.message : "";
-  const normalized = message.toLowerCase();
   if (isConsentGuardError(error)) {
     return "분석 시 3D 목업 생성 동의를 확인하지 못했습니다.";
   }
@@ -739,22 +856,21 @@ function readExternalError(error: unknown) {
   if (isExteriorProfileGuardError(error)) {
     return "현재 지식 기준의 외관 소재 정보가 없어 새 AI 분석이 필요합니다.";
   }
-  if (normalized.includes("credits")) {
-    return "Meshy API credits가 부족합니다.";
-  }
-  if (normalized.includes("quota") || normalized.includes("rate limit")) {
-    return "오늘 사용할 수 있는 3D 목업 생성 횟수를 초과했습니다.";
-  }
-  if (normalized.includes("not enabled")) {
-    return "3D 목업 생성 기능이 활성화되지 않았습니다.";
-  }
-  return message || "3D 목업을 생성하지 못했습니다.";
+  return textureProviderErrorMessage(message);
+}
+
+function isRetryableTextureCreateRejection(error: unknown) {
+  return (
+    error instanceof CustomerApiError &&
+    isRetryableTextureCreateFailure(error.details)
+  );
 }
 
 function readDisplayStatus({
   applicationState,
   capabilities,
   capabilitiesUnavailable,
+  demoFallbackActive,
   externalStatus,
   generationComplete,
   pipelineRunning,
@@ -762,10 +878,12 @@ function readDisplayStatus({
   applicationState: TextureApplicationState;
   capabilities: TextureProviderCapabilities | null;
   capabilitiesUnavailable: boolean;
+  demoFallbackActive: boolean;
   externalStatus: string | null;
   generationComplete: boolean;
   pipelineRunning: boolean;
 }) {
+  if (demoFallbackActive) return DEMO_MOCKUP_FALLBACK_MESSAGE;
   if (generationComplete) return "3D 목업 생성이 완료되었습니다.";
   if (applicationState === "loading") {
     return "외관 텍스처를 3D 목업에 적용하고 있습니다.";
@@ -782,6 +900,42 @@ function readDisplayStatus({
 
 function meshyTaskStorageKey(analysisId: string, jobKind: MeshyTaskKind) {
   return `mcm.reborn.texture.meshy-task.${analysisId}.${jobKind}`;
+}
+
+function forgetMeshyTaskToken(analysisId: string, jobKind: MeshyTaskKind) {
+  try {
+    window.sessionStorage.removeItem(meshyTaskStorageKey(analysisId, jobKind));
+  } catch {
+    // The next create still uses the server-owned idempotency receipt.
+  }
+}
+
+function demoMockupStorageKey(analysisId: string) {
+  return `mcm.reborn.texture.demo-mockup.${analysisId}.v1`;
+}
+
+function rememberDemoMockup(analysisId: string) {
+  try {
+    window.sessionStorage.setItem(demoMockupStorageKey(analysisId), "1");
+  } catch {
+    // The in-memory fallback still works when storage is unavailable.
+  }
+}
+
+function forgetDemoMockup(analysisId: string) {
+  try {
+    window.sessionStorage.removeItem(demoMockupStorageKey(analysisId));
+  } catch {
+    // A stale marker is harmless; a successful target still wins this render.
+  }
+}
+
+function hasRememberedDemoMockup(analysisId: string) {
+  try {
+    return window.sessionStorage.getItem(demoMockupStorageKey(analysisId)) === "1";
+  } catch {
+    return false;
+  }
 }
 
 function textureRequestStorageKey(

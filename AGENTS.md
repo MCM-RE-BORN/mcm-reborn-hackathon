@@ -54,8 +54,8 @@
 - 정상, 오류, 빈 상태, 권한 시나리오를 검토한다.
 - 변경 범위에 맞는 lint, 타입 검사, 테스트, 빌드를 실행한다.
 - Next.js 의존성을 재현해야 하면 저장소 루트에서 `npm --prefix mcm-reborn ci`를 실행한다.
-- `mcm-reborn/` 변경에는 저장소 루트에서 `npm --prefix mcm-reborn run lint`, `npm --prefix mcm-reborn run typecheck`, `npm --prefix mcm-reborn run build`를 실행한다.
-- 현재 `mcm-reborn/package.json`에는 자동 테스트 스크립트가 없다. 테스트를 실행하거나 통과했다고 표현하지 말고 이 공백을 결과와 PR에 기록한다. 테스트 스크립트가 추가되면 그때 실제 명령을 실행한다.
+- `mcm-reborn/` 변경에는 저장소 루트에서 `npm --prefix mcm-reborn run lint`, `npm --prefix mcm-reborn run typecheck`, `npm --prefix mcm-reborn test`, `npm --prefix mcm-reborn run build`를 실행한다.
+- `mcm-reborn/package.json`의 native Node 테스트는 OpenAI 요청·폴백·이미지 범위와 Meshy quota·오류·복구 정책을 검증한다. 실행하지 못한 외부 LIVE·브라우저·DB 통합 검사는 별도 검증 공백으로 기록한다.
 - API 패키지를 바꾸면 `python validate_package.py`를, 협업 문서·템플릿·스킬을 바꾸면 `python -X utf8 scripts/validate_collaboration.py`를 실행한다.
 - 실행하지 못한 검사는 통과했다고 표현하지 말고 이유와 위험을 남긴다.
 - 문서, 데모 데이터, 롤백 방법이 영향받으면 함께 갱신한다.

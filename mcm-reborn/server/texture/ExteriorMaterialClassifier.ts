@@ -12,11 +12,18 @@ import type {
 } from "@/contracts/exterior-material";
 import type { ExteriorMaterialPlan } from "@/lib/texture-preview";
 import { MCM_PUBLIC_VISUAL_KNOWLEDGE } from "@/server/openai/analysisKnowledge";
+import {
+  readProviderFailureMetadata,
+  runOpenAiStage,
+  runSerializedOpenAiAnalysis,
+} from "@/server/openai/openAiRequestPolicy";
 
 const EXTERIOR_MATERIAL_PLAN_VERSION =
   "MCM_EXTERIOR_MATERIAL_PLAN_V1" as const;
 const EXPECTED_VIEWS = ["FRONT", "RIGHT", "REAR", "LEFT"] as const;
 const EXPECTED_PARTS = ["BODY", "TRIM", "STRAP", "HARDWARE"] as const;
+const EXTERIOR_PLAN_DEADLINE_MS = 120_000;
+const EXTERIOR_PLAN_MAX_COMPLETION_TOKENS = 4_096;
 
 const EXTERIOR_MATERIAL_DEVELOPER_PROMPT = `You are the exterior-material inspection component of the MCM RE:BORN passport-wallet MVP.
 Analyze exactly four labeled exterior photographs of the same source product: FRONT, RIGHT, REAR, and LEFT. Return only data matching the supplied structured-output schema.
@@ -197,7 +204,7 @@ export class ExteriorMaterialClassifier {
       );
     }
 
-    this.client = new OpenAI({ apiKey, maxRetries: 0, timeout: 120_000 });
+    this.client = new OpenAI({ apiKey, maxRetries: 0, timeout: 60_000 });
     this.model = model || "gpt-5.6";
   }
 
@@ -219,39 +226,65 @@ export class ExteriorMaterialClassifier {
       (view) => imagesByView.get(view)!,
     );
 
+    const deadlineAtMs = Date.now() + EXTERIOR_PLAN_DEADLINE_MS;
     try {
-      const completion = await this.client.chat.completions.parse({
-        messages: [
-          {
-            content: EXTERIOR_MATERIAL_DEVELOPER_PROMPT,
-            role: "developer",
-          },
-          {
-            content: [
-              {
-                text: "각 VIEW 라벨 바로 다음 사진만 그 라벨의 시점 증거로 사용해 외관 소재 계획을 작성하세요.",
-                type: "text",
-              },
-              ...orderedImages.flatMap(({ signedUrl, view }) => [
-                { text: `VIEW: ${view}`, type: "text" as const },
+      const completion = await runSerializedOpenAiAnalysis(
+        deadlineAtMs,
+        () =>
+          runOpenAiStage({
+            stage: "EXTERIOR_PLAN",
+            maxAttempts: 2,
+            deadlineAtMs,
+            onRetry: (failure) => {
+              console.warn(
+                "[ExteriorMaterialClassifier] retrying after transient failure",
+                failure,
+              );
+            },
+            call: ({ clientRequestId, timeoutMs }) =>
+              this.client.chat.completions.parse(
                 {
-                  image_url: {
-                    detail: "high" as const,
-                    url: signedUrl,
-                  },
-                  type: "image_url" as const,
+                  max_completion_tokens:
+                    EXTERIOR_PLAN_MAX_COMPLETION_TOKENS,
+                  messages: [
+                    {
+                      content: EXTERIOR_MATERIAL_DEVELOPER_PROMPT,
+                      role: "developer",
+                    },
+                    {
+                      content: [
+                        {
+                          text: "각 VIEW 라벨 바로 다음 사진만 그 라벨의 시점 증거로 사용해 외관 소재 계획을 작성하세요.",
+                          type: "text",
+                        },
+                        ...orderedImages.flatMap(({ signedUrl, view }) => [
+                          { text: `VIEW: ${view}`, type: "text" as const },
+                          {
+                            image_url: {
+                              detail: "high" as const,
+                              url: signedUrl,
+                            },
+                            type: "image_url" as const,
+                          },
+                        ]),
+                      ],
+                      role: "user",
+                    },
+                  ],
+                  model: this.model,
+                  response_format: zodResponseFormat(
+                    ExteriorMaterialPlanSchema,
+                    EXTERIOR_MATERIAL_PLAN_VERSION,
+                  ),
                 },
-              ]),
-            ],
-            role: "user",
-          },
-        ],
-        model: this.model,
-        response_format: zodResponseFormat(
-          ExteriorMaterialPlanSchema,
-          EXTERIOR_MATERIAL_PLAN_VERSION,
-        ),
-      });
+                {
+                  headers: { "X-Client-Request-Id": clientRequestId },
+                  maxRetries: 0,
+                  timeout: timeoutMs,
+                },
+              ),
+          }),
+      );
 
       const plan = completion.choices[0]?.message.parsed;
       if (!plan) {
@@ -259,9 +292,15 @@ export class ExteriorMaterialClassifier {
       }
 
       return ExteriorMaterialPlanSchema.parse(plan);
-    } catch {
+    } catch (error) {
+      const failure = readProviderFailureMetadata(error);
+      console.error(
+        "[ExteriorMaterialClassifier] OpenAI classification failed",
+        failure ?? { name: error instanceof Error ? error.name : typeof error },
+      );
       throw new UpstreamError(
         "OpenAI exterior material classification failed",
+        { retryable: failure?.kind !== "QUOTA_EXHAUSTED" },
       );
     }
   }

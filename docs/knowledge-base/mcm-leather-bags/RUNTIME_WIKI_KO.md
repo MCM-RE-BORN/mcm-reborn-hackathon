@@ -16,13 +16,13 @@
 
 ## 런타임 흐름
 
-1. 첫 OpenAI 호출은 explicit `IMAGE_INDEX`/`VIEW`가 붙은 여섯 `detail: low` 사진을 보고 소재·표면·패턴·구조의 일반 검색어만 만든다.
+1. 첫 OpenAI 호출은 원래 6면 인덱스를 유지한 `0 FRONT`, `1 REAR`, `4 LEFT`, `5 RIGHT`의 네 `detail: low` 외관 사진만 보고 소재·표면·패턴·구조의 일반 검색어를 만든다. TOP과 BOTTOM은 이 단계에서 제외한다.
 2. `tool_choice`는 `search_mcm_leather_wiki` 하나로 고정하고 병렬 도구 호출을 끈다.
 3. 서버는 로컬 생성 스냅샷의 dynamic 11개 claim만 검색한다. 외부 검색 서비스나 벡터 DB를 호출하지 않고 제품 예시는 항상 비활성화한다.
-4. 두 번째 OpenAI 호출은 같은 여섯 `detail: auto` 사진, 검색 결과, PDF 재사용 가이드와 always-on 금지 경계로 현재 `BagVisionSchema` v3 분석과 외관 profile을 함께 반환한다.
+4. 두 번째 OpenAI 호출은 상단·하단을 포함한 여섯 `detail: auto` 사진, 검색 결과, PDF 재사용 가이드와 always-on 금지 경계로 현재 `BagVisionSchema` v3 분석과 외관 profile을 함께 반환한다.
 5. 최종 제공자 요청 ID와 별도로 조회 요청 ID, query hash, 순서가 보존된 claim·출처 ID, 정확한 tool context hash와 적용 상태를 `provider_result`에 기록한다. 조회 뒤 최종 호출이 실패해 Fixture로 폴백해도 `LOOKUP_COMPLETED_FINAL_FAILED` trace는 보존한다.
 
-두 번의 모델 호출이 필요하므로 LIVE 비용과 지연은 기존 단일 호출보다 증가한다. 첫 호출은 `detail: low`와 작은 출력 한도를 쓰고, 전체 코퍼스 대신 최대 5개·4,000자만 최종 호출에 전달해 증가폭을 제한한다. OpenAI client 자동 재시도는 끄고 호출당 60초 timeout, 분석 route 180초 상한을 둬 같은 이미지 요청이 내부 재시도로 불어나지 않게 한다. lookup 실패·무결과에도 전체 코퍼스로 폴백하지 않고 7개 always-on 경계와 사진으로 보수적으로 분석한다. Fixture와 외부 제공자 장애 폴백 정책은 유지한다.
+두 번의 모델 호출이 필요하므로 LIVE 비용과 지연은 기존 단일 호출보다 증가한다. 첫 호출은 외관 4면만 `detail: low`로 보내고 작은 출력 한도를 쓰며, 전체 코퍼스 대신 최대 5개·4,000자만 최종 호출에 전달해 증가폭을 제한한다. 최종 분석은 품질·상하단 손상 근거를 잃지 않도록 6면을 유지한다. OpenAI client 자동 재시도는 끄고 전체 145초 deadline 안에서 lookup은 최대 35초·1회, 최종 분석은 시도당 최대 60초·전체 최대 2회로 제한한다. lookup 무결과나 로컬 schema·검색·provider 5xx 실패는 전체 코퍼스로 폴백하지 않고 7개 always-on 경계와 사진으로 최종 분석을 계속하지만, lookup의 rate limit·quota·timeout·인증성 4xx 뒤에는 최종 6면 호출을 추가하지 않고 canonical Fixture로 복구한다. Fixture와 외부 제공자 장애 폴백 정책은 유지한다.
 
 ## 검색 및 적용 규칙
 

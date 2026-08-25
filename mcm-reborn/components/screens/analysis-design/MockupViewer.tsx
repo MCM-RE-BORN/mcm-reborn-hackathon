@@ -7,6 +7,7 @@ import styles from "./analysis-design.module.css";
 const MODEL_SRC = "/assets/models/reborn-passport-wallet.glb";
 const PROMPT_RESET_DELAY_MS = 10_000;
 const MODEL_LOAD_TIMEOUT_MS = 20_000;
+const TEXTURE_APPLICATION_TIMEOUT_MS = 30_000;
 
 type ModelViewerTexture = object;
 
@@ -180,9 +181,12 @@ export function MockupViewer({
       reportState("loading");
       const textureUrl = URL.createObjectURL(textureBlob);
       try {
-        const texture = await viewer.createTexture(
-          textureUrl,
-          textureBlob.type || "image/jpeg",
+        const texture = await withTimeout(
+          viewer.createTexture(
+            textureUrl,
+            textureBlob.type || "image/jpeg",
+          ),
+          TEXTURE_APPLICATION_TIMEOUT_MS,
         );
         if (cancelled) return;
         if (!texture) {
@@ -282,4 +286,20 @@ export function MockupViewer({
       ) : null}
     </section>
   );
+}
+
+async function withTimeout<T>(promise: Promise<T>, timeoutMs: number) {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<never>((_, reject) => {
+        timeoutId = setTimeout(() => {
+          reject(new Error("MODEL_VIEWER_TEXTURE_TIMEOUT"));
+        }, timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
+  }
 }

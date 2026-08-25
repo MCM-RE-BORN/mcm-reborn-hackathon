@@ -235,6 +235,8 @@ export class CustomerApiError extends Error {
   constructor(
     message: string,
     public readonly status: number,
+    public readonly code: string | null = null,
+    public readonly details: Record<string, unknown> = {},
   ) {
     super(message);
     this.name = "CustomerApiError";
@@ -332,7 +334,13 @@ export async function customerFetch<T>(
     const message =
       readStringValue(errorRecord, "message") ??
       "고객 API 요청을 처리하지 못했습니다.";
-    throw new CustomerApiError(message, response.status);
+    const details = readRecord(readRecord(errorRecord)?.details) ?? {};
+    throw new CustomerApiError(
+      message,
+      response.status,
+      readStringValue(errorRecord, "code"),
+      details,
+    );
   }
   return payload as T;
 }
