@@ -85,10 +85,11 @@
 ```text
 npm --prefix mcm-reborn run lint
 npm --prefix mcm-reborn run typecheck
+npm --prefix mcm-reborn test
 npm --prefix mcm-reborn run build
 ```
 
-재현 가능한 의존성 설치가 필요하면 먼저 `npm --prefix mcm-reborn ci`를 실행한다. 현재 `mcm-reborn/package.json`에는 자동 테스트 스크립트가 없으므로 테스트 성공을 주장하지 말고 검증 공백으로 기록한다.
+재현 가능한 의존성 설치가 필요하면 먼저 `npm --prefix mcm-reborn ci`를 실행한다. native Node 정책 테스트는 실제로 실행한 결과만 보고하고, 외부 LIVE·브라우저·DB 통합 검사는 실행하지 못했으면 이유와 위험을 남긴다.
 
 협업 문서, GitHub 템플릿 또는 저장소 스킬을 바꾼 경우 `python -X utf8 scripts/validate_collaboration.py`도 실행한다.
 

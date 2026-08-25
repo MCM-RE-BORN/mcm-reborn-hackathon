@@ -100,10 +100,11 @@ python validate_package.py
 npm --prefix mcm-reborn ci
 npm --prefix mcm-reborn run lint
 npm --prefix mcm-reborn run typecheck
+npm --prefix mcm-reborn test
 npm --prefix mcm-reborn run build
 ```
 
-현재 `mcm-reborn/package.json`에는 테스트 스크립트가 없다. `npm test`를 실행했다고 기록하지 말고, 필요한 테스트가 추가되기 전까지 이슈 완료 조건별 수동 검증과 계약 검증을 남긴다.
+현재 `mcm-reborn/package.json`의 native Node 테스트는 OpenAI 요청·폴백·이미지 범위와 Meshy quota·오류·복구 정책을 검증한다. 외부 LIVE·브라우저·DB 통합 검사는 별도 staging 검증과 수동 확인 결과를 남긴다.
 
 ## 9. 운영 리듬과 기록
 

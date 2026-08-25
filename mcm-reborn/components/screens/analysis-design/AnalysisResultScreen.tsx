@@ -10,6 +10,10 @@ import { StatusPanel } from "@/components/ui/StatusPanel";
 import { DemoStatePanel } from "./DemoStatePanel";
 import { SubmissionProductSummary } from "./SubmissionProductSummary";
 import { RecycleGauge } from "./RecycleGauge";
+import {
+  isApiFallbackAnalysis,
+  visibleAnalysisWarnings,
+} from "./analysisFallback";
 import styles from "./analysis-design.module.css";
 import type { DemoState } from "./types";
 import {
@@ -169,6 +173,8 @@ export function AnalysisResultScreen({
   }
 
   const conditionSummary = analysis.condition.summary.trim();
+  const isApiFallback = isApiFallbackAnalysis(analysis);
+  const visibleWarnings = visibleAnalysisWarnings(analysis);
 
   return (
     <AppShell
@@ -225,6 +231,11 @@ export function AnalysisResultScreen({
               },
             ]}
           />
+          {isApiFallback ? (
+            <small className={styles.analysisFallbackLabel} role="status">
+              API오류로 인한 DEMO
+            </small>
+          ) : null}
         </section>
 
         {conditionSummary ? (
@@ -250,10 +261,10 @@ export function AnalysisResultScreen({
           </p>
         </aside>
 
-        {analysis.warnings.length > 0 ? (
+        {visibleWarnings.length > 0 ? (
           <aside className={styles.contractNotice} role="status">
-            <strong>외부 AI 폴백 안내</strong>
-            {analysis.warnings.map((warning) => (
+            <strong>분석 안내</strong>
+            {visibleWarnings.map((warning) => (
               <p key={warning.code}>{warning.message}</p>
             ))}
           </aside>

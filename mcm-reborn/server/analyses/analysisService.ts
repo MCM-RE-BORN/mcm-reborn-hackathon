@@ -43,6 +43,7 @@ import {
   MCM_ANALYSIS_GROUNDING_COMPONENTS,
   MCM_ANALYSIS_KNOWLEDGE_VERSION,
 } from '@/server/openai/analysisGrounding';
+import { readProviderFailureMetadata } from '@/server/openai/openAiRequestPolicy';
 import {
   MCM_LEATHER_WIKI_ALWAYS_ON_SAFETY_CLAIM_IDS,
   MCM_LEATHER_WIKI_DYNAMIC_CLAIM_IDS,
@@ -983,13 +984,13 @@ async function analyzeImages(input: CreateAnalysisInput, imageUrls: string[]) {
     if (isAppError(error)) {
       throw error;
     }
-    // The original error is discarded below so it never reaches the client,
-    // but that also erased it from server logs. Log only the safe,
-    // non-sensitive shape (no image URLs, tokens, or provider payloads) so a
-    // provider failure can actually be diagnosed from Vercel/server logs.
+    const providerFailure = readProviderFailureMetadata(error);
+    // Never log provider messages or payloads here: they can contain signed
+    // image URLs or other customer data. Policy metadata is allowlisted.
     console.error('[analyzeImages] vision provider threw an unexpected error', {
-      name: error instanceof Error ? error.name : typeof error,
-      message: error instanceof Error ? error.message : String(error),
+      failure:
+        providerFailure ??
+        { name: error instanceof Error ? error.name : typeof error },
     });
     throw new UpstreamError('Analysis provider failed');
   }

@@ -26,9 +26,10 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 ```text
 npm --prefix mcm-reborn run lint
 npm --prefix mcm-reborn run typecheck
+npm --prefix mcm-reborn test
 npm --prefix mcm-reborn run build
 ```
 
-의존성 재현이 필요하면 먼저 `npm --prefix mcm-reborn ci`를 실행한다. 현재 `package.json`에는 자동 테스트 스크립트가 없으므로 테스트 성공을 주장하지 말고 검증 공백으로 기록한다.
+의존성 재현이 필요하면 먼저 `npm --prefix mcm-reborn ci`를 실행한다. native Node 테스트는 OpenAI 요청·폴백·이미지 범위와 Meshy quota·오류·복구 정책을 검증하며, 외부 LIVE·브라우저·DB 통합 검사는 별도 staging 게이트로 남긴다.
 
 `main`과 `develop`에 직접 push하지 않는다. 브랜치 생성, 커밋, push, PR 생성과 병합은 명시적으로 요청된 범위에서만 수행한다. 작성자는 자신의 PR을 승인하지 않으며 병합은 사람의 승인과 필수 검사 뒤 팀 권한 정책을 따른다.
